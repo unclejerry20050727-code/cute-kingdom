@@ -21,6 +21,13 @@ const Game = {
   stage: 'created',  // created | bed | done
   awakeT: 0, meetT: 0,
   loadingTimer: 0,
+  /* 第一人稱剛醒 */
+  fp: { on: false, phase: 'closed', openT: 0, t: 0, camX: 710 },
+  /* 金錢 / 打工裝備 */
+  money: 100,
+  gear: { uniform: false, hat: false },
+  /* 地圖 */
+  mapP: { x: 490, y: 195, facing: 'down', walkT: 0, walking: false },
   mouse: { wx: 0, wy: 0, tx: 0, ty: 0 },
 };
 
@@ -146,18 +153,20 @@ function beginGame(save, skipIntro) {
     return;
   }
 
-  /* 全新遊戲：從剛醒開始 */
+  /* 全新遊戲：從剛醒開始（第一人稱：閉眼→睜眼→左右看） */
   n.visible = false;
   n.revealed = false;
   p.eyesClosed = true;
   p.getup = 0;
-  setSub('wake');
+  Game.fp = { on: true, phase: 'closed', openT: 0, t: 0, camX: 710 };
+  setSub('fp');
+  $('#click-next').textContent = '👆 點擊睜開眼睛';
   $('#click-next').classList.remove('hidden');
 }
 
 function setSub(sub) {
   Game.sub = sub;
-  if (sub !== 'wake') $('#click-next').classList.add('hidden');
+  if (sub !== 'fp') $('#click-next').classList.add('hidden');
   if (sub !== 'placeBed' && sub !== 'free' && sub !== 'goOut') showDpad(false);
   if (sub === 'free') showDpad();
 }
@@ -168,16 +177,29 @@ function updateGame(dt) {
   const p = Game.player;
 
   switch (Game.sub) {
-    case 'awake': {
-      Game.awakeT += dt;
-      p.gaze = gazeTimeline(Game.awakeT);
-      if (Game.awakeT >= 3.1) {
-        setSub('talk');
-        p.gaze = 0;
-        Dialogue.start([
-          { who: 'player', name: '小島', text: '這是哪裡？' },
-        ], () => { setSub('meet'); Game.meetT = 0; });
+    case 'fp': {
+      const fp = Game.fp;
+      if (fp.phase === 'open') {
+        fp.openT = clamp(fp.openT + dt / 0.9, 0, 1);
+        fp.t += dt;
+        fp.camX = fpCamX(fp.t);
+        if (fp.t >= FP_PAN_DUR) {
+          /* 左右看完 → 問一句（還維持第一人稱） */
+          setSub('talk');
+          Dialogue.start([
+            { who: 'player', name: '小島', text: '這是哪裡？' },
+          ], () => {
+            Game.fp.on = false; /* 之後小宥說話 → 第三人稱 */
+            setSub('meet');
+            Game.meetT = 0;
+          });
+        }
       }
+      break;
+    }
+    case 'talk': {
+      /* 第一人稱緩慢晃動（小宥還沒出場的對話） */
+      Game.fp.camX = fpCamIdle(Game.t);
       break;
     }
     case 'meet': {
@@ -368,11 +390,19 @@ function bedValid(tx, ty) {
 }
 
 /* ══════════ 渲染 ══════════ */
+/* ── 渲染分發 ── */
 function renderGame() {
   const ctx = Game.ctx;
   const w = innerWidth, h = innerHeight;
   ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
   drawPolkaBg(ctx, w, h);
+
+  if (Game.fp.on && (Game.sub === 'fp' || Game.sub === 'talk')) {
+    ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
+    const skin = (PALETTES.skin.find(s => s.id === Game.playerCfg.skin) || PALETTES.skin[0]).c;
+    renderFP(ctx, Game.fp.camX, Game.fp.openT, skin);
+    return;
+  }
 
   ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
   drawRoom(ctx);
@@ -473,6 +503,10 @@ function setupInput() {
       Dialogue.advance();
       e.preventDefault();
     }
+    if ((e.key === ' ' || e.key === 'Enter') && Game.sub === 'fp' && !Dialogue.active) {
+      Game.canvas.dispatchEvent(new MouseEvent('click', { clientX: innerWidth / 2, clientY: innerHeight / 2 }));
+      e.preventDefault();
+    }
     if (e.key === 'Escape') {
       if (Game.sub === 'placeBed') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
@@ -499,15 +533,18 @@ function setupInput() {
     Game.mouse.tx = tx; Game.mouse.ty = ty;
 
     switch (Game.sub) {
-      case 'wake':
-        Game.player.eyesClosed = false;
-        setSub('awake');
-        Game.awakeT = 0;
-        sfx('wake');
-        break;
-      case 'awake':
-        /* 加速看完 */
-        Game.awakeT = 3.2;
+      case 'fp':
+        if (Game.fp.phase === 'closed') {
+          Game.fp.phase = 'open';
+          Game.fp.openT = 0;
+          Game.fp.t = 0;
+          Game.player.eyesClosed = false;
+          $('#click-next').classList.add('hidden');
+          sfx('wake');
+        } else {
+          /* 加速看完 */
+          Game.fp.t = FP_PAN_DUR;
+        }
         break;
       case 'free': {
         if (tx > 0.2 && ty > 0.2 && tx < N - 0.2 && ty < N - 0.2) {

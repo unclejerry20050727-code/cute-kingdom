@@ -93,6 +93,17 @@ function handLine(ctx, x1, y1, x2, y2, opt = {}) {
   ctx.stroke();
 }
 
+/* 長距離手繪直線（自動分段，避免抖動太稀） */
+function handLineLong(ctx, x1, y1, x2, y2, opt = {}) {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const n = Math.max(1, Math.round(len / 240));
+  for (let i = 0; i < n; i++) {
+    const a = i / n, b = (i + 1) / n;
+    handLine(ctx, lerp(x1, x2, a), lerp(y1, y2, a), lerp(x1, x2, b), lerp(y1, y2, b),
+      { ...opt, seed: (opt.seed || 1) + i * 97 });
+  }
+}
+
 /* 手繪圓的 SVG path（loading 圈圈用） */
 function handCirclePathD(cx, cy, r, seed = 1, amp = 3, n = 42) {
   const rnd = mulberry32(seed);
