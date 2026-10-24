@@ -101,11 +101,13 @@ const Dialogue = {
     if (this.typing < this.current.text.length) {
       this.typing = this.current.text.length;
       this.textEl.textContent = this.current.text;
+      try { sfx('blip'); } catch (e) { /* ignore */ }
       return;
     }
     if (this.current.onExit) this.current.onExit();
     this.idx++;
     this.showLine();
+    try { sfx('blip'); } catch (e) { /* ignore */ }
   },
 
   close() {

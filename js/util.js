@@ -64,6 +64,7 @@ function showToast(msg, ms = 2200) {
   const t = $('#toast');
   t.textContent = msg;
   t.classList.remove('hidden');
+  try { sfx('toast'); } catch (e) { /* ignore */ }
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add('hidden'), ms);
 }

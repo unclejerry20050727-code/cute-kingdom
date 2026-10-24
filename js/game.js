@@ -35,20 +35,23 @@ function init() {
   setupCreateUI();
   setupBuildUI();
 
-  $('#cover-enter').onclick = () => showScreen('title');
-  $('#btn-start').onclick = startGame;
-  $('#btn-new').onclick = newGame;
-  $('#create-back').onclick = () => showScreen('title');
-  $('#create-confirm').onclick = confirmCreate;
+  $('#cover-enter').onclick = () => { sfx('confirm'); startBGM(); showScreen('title'); };
+  $('#btn-start').onclick = () => { sfx('confirm'); startGame(); };
+  $('#btn-new').onclick = () => { sfx('click'); newGame(); };
+  $('#create-back').onclick = () => { sfx('back'); showScreen('title'); };
+  $('#create-confirm').onclick = () => { sfx('confirm'); confirmCreate(); };
   $('#btn-back-home').onclick = () => {
+    sfx('whoosh');
     $('#screen-outside').classList.add('hidden');
     setSub('free');
   };
-  $('#build-btn').onclick = () => toggleBuildPanel();
+  $('#build-btn').onclick = () => { sfx('pop'); toggleBuildPanel(); };
   $('#out-btn').onclick = () => {
     if (Game.sub === 'goOut') hideHint();
     if (Game.sub === 'goOut' || Game.sub === 'free') goOutside();
   };
+  $('#btn-mute').onclick = toggleMute;
+  updateMuteBtn();
 
   requestAnimationFrame(frame);
 }
@@ -266,6 +269,7 @@ function goOutside() {
   saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done' });
   setSub('loading');
   Game.loadingTimer = 0;
+  sfx('whoosh');
   $('#screen-loading').classList.remove('hidden');
   hideHint();
 }
@@ -484,6 +488,7 @@ function setupInput() {
         Game.player.eyesClosed = false;
         setSub('awake');
         Game.awakeT = 0;
+        sfx('wake');
         break;
       case 'awake':
         /* 加速看完 */
@@ -560,7 +565,7 @@ const BUILD_TABS = {
 
 function setupBuildUI() {
   for (const tab of document.querySelectorAll('.btab')) {
-    tab.onclick = () => selectBuildTab(tab.dataset.tab);
+    tab.onclick = () => { sfx('click'); selectBuildTab(tab.dataset.tab); };
   }
 }
 
@@ -605,6 +610,7 @@ function selectBuildTab(tab, force) {
     nm.textContent = '床' + (hasBed ? '（已有）' : '');
     item.append(cv, nm);
     item.onclick = () => {
+      sfx('click');
       if (hasBed) { showToast('你已經有一張床囉～🛏️'); return; }
       if (Game.sub === 'tutBuild') startPlacement();
       else if (Game.sub === 'free') startPlacement();
@@ -624,8 +630,7 @@ function selectBuildTab(tab, force) {
 function startPlacement() {
   closeBuildPanel();
   hideHint();
-  setSub('placeBed');
-  const tx = Math.floor(Game.mouse.tx), ty = Math.floor(Game.mouse.ty);
+  setSub('placeBed');  const tx = Math.floor(Game.mouse.tx), ty = Math.floor(Game.mouse.ty);
   Game.placement = { tx: clamp(tx, 0, N - BED.w), ty: clamp(ty, 0, N - BED.d), valid: true };
   Game.placement.valid = bedValid(Game.placement.tx, Game.placement.ty);
   const bar = $('#hint-bar');
@@ -647,6 +652,7 @@ function placeBed(tx, ty) {
   rebuildBlocked();
   Game.placement = null;
   $('#hint-bar').classList.add('hidden');
+  sfx('place');
   saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'bed' });
   setSub('praise');
   Dialogue.start([
@@ -663,6 +669,7 @@ function setupCreateUI() {
   /* 性別 */
   for (const btn of document.querySelectorAll('#opt-gender .chip')) {
     btn.onclick = () => {
+      sfx('click');
       Game.playerCfg.gender = btn.dataset.val;
       Game.playerCfg.hairStyle = defaultConfig(btn.dataset.val).hairStyle;
       refreshCreateUI();
@@ -692,7 +699,7 @@ function fillChips(sel, opts, key) {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = o.name;
-    b.onclick = () => { Game.playerCfg[key] = o.id; refreshCreateUI(); };
+    b.onclick = () => { sfx('click'); Game.playerCfg[key] = o.id; refreshCreateUI(); };
     box.appendChild(b);
   }
 }
@@ -705,7 +712,7 @@ function fillSwatches(sel, opts, key) {
     s.style.background = o.c;
     s.dataset.name = o.name;
     s.setAttribute('aria-label', o.name);
-    s.onclick = () => { Game.playerCfg[key] = o.id; refreshCreateUI(); };
+    s.onclick = () => { sfx('click'); Game.playerCfg[key] = o.id; refreshCreateUI(); };
     box.appendChild(s);
   }
 }
@@ -718,7 +725,7 @@ function fillClothChips(sel, opts, key) {
     const dot = document.createElement('i');
     dot.style.cssText = `display:inline-block;width:14px;height:14px;border-radius:50%;background:${o.c};border:2px solid rgba(122,82,54,.3);margin-right:6px;vertical-align:-2px;`;
     b.append(dot, document.createTextNode(o.name));
-    b.onclick = () => { Game.playerCfg[key] = o.id; refreshCreateUI(); };
+    b.onclick = () => { sfx('click'); Game.playerCfg[key] = o.id; refreshCreateUI(); };
     box.appendChild(b);
   }
 }

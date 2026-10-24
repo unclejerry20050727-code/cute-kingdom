@@ -481,6 +481,22 @@ body {
   animation: pop-in .25s cubic-bezier(.34,1.56,.64,1);
 }
 
+/* 靜音按鈕 */
+.mute-btn {
+  position: fixed; top: 14px; right: 16px;
+  width: 46px; height: 46px;
+  border: 3px solid var(--brown);
+  border-radius: 50%;
+  background: #FFF8EC;
+  font-size: 21px;
+  cursor: pointer;
+  z-index: 98;
+  box-shadow: 0 4px 0 rgba(122,82,54,.25);
+  transition: transform .1s;
+}
+.mute-btn:hover { transform: scale(1.08); }
+.mute-btn:active { transform: scale(.94); }
+
 /* 通用彈入 */
 @keyframes pop-in {
   from { transform: scale(.6); opacity: 0; }
