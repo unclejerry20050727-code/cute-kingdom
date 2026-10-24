@@ -4,6 +4,7 @@
 const Game = {
   state: 'cover',   // cover | title | create | game
   sub: null,        // fp | talk | meet | tutBuild | placeBed | praise | goOut | free | loading | map | work
+  mapTarget: null,
   t: 0,
   canvas: null,
   ctx: null,
@@ -52,6 +53,12 @@ function init() {
     if (Game.sub === 'goOut') hideHint();
     if (Game.sub === 'goOut' || Game.sub === 'free') goOutside();
   };
+  $('#map-home').onclick = () => { sfx('whoosh'); homeFromMap(); };
+  $('#shop-x').onclick = () => { sfx('back'); closeShop(); };
+  $('#work-x').onclick = () => { sfx('back'); exitWork(); };
+  $('#buy-uniform').onclick = () => buyGear('uniform');
+  $('#buy-hat').onclick = () => buyGear('hat');
+  $('#btn-start-work').onclick = () => startWork();
   $('#btn-mute').onclick = toggleMute;
   updateMuteBtn();
 
@@ -114,6 +121,9 @@ function beginGame(save, skipIntro) {
   Game.furniture = save.furniture || [];
   Game.stage = save.stage || 'created';
   rebuildBlocked();
+  /* 金錢 / 打工裝備（舊存檔補預設值） */
+  Game.money = save.money ?? 100;
+  Game.gear = save.gear ?? { uniform: false, hat: false };
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -126,7 +136,7 @@ function beginGame(save, skipIntro) {
 
   $('#hud-name').textContent = '小島';
   Game.state = 'game';
-  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading']) {
+  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading', 'screen-shop', 'screen-work']) {
     document.getElementById(id).classList.add('hidden');
   }
   $('#screen-game').classList.remove('hidden');
@@ -167,8 +177,20 @@ function beginGame(save, skipIntro) {
 function setSub(sub) {
   Game.sub = sub;
   if (sub !== 'fp') $('#click-next').classList.add('hidden');
-  if (sub !== 'placeBed' && sub !== 'free' && sub !== 'goOut') showDpad(false);
-  if (sub === 'free') showDpad();
+  const roomSub = ['meet', 'tutBuild', 'placeBed', 'praise', 'goOut', 'free'].includes(sub);
+  $('#out-btn').classList.toggle('hidden', !roomSub);
+  $('#build-btn').classList.toggle('hidden', !roomSub);
+  if (!roomSub) closeBuildPanel();
+  if (sub !== 'placeBed' && !roomSub) showDpad(false);
+  if (sub === 'free' || sub === 'map') showDpad();
+  $('#map-home').classList.toggle('hidden', sub !== 'map');
+  syncMoneyUI();
+}
+
+function syncMoneyUI() {
+  const inWorld = ['free', 'goOut', 'map', 'work'].includes(Game.sub);
+  $('#hud-money').classList.toggle('hidden', !inWorld);
+  if (typeof Game.money === 'number') $('#hud-money-val').textContent = Game.money;
 }
 
 /* ══════════ 子狀態更新 ══════════ */
@@ -215,6 +237,40 @@ function updateGame(dt) {
       updateMovement(dt);
       break;
     }
+    case 'map': {
+      /* 地圖走路：WASD / 點地面 / D-pad，限道路上 */
+      const m = Game.mapP, k = Game.keys;
+      let dx = 0, dy = 0;
+      if (k.has('up')) dy -= 1;
+      if (k.has('down')) dy += 1;
+      if (k.has('left')) dx -= 1;
+      if (k.has('right')) dx += 1;
+      if (!dx && !dy && Game.dpadDir) { dx = Game.dpadDir[0]; dy = Game.dpadDir[1]; }
+      const len = Math.hypot(dx, dy);
+      if (len > 0) {
+        Game.mapTarget = null;
+        m.x = clamp(m.x + (dx / len) * 235 * dt, ROAD_L + 10, ROAD_R - 10);
+        m.y = clamp(m.y + (dy / len) * 235 * dt, 182, 640);
+        m.facing = Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? 'down' : 'up') : (dx > 0 ? 'right' : 'left');
+        m.walking = true; m.walkT += dt;
+      } else if (Game.mapTarget) {
+        const { x, y } = Game.mapTarget;
+        const d = Math.hypot(x - m.x, y - m.y);
+        if (d < 7) { Game.mapTarget = null; m.walking = false; }
+        else {
+          m.x += (x - m.x) * Math.min(1, dt * 250 / d);
+          m.y += (y - m.y) * Math.min(1, dt * 250 / d);
+          m.facing = Math.abs(x - m.x) > Math.abs(y - m.y) ? (x > m.x ? 'right' : 'left') : (y > m.y ? 'down' : 'up');
+          m.walking = true; m.walkT += dt;
+        }
+      } else {
+        m.walking = false;
+      }
+      break;
+    }
+    case 'work':
+      updateWork(dt);
+      break;
     case 'placeBed': {
       if (Game.placement) {
         const tx = Math.floor(Game.mouse.tx), ty = Math.floor(Game.mouse.ty);
@@ -228,7 +284,11 @@ function updateGame(dt) {
       Game.loadingTimer += dt;
       if (Game.loadingTimer >= 3.2) {
         $('#screen-loading').classList.add('hidden');
-        setSub('free'); /* 暫定：地圖場景完成後改成進 map */
+        /* 手寫 loading 過場 → 室外地圖 */
+        Game.mapP = { x: 490, y: 235, facing: 'down', walkT: 0, walking: false };
+        Game.mapTarget = null;
+        setSub('map');
+        showHint($('#map-home'), '按『回家』回房間');
       }
       break;
     }
@@ -309,6 +369,121 @@ const LOADING_QUOTES = [
 function setLoadingQuote() {
   const q = LOADING_QUOTES[Math.floor(Math.random() * LOADING_QUOTES.length)];
   document.getElementById('loading-quote').textContent = '「' + q + '」';
+}
+
+/* ══════════ 回家 / 麥當勞商店 ══════════ */
+function homeFromMap() {
+  $('#screen-shop').classList.add('hidden');
+  Game.mapTarget = null;
+  Game.player.x = 1.5; Game.player.y = 7.2; Game.player.facing = 'down';
+  setSub('free');
+}
+
+function openShop() {
+  sfx('pop');
+  hideHint();
+  fillShopUI();
+  $('#screen-shop').classList.remove('hidden');
+}
+
+function closeShop() {
+  $('#screen-shop').classList.add('hidden');
+  if (Game.sub !== 'work') setSub('map');
+}
+
+function fillShopUI() {
+  drawShopIcon(document.getElementById('icon-uniform'), 'uniform');
+  drawShopIcon(document.getElementById('icon-hat'), 'hat');
+  /* 角色預覽（穿裝備） */
+  const pc = document.getElementById('shop-char-canvas');
+  const c2 = pc.getContext('2d');
+  c2.clearRect(0, 0, pc.width, pc.height);
+  drawCharacter(c2, Game.playerCfg, {
+    x: pc.width / 2, y: pc.height - 24,
+    facing: 'down', t: 0.8, walking: false,
+    scale: 1.15, gear: Game.gear,
+  });
+  /* 購買按鈕 */
+  const bu = document.getElementById('buy-uniform');
+  const bh = document.getElementById('buy-hat');
+  bu.disabled = Game.gear.uniform;
+  bu.textContent = Game.gear.uniform ? '✅ 已購買' : '購買 50';
+  bh.disabled = Game.gear.hat;
+  bh.textContent = Game.gear.hat ? '✅ 已購買' : '購買 30';
+  document.getElementById('shop-money').textContent = Game.money;
+  const ready = Game.gear.uniform && Game.gear.hat;
+  const bs = document.getElementById('btn-start-work');
+  bs.disabled = !ready;
+  bs.textContent = ready ? '⏰ 開始打工' : '集齊制服＋帽子才能打工喔';
+}
+
+function drawShopIcon(cv, kind) {
+  const c2 = cv.getContext('2d');
+  const x = cv.width / 2, y = cv.height / 2;
+  c2.clearRect(0, 0, cv.width, cv.height);
+  if (kind === 'uniform') {
+    /* 白T紅領小制服 */
+    c2.fillStyle = '#FFFFFF';
+    c2.strokeStyle = '#E4D5BD';
+    c2.lineWidth = 2.5;
+    c2.beginPath();
+    c2.moveTo(x - 16, y - 12);
+    c2.lineTo(x + 16, y - 12);
+    c2.lineTo(x + 22, y - 2);
+    c2.lineTo(x + 14, y + 2);
+    c2.lineTo(x + 14, y + 18);
+    c2.lineTo(x - 14, y + 18);
+    c2.lineTo(x - 14, y + 2);
+    c2.lineTo(x - 22, y - 2);
+    c2.closePath();
+    c2.fill(); c2.stroke();
+    c2.strokeStyle = '#D94F4F';
+    c2.lineWidth = 3.5;
+    c2.lineCap = 'round';
+    c2.beginPath(); c2.arc(x, y - 11, 8, 0, Math.PI); c2.stroke();
+    c2.fillStyle = '#D94F4F';
+    c2.fillRect(x - 9, y + 4, 18, 14);
+  } else {
+    /* 紅帽子 */
+    c2.fillStyle = '#C43F3F';
+    c2.beginPath();
+    c2.ellipse(x, y + 10, 26, 7, 0, 0, Math.PI * 2);
+    c2.fill();
+    c2.fillStyle = '#D94F4F';
+    c2.beginPath();
+    c2.arc(x, y + 6, 20, Math.PI, 0);
+    c2.closePath();
+    c2.fill();
+    c2.strokeStyle = '#F7C948';
+    c2.lineWidth = 3.5;
+    c2.lineCap = 'round';
+    const mw = 7;
+    const arch = (x0) => {
+      c2.beginPath();
+      c2.moveTo(x0, y + 2);
+      c2.quadraticCurveTo(x0, y - 8, x0 + mw / 2, y - 8);
+      c2.quadraticCurveTo(x0 + mw, y - 8, x0 + mw, y + 2);
+      c2.stroke();
+    };
+    arch(x - mw - 1.5);
+    arch(x + 1.5);
+  }
+}
+
+function buyGear(kind) {
+  const price = kind === 'uniform' ? 50 : 30;
+  if (Game.gear[kind]) return;
+  if (Game.money < price) {
+    showToast('錢不夠！先打工賺一點吧 🪙');
+    sfx('buzz');
+    return;
+  }
+  Game.money -= price;
+  Game.gear[kind] = true;
+  sfx('coin');
+  syncMoneyUI();
+  fillShopUI();
+  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done', money: Game.money, gear: Game.gear });
 }
 
 /* ══════════ 移動 ══════════ */
@@ -401,6 +576,18 @@ function renderGame() {
     ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
     const skin = (PALETTES.skin.find(s => s.id === Game.playerCfg.skin) || PALETTES.skin[0]).c;
     renderFP(ctx, Game.fp.camX, Game.fp.openT, skin);
+    return;
+  }
+
+  if (Game.sub === 'map') {
+    ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
+    renderMap(ctx, Game.t, Game.mapP);
+    return;
+  }
+
+  if (Game.sub === 'work') {
+    ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
+    renderWork(ctx, Game.t);
     return;
   }
 
@@ -499,6 +686,10 @@ function setupInput() {
       Game.keys.add(keyMap[e.key]);
       e.preventDefault();
     }
+    if (Game.sub === 'map' && keyMap[e.key]) {
+      Game.keys.add(keyMap[e.key]);
+      e.preventDefault();
+    }
     if ((e.key === ' ' || e.key === 'Enter') && Dialogue.active) {
       Dialogue.advance();
       e.preventDefault();
@@ -556,6 +747,25 @@ function setupInput() {
         const px = Math.floor(Game.mouse.tx), py = Math.floor(Game.mouse.ty);
         if (bedValid(px, py)) placeBed(px, py);
         else showToast('這裡放不了喔，換個位置試試～');
+        break;
+      }
+      case 'map': {
+        /* 點麥當勞 → 商店；點道路 → 走過去 */
+        if (Math.hypot(wx - MC.x, wy - MC.y) < 34) { openShop(); break; }
+        if (wx > ROAD_L && wx < ROAD_R && wy > 175 && wy < 645) {
+          Game.mapTarget = { x: clamp(wx, ROAD_L + 10, ROAD_R - 10), y: clamp(wy, 182, 640) };
+        }
+        break;
+      }
+      case 'work': {
+        /* 點食材卡 */
+        for (let i = 0; i < WORK_CARDS.length; i++) {
+          const c = WORK_CARDS[i];
+          if (wx > c.x - CARD_W / 2 && wx < c.x + CARD_W / 2 && wy > c.y && wy < c.y + CARD_H) {
+            workClick(i);
+            return;
+          }
+        }
         break;
       }
     }

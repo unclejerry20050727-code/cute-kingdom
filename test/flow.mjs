@@ -48,6 +48,21 @@ async function shot(name, note = '') {
 }
 async function waitMs(ms) { await page.waitForTimeout(ms); }
 
+/* 房間磁磚 → 螢幕座標 */
+async function tilePt(tx, ty) {
+  return page.evaluate(([a, b]) => {
+    const [sx, sy] = P(a, b);
+    return { x: Game.offX + sx * Game.ws, y: Game.offY + sy * Game.ws };
+  }, [tx, ty]);
+}
+/* 世界座標（地圖/打工場景）→ 螢幕座標 */
+async function worldPt(x, y) {
+  return page.evaluate(([a, b]) => ({
+    x: Game.offX + a * Game.ws,
+    y: Game.offY + b * Game.ws,
+  }), [x, y]);
+}
+
 async function dlgActive() {
   return page.evaluate(() => !document.getElementById('dialogue').classList.contains('hidden'));
 }
@@ -138,10 +153,11 @@ await page.click('#build-items .build-item');
 await waitMs(500);
 
 console.log('1️⃣1️⃣ 放置床（ghost）');
-await page.mouse.move(480, 420);
+const bedPt = await tilePt(6.5, 3.5);
+await page.mouse.move(bedPt.x, bedPt.y);
 await waitMs(300);
 await shot('bed-ghost', `sub=${await sub()}`);
-await page.mouse.click(480, 420);
+await page.mouse.click(bedPt.x, bedPt.y);
 await waitMs(900);
 await shot('bed-placed');
 
@@ -168,15 +184,54 @@ await shot('resume-bed', `sub=${await sub()}`);
 await page.click('#out-btn');
 await waitMs(1000);
 
-console.log('1️⃣4️⃣ loading');
+console.log('1️⃣4️⃣ loading（手寫風）');
 await shot('loading', `sub=${await sub()}`);
-await page.waitForSelector('#screen-outside:not(.hidden)', { timeout: 15000 });
+await page.waitForFunction(() => Game.sub === 'map', null, { timeout: 15000 });
 await waitMs(600);
 
-console.log('1️⃣5️⃣ 屋外');
-await shot('outside');
-await page.click('#btn-back-home');
-await waitMs(800);
+console.log('1️⃣5️⃣ 地圖（直直往下＋麥當勞）');
+await shot('map');
+
+console.log('1️⃣5️⃣½ 點道路走路');
+const roadPt = await worldPt(490, 560);
+await page.mouse.click(roadPt.x, roadPt.y);
+await waitMs(1500);
+await shot('map-walk');
+
+console.log('1️⃣6️⃣ 點麥當勞 → 打工小舖（買制服50+帽子30）');
+const mcPt = await worldPt(490, 432);
+await page.mouse.click(mcPt.x, mcPt.y);
+await waitMs(500);
+await shot('shop');
+await page.click('#buy-uniform');
+await waitMs(250);
+await page.click('#buy-hat');
+await waitMs(250);
+await shot('shop-gear');
+
+console.log('1️⃣7️⃣ 開始打工（3-2-1 → 固定食譜 → +20）');
+await page.click('#btn-start-work');
+await waitMs(600);
+await shot('work-count');
+await waitMs(2600);
+const cards = await page.evaluate(() => WORK_CARDS.map(c => ({ id: c.id, x: c.x, y: c.y + CARD_H / 2 })));
+for (const id of ['bun', 'meat', 'tomato', 'lettuce', 'bun']) {
+  const c = cards.find(k => k.id === id);
+  const p = await worldPt(c.x, c.y);
+  await page.mouse.click(p.x, p.y);
+  await waitMs(280);
+}
+await waitMs(900);
+await shot('work-delivered');
+console.log('  money=', await page.evaluate(() => Game.money), ' count=', await page.evaluate(() => Work && Work.count));
+await page.click('#work-x');
+await waitMs(400);
+await shot('back-map');
+
+console.log('1️⃣8️⃣ 點「回家」→ 房間');
+await page.click('#map-home');
+await waitMs(500);
+await shot('home', `sub=${await sub()}`);
 
 console.log('1️⃣6️⃣ 自由移動（WASD + 點地板）');
 await shot('free', `sub=${await sub()}`);
@@ -186,7 +241,8 @@ await waitMs(900);
 await page.keyboard.up('d');
 await page.keyboard.up('w');
 await waitMs(300);
-await page.mouse.click(700, 300);
+const freePt = await tilePt(6, 6);
+await page.mouse.click(freePt.x, freePt.y);
 await waitMs(1600);
 await shot('free-moved');
 

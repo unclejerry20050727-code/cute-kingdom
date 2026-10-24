@@ -108,6 +108,24 @@ function sfx(name) {
       tone(523, t + 0.12, 0.1, { type: 'sine', vol: 0.06, release: 0.1 });
       tone(659, t + 0.24, 0.2, { type: 'sine', vol: 0.07, release: 0.3 });
       break;
+    case 'ding':
+      tone(1319, t, 0.08, { type: 'triangle', vol: 0.07, release: 0.15 });
+      tone(1760, t + 0.01, 0.06, { type: 'sine', vol: 0.03, release: 0.12 });
+      break;
+    case 'buzz':
+      tone(140, t, 0.16, { type: 'square', vol: 0.04, release: 0.14 });
+      tone(110, t + 0.02, 0.14, { type: 'sawtooth', vol: 0.03, release: 0.12 });
+      break;
+    case 'coin':
+      tone(988, t, 0.07, { type: 'square', vol: 0.05, release: 0.05 });
+      tone(1319, t + 0.07, 0.14, { type: 'square', vol: 0.05, release: 0.16 });
+      break;
+    case 'tick':
+      tone(1050, t, 0.03, { type: 'square', vol: 0.035, release: 0.03 });
+      break;
+    case 'fly':
+      tone(320, t, 0.18, { type: 'sine', vol: 0.05, release: 0.16, slideTo: 880 });
+      break;
   }
 }
 

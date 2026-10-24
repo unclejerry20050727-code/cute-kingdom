@@ -107,18 +107,18 @@
 - [x] B. 房間比例（WALL_H=300、門 168、窗 132）
 - [x] C. 手繪工具（world.js：handShape/handEllipse/mulberry32，種子化抖動不閃爍）
 - [x] D. 第一人稱全景（js/pano.js：離屏 2400×660 全景 + 眼皮張開/鏡頭平移 + fp/talk 子狀態）
-- [ ] E. 地圖場景（js/mapscene.js：離屏 980×660，道路/草坪/小房子/麥當勞點＋小舖，mapP 像素移動，回家按鈕、錢幣 HUD）
-- [ ] F. 麥當勞商店（screen-shop：制服/帽子圖示 canvas、購買、開始打工）
-- [ ] G. 組漢堡打工（js/mini.js：sub=work，3-2-1、60 秒、固定食譜、錯點抖動、完成飛給客人 +20、顧客隨機造型、制服帽子圖形）
-- [ ] H. 音效補充（ding/buzz/coin/tick/fly）
-- [ ] I. 存檔擴充（money/gear）、test/flow.mjs 新流程 + 截圖、PROGRESS 更新
+- [x] E. 地圖場景（js/mapscene.js：離屏 980×660，道路/草坪/小房子/麥當勞點＋小舖，mapP 像素移動，回家按鈕、錢幣 HUD）
+- [x] F. 麥當勞商店（screen-shop：制服/帽子圖示 canvas、購買、開始打工、角色穿裝備預覽）
+- [x] G. 組漢堡打工（js/mini.js：sub=work，3-2-1、60 秒、固定食譜、錯點抖動、完成飛給客人 +20、顧客隨機造型、制服帽子圖形）
+- [x] H. 音效補充（ding/buzz/coin/tick/fly）
+- [x] I. 存檔擴充（money/gear）、test/flow.mjs 新流程 + 截圖（31 張）、PROGRESS 更新
 
 ### 流程狀態機（新版）
 `cover → title → create → fp(閉眼→睜眼→全景平移) → talk(第一人稱) → meet(第三人稱) → tutBuild → placeBed → praise → goOut → loading → map ⇄ shop → work(60s) → map → 回家 → free`
 
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
-- [ ] 真正的屋外場景（直式道路地圖，麥當勞打工）
+- [x] 真正的屋外場景（直式道路地圖，麥當勞打工）
 - [ ] 角色細節（腮紅加深、頭髮高光）
 - [ ] 過場動畫
 

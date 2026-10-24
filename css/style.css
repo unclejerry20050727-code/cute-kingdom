@@ -499,7 +499,7 @@ body {
 .money-badge { left: 214px; }
 
 /* 地圖：回家 */
-.map-home-btn { top: 14px; right: 22px; bottom: auto; }
+.map-home-btn { top: 74px; right: 16px; bottom: auto; }
 
 /* ══════════ 麥當勞商店 ══════════ */
 #screen-shop { background: rgba(90,62,43,.35); z-index: 20; }

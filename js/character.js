@@ -247,6 +247,58 @@ function drawCharacter(ctx, cfg, o) {
     drawFace(ctx, c, headX, headY, R, gz, closed, t);
   }
 
+  /* ── 打工裝備：制服（白T+紅領+紅圍裙） / 帽子（紅帽+M） ── */
+  if (o.gear) {
+    if (o.gear.uniform) {
+      const y0 = -40 + bob * 0.3;
+      /* 白T */
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#E4D5BD';
+      ctx.lineWidth = 1.8;
+      roundRectPath(ctx, -12.6, y0 + 0.8, 25.2, 28.5, 8.5);
+      ctx.fill(); ctx.stroke();
+      /* 紅色 Polo 領 */
+      ctx.strokeStyle = '#D94F4F';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(0, y0 + 3.4, 6.4, 0, Math.PI); ctx.stroke();
+      /* 紅圍裙 */
+      ctx.fillStyle = '#D94F4F';
+      roundRectPath(ctx, -9.5, y0 + 10.5, 19, 17.5, 3.5);
+      ctx.fill();
+      ctx.strokeStyle = '#B93B3B';
+      ctx.lineWidth = 1.3;
+      ctx.strokeRect(-5, y0 + 17, 10, 7);
+    }
+    if (o.gear.hat) {
+      const hy = headY - 10;
+      /* 帽簷 */
+      ctx.fillStyle = '#C43F3F';
+      roundRectPath(ctx, headX - 20, hy + 1, 40, 7, 3.5);
+      ctx.fill();
+      /* 帽身 */
+      ctx.fillStyle = '#D94F4F';
+      ctx.beginPath();
+      ctx.arc(headX, hy + 2.5, 17.5, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      /* 小 M */
+      ctx.strokeStyle = '#F7C948';
+      ctx.lineWidth = 2.6;
+      ctx.lineCap = 'round';
+      const mw = 5.4, my = hy - 2.5;
+      const arch = (x0) => {
+        ctx.beginPath();
+        ctx.moveTo(x0, my + 3.6);
+        ctx.quadraticCurveTo(x0, my - 2.6, x0 + mw / 2, my - 2.6);
+        ctx.quadraticCurveTo(x0 + mw, my - 2.6, x0 + mw, my + 3.6);
+        ctx.stroke();
+      };
+      arch(headX - mw - 1.2);
+      arch(headX + 1.2);
+    }
+  }
+
   ctx.restore();
 }
 
