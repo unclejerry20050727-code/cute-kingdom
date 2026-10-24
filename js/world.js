@@ -3,7 +3,7 @@
 
 const N = 10;          /* 房間 10x10 格 */
 const TW = 64, TH = 32; /* 等距格 2:1 */
-const WALL_H = 118;     /* 牆高(px) */
+const WALL_H = 300;     /* 牆高(px)：對照小森風參考圖，房子要像方盒子 */
 
 const C_BG = { base: '#EDD3AE', dot: '#5A3E2B' };
 const C_ROOM = {
@@ -214,19 +214,19 @@ function drawWallA(ctx) {
   ctx.fillStyle = c.wallTop;
   ctx.beginPath();
   ctx.moveTo(ax, ay - WALL_H); ctx.lineTo(bx, by - WALL_H);
-  ctx.lineTo(bx, by - WALL_H + 10); ctx.lineTo(ax, ay - WALL_H + 10);
+  ctx.lineTo(bx, by - WALL_H + 14); ctx.lineTo(ax, ay - WALL_H + 14);
   ctx.closePath();
   ctx.fill();
   /* 牆裙 */
   ctx.fillStyle = c.baseboard;
   ctx.beginPath();
-  ctx.moveTo(ax, ay - 10); ctx.lineTo(bx, by - 10);
+  ctx.moveTo(ax, ay - 14); ctx.lineTo(bx, by - 14);
   ctx.lineTo(bx, by); ctx.lineTo(ax, ay);
   ctx.closePath();
   ctx.fill();
 
-  /* 窗戶（tx 2.7~5.7，距頂 26~88） */
-  const w0 = 2.7, w1 = 5.7, top = -WALL_H + 26, bot = -WALL_H + 90;
+  /* 窗戶（tx 2.7~5.7，距頂 52~184） */
+  const w0 = 2.7, w1 = 5.7, top = -WALL_H + 52, bot = -WALL_H + 184;
   const [wx0, wy0] = P(w0, 0, bot), [wx1, wy1] = P(w1, 0, bot), [wx2, wy2] = P(w1, 0, top), [wx3, wy3] = P(w0, 0, top);
   ctx.fillStyle = c.windowFrame;
   poly(ctx, [wx0, wy0], [wx1, wy1], [wx2, wy2], [wx3, wy3]);
@@ -236,16 +236,16 @@ function drawWallA(ctx) {
     [wx0 + in0, wy0 + in0 * 0.42], [wx1 - in0, wy1 - in0 * 0.42],
     [wx2 - in0, wy2 - in0 * 0.42], [wx3 + in0, wy3 + in0 * 0.42]);
   /* 太陽 + 小雲 */
-  const [sx, sy] = P(3.4, 0, -WALL_H + 52);
+  const [sx, sy] = P(3.4, 0, -WALL_H + 106);
   ctx.fillStyle = c.sun;
-  ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  const [cx1, cy1] = P(4.9, 0, -WALL_H + 40);
-  ellipse(ctx, cx1, cy1, 10, 5);
-  ellipse(ctx, cx1 + 8, cy1 - 3, 7, 4);
+  const [cx1, cy1] = P(4.9, 0, -WALL_H + 81);
+  ellipse(ctx, cx1, cy1, 15, 8);
+  ellipse(ctx, cx1 + 11, cy1 - 4, 10, 6);
   /* 窗框十字 */
   ctx.strokeStyle = c.windowFrame;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6;
   const [mx0, my0] = P(4.2, 0, bot), [mx1, my1] = P(4.2, 0, top);
   ctx.beginPath(); ctx.moveTo(mx0, my0); ctx.lineTo(mx1, my1); ctx.stroke();
   const [my0a, my0b] = [bot, top];
@@ -256,19 +256,19 @@ function drawWallA(ctx) {
   const [sb0, sb1] = P(w0 - 0.15, 0, bot), [sb2, sb3] = P(w1 + 0.15, 0, bot);
   ctx.beginPath();
   ctx.moveTo(sb0, sb1); ctx.lineTo(sb2, sb3);
-  ctx.lineTo(sb2, sb3 + 7); ctx.lineTo(sb0, sb1 + 7);
+  ctx.lineTo(sb2, sb3 + 10); ctx.lineTo(sb0, sb1 + 10);
   ctx.closePath();
   ctx.fill();
 
   /* 小愛心畫框 */
-  const [hx, hy] = P(7.6, 0, -WALL_H + 52);
+  const [hx, hy] = P(7.6, 0, -WALL_H + 132);
   ctx.fillStyle = c.windowFrame;
   ctx.save();
   ctx.translate(hx, hy);
   ctx.rotate(0.265);
-  ctx.fillRect(-14, -18, 28, 36);
+  ctx.fillRect(-16, -21, 32, 42);
   ctx.fillStyle = '#FF8FB2';
-  drawHeartPath(ctx, 0, 0, 9);
+  drawHeartPath(ctx, 0, 0, 11);
   ctx.fill();
   ctx.restore();
 }
@@ -286,47 +286,47 @@ function drawWallB(ctx) {
   ctx.fillStyle = c.wallTop;
   ctx.beginPath();
   ctx.moveTo(ax, ay - WALL_H); ctx.lineTo(bx, by - WALL_H);
-  ctx.lineTo(bx, by - WALL_H + 10); ctx.lineTo(ax, ay - WALL_H + 10);
+  ctx.lineTo(bx, by - WALL_H + 14); ctx.lineTo(ax, ay - WALL_H + 14);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = c.baseboard;
   ctx.beginPath();
-  ctx.moveTo(ax, ay - 10); ctx.lineTo(bx, by - 10);
+  ctx.moveTo(ax, ay - 14); ctx.lineTo(bx, by - 14);
   ctx.lineTo(bx, by); ctx.lineTo(ax, ay);
   ctx.closePath();
   ctx.fill();
 
   /* 門（ty 6.2~8.2） */
-  const d0 = 6.2, d1 = 8.2, doorH = 96;
+  const d0 = 6.2, d1 = 8.2, doorH = 168;
   const [dx0, dy0] = P(0, d0, 0), [dx1, dy1] = P(0, d1, 0);
   /* 門框 */
   ctx.fillStyle = c.doorFrame;
   ctx.beginPath();
-  ctx.moveTo(dx0, dy0 - doorH - 8); ctx.lineTo(dx1, dy1 - doorH - 8);
+  ctx.moveTo(dx0, dy0 - doorH - 12); ctx.lineTo(dx1, dy1 - doorH - 12);
   ctx.lineTo(dx1, dy1); ctx.lineTo(dx0, dy0);
   ctx.closePath();
   ctx.fill();
   /* 門板 */
   ctx.fillStyle = c.door;
-  const m = 7;
+  const m = 9;
   ctx.beginPath();
   ctx.moveTo(dx0 + m, dy0 - doorH); ctx.lineTo(dx1 - m, dy1 - doorH);
   ctx.lineTo(dx1 - m, dy1 - 2); ctx.lineTo(dx0 + m, dy0 - 2);
   ctx.closePath();
   ctx.fill();
   /* 門上的小窗 + 把手 */
-  const [px, py] = P(0, 7.2, -doorH + 26);
+  const [px, py] = P(0, 7.2, -doorH + 44);
   ctx.fillStyle = c.doorFrame;
   ctx.save();
   ctx.translate(px, py);
   ctx.rotate(-0.265);
   ctx.beginPath();
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.arc(0, 0, 11, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   const [kx, ky] = P(0, 7.85, -doorH * 0.42);
   ctx.fillStyle = '#FFD98A';
-  ellipse(ctx, kx, ky, 3.4, 3.4);
+  ellipse(ctx, kx, ky, 4.5, 4.5);
   /* 門檻小地毯 */
   const [rx0, ry0] = P(0.15, d0 + 0.15, 2), [rx1, ry1] = P(0.15, d1 - 0.15, 2);
   ctx.fillStyle = 'rgba(255,182,205,0.85)';

@@ -43,6 +43,13 @@ if (name === 'loading') {
     document.getElementById('screen-loading').classList.remove('hidden');
     setLoadingQuote();
   });
+} else if (name === 'room') {
+  await page.evaluate(() => {
+    Game.playerCfg = defaultConfig('female');
+    Game.furniture = [{ id: 'bed', tx: 4, ty: 2 }];
+    beginGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done' }, true);
+    setSub('free');
+  });
 } else {
   await page.evaluate((n) => showScreen(n), name);
 }
