@@ -381,7 +381,7 @@ body {
 }
 .hint-arrow {
   position: absolute;
-  left: -20px; top: -96px;
+  left: -20px; top: -88px;
   font-size: 40px;
   animation: hint-bounce .7s ease-in-out infinite;
   filter: drop-shadow(0 3px 0 rgba(122,82,54,.3));
@@ -389,7 +389,7 @@ body {
 @keyframes hint-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(14px); } }
 .hint-bubble {
   position: absolute;
-  left: 40px; top: -100px;
+  left: 0; top: -126px;
   background: var(--ink);
   color: #fff;
   font-size: 17px; font-weight: 800;

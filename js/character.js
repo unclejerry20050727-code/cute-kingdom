@@ -10,6 +10,8 @@ const PALETTES = {
     { id: 'sakura', name: '櫻花', c: '#FFCDC4' },
   ],
   hair: [
+    { id: 'cocoa', name: '可可', c: '#7A564A' },
+    { id: 'latte', name: '拿鐵', c: '#A97C62' },
     { id: 'berry', name: '黑莓', c: '#3A3450' },
     { id: 'indigo', name: '靛藍', c: '#4A5B93' },
     { id: 'sky', name: '天藍', c: '#4E9BD8' },
@@ -20,6 +22,7 @@ const PALETTES = {
     { id: 'lilac', name: '薰衣草', c: '#A27BD8' },
   ],
   eye: [
+    { id: 'cocoaEye', name: '可可棕', c: '#6E4A33' },
     { id: 'ink', name: '墨黑', c: '#3A3550' },
     { id: 'blue', name: '海藍', c: '#4A7BC8' },
     { id: 'green', name: '草綠', c: '#4FA87C' },
@@ -48,12 +51,13 @@ const PALETTES = {
   bottom: [
     { id: 'shortDenim', name: '牛仔短褲', c: '#7FB3D8' },
     { id: 'longDenim', name: '牛仔長褲', c: '#5E8FC2' },
+    { id: 'coffeeLong', name: '深咖長褲', c: '#57473C' },
   ],
 };
 
 const HAIR_STYLES = [
   { id: 'short', name: '蓬蓬短髮' },
-  { id: 'bob', name: '瀏海瀏海' },
+  { id: 'bob', name: '波波頭' },
   { id: 'pony', name: '側馬尾' },
   { id: 'twins', name: '雙馬尾' },
   { id: 'long', name: '長髮' },
@@ -79,11 +83,11 @@ const MOUTH_SHAPES = [
 
 function defaultConfig(gender) {
   return gender === 'female' ? {
-    gender, skin: 'peach', hair: 'pink', eye: 'blue', nose: 'n1', mouth: 'm1',
-    hairStyle: 'twins', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
+    gender, skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
+    hairStyle: 'long', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
     top: 'whiteS', bottom: 'shortDenim',
   } : {
-    gender, skin: 'milk', hair: 'berry', eye: 'ink', nose: 'n1', mouth: 'm1',
+    gender, skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
     hairStyle: 'short', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
     top: 'whiteS', bottom: 'shortDenim',
   };
@@ -189,6 +193,17 @@ function drawCharacter(ctx, cfg, o) {
   /* 領口 */
   ctx.fillStyle = shade(c.topColor, c.topColor === '#FFFFFF' ? -0.1 : 0.25);
   ellipse(ctx, 0, -38.5 + bob * 0.3, 5.5, 3);
+  /* 黑色長袖＝開襟外套：露出內搭白T（參考小宥） */
+  if (c.top === 'blackL') {
+    const y0 = -40 + bob * 0.3;
+    ctx.fillStyle = '#FFF8EC';
+    ctx.beginPath();
+    ctx.moveTo(-7.5, y0 + 1.5);
+    ctx.quadraticCurveTo(0, y0 + 14, 7.5, y0 + 1.5);
+    ctx.quadraticCurveTo(0, y0 + 6.5, -7.5, y0 + 1.5);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   /* ── 手臂 ── */
   for (const side of [-1, 1]) {
@@ -235,19 +250,36 @@ function drawCharacter(ctx, cfg, o) {
   ctx.restore();
 }
 
+/* 呆毛（小捲捲）：x,y 為頭中心，R 為頭半徑 */
+function ahoge(ctx, x, y, R) {
+  const r = R + 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 3, y - r + 1);
+  ctx.quadraticCurveTo(x - 7, y - r - 9, x + 1, y - r - 15);
+  ctx.quadraticCurveTo(x + 10, y - r - 10, x + 4, y - r - 1);
+  ctx.quadraticCurveTo(x + 1, y - r + 3, x - 3, y - r + 1);
+  ctx.closePath();
+  ctx.fill();
+}
+
 /* ── 後層頭髮（身前側看） ── */
 function drawBackHair(ctx, c, fx, headY) {
   const x = fx * 1.6;
   ctx.fillStyle = c.hairColor;
   switch (c.hairStyle) {
     case 'long': {
+      /* 長髮：下緣帶波浪（參考小島女版） */
       ctx.beginPath();
       ctx.moveTo(x - 27, headY - 4);
-      ctx.bezierCurveTo(x - 30, headY + 26, x - 24, headY + 40, x - 16, headY + 42);
-      ctx.quadraticCurveTo(x, headY + 36, x + 16, headY + 42);
-      ctx.bezierCurveTo(x + 24, headY + 40, x + 30, headY + 26, x + 27, headY - 4);
+      ctx.bezierCurveTo(x - 31, headY + 22, x - 28, headY + 34, x - 19, headY + 43);
+      ctx.quadraticCurveTo(x - 13, headY + 36, x - 6, headY + 45);
+      ctx.quadraticCurveTo(x + 2, headY + 37, x + 9, headY + 45);
+      ctx.quadraticCurveTo(x + 16, headY + 37, x + 19, headY + 43);
+      ctx.bezierCurveTo(x + 28, headY + 34, x + 31, headY + 22, x + 27, headY - 4);
       ctx.closePath();
       ctx.fill();
+      /* 呆毛 */
+      ahoge(ctx, x, headY, 27);
       break;
     }
     case 'twins': {
@@ -316,6 +348,7 @@ function drawBackViewHair(ctx, c, x, y, R) {
       ctx.bezierCurveTo(x + R - 4, y + 42, x + R + 5, y + 30, x + R + 1, y);
       ctx.closePath();
       ctx.fill();
+      ahoge(ctx, x, y, R);
       break;
     }
     case 'twins': {
@@ -362,6 +395,7 @@ function drawBackViewHair(ctx, c, x, y, R) {
           ctx.fill();
         }
       }
+      if (c.hairStyle === 'short') ahoge(ctx, x, y, R);
       break;
     }
   }
@@ -374,8 +408,8 @@ function drawBangs(ctx, c, x, y, R, fx) {
   ctx.beginPath();
   /* 上半圓（從左端點繞頂端至右端點） */
   ctx.arc(x, y, r, Math.PI, Math.PI * 2);
-  /* 瀏海下緣（由右往左回到起點） */
-  const pts = bangPoints(c.hairStyle, R, fx);
+  /* 瀏海下緣（由右往左回到起點）；座標需加上頭中心偏移 */
+  const pts = bangPoints(c.hairStyle, R, fx).map(p => [x + p[0], y + p[1]]);
   if (c.hairStyle === 'curly') {
     /* 波浪邊 */
     const n = 4;
@@ -417,6 +451,9 @@ function drawBangs(ctx, c, x, y, R, fx) {
     ctx.quadraticCurveTo(x, y + R * 0.34, x - r * 0.18, y + R * 0.28);
     ctx.fill();
   }
+
+  /* 呆毛（蓬蓬短髮/長髮，參考設定圖） */
+  if (c.hairStyle === 'short' || c.hairStyle === 'long') ahoge(ctx, x, y, R);
 }
 
 /* 瀏海邊緣點（由左往右），x 相對頭中心、y 相對頭中心（向下為正） */
@@ -637,10 +674,10 @@ function drawPortrait(ctx, cfg, size, o = {}) {
   drawFace(ctx, c, x, y, R, o.gaze ?? 0, closed, t);
 }
 
-/* ══════════ NPC：小宥 ══════════ */
+/* ══════════ NPC：小宥（參考 art/小宥.png） ══════════ */
 const XIAOYOU_CFG = {
   gender: 'male',
-  skin: 'peach', hair: 'indigo', eye: 'blue', nose: 'n1', mouth: 'm1',
+  skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
   hairStyle: 'short', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
-  top: 'whiteS', bottom: 'shortDenim',
+  top: 'blackL', bottom: 'coffeeLong',
 };

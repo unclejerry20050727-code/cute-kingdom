@@ -117,6 +117,9 @@ function beginGame(save, skipIntro) {
 
   $('#hud-name').textContent = '小島';
   Game.state = 'game';
+  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading', 'screen-outside']) {
+    document.getElementById(id).classList.add('hidden');
+  }
   $('#screen-game').classList.remove('hidden');
   Dialogue.close();
 
@@ -165,9 +168,10 @@ function updateGame(dt) {
   switch (Game.sub) {
     case 'awake': {
       Game.awakeT += dt;
-      const t = Game.awakeT;
-      p.gaze = gazeTimeline(t);
-      if (t >= 3.1) {
+      p.gaze = gazeTimeline(Game.awakeT);
+      if (Game.awakeT >= 3.1) {
+        setSub('talk');
+        p.gaze = 0;
         Dialogue.start([
           { who: 'player', name: '小島', text: '這是哪裡？' },
         ], () => { setSub('meet'); Game.meetT = 0; });
@@ -426,9 +430,9 @@ function frame(ts) {
   Game.t += dt;
   Dialogue.update(dt);
   if (Game.state === 'create') updatePreview();
-  if (Game.state === 'game' && Game.sub !== 'outside' && Game.sub !== 'loading') {
+  if (Game.state === 'game' && Game.sub !== 'outside') {
     updateGame(dt);
-    renderGame();
+    if (Game.sub !== 'loading') renderGame();
   }
   requestAnimationFrame(frame);
 }
@@ -525,8 +529,19 @@ function positionHint() {
   if (!hintTarget) return;
   const r = hintTarget.getBoundingClientRect();
   const h = $('#hint');
-  h.style.left = (r.left + r.width / 2) + 'px';
+  const cx = r.left + r.width / 2;
+  h.style.left = cx + 'px';
   h.style.top = (r.top + r.height / 2) + 'px';
+  /* 氣泡置中在目標上方，且不出畫面 */
+  const b = $('#hint .hint-bubble');
+  if (b.offsetWidth) {
+    const pad = 10;
+    let left = -b.offsetWidth / 2;
+    let bl = cx + left, br = cx + left + b.offsetWidth;
+    if (br > innerWidth - pad) left -= br - (innerWidth - pad);
+    if (bl < pad) left += pad - bl;
+    b.style.left = left + 'px';
+  }
 }
 function hideHint() {
   hintTarget = null;
