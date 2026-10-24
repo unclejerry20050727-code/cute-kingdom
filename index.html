@@ -6,7 +6,8 @@
 <title>可愛國</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&family=Caveat:wght@600;700&family=Long+Cang&display=swap" rel="stylesheet">
+<style>.font-hand{font-family:'Long Cang','Caveat',cursive;}</style>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -111,6 +112,16 @@
     <span class="hud-name" id="hud-name">小島</span>
   </div>
 
+  <!-- 錢（地圖/房間/打工） -->
+  <div class="hud-badge money-badge hidden" id="hud-money">
+    <span class="coin"></span><span id="hud-money-val">100</span> 元
+  </div>
+
+  <!-- 地圖：回家 -->
+  <button class="hud-btn map-home-btn hidden" id="map-home" title="回家">
+    <span class="hud-emoji">🏠</span><span>回家</span>
+  </button>
+
   <!-- 建造 -->
   <button class="hud-btn hidden" id="build-btn" title="建造">
     <span class="hud-emoji">🛠️</span><span>建造</span>
@@ -168,28 +179,57 @@
   <div class="fade hidden" id="fade"></div>
 </div>
 
-<!-- ══════════ Loading ══════════ -->
+<!-- ══════════ Loading（手寫風・棕色系） ══════════ -->
 <div id="screen-loading" class="screen polka hidden">
   <div class="loading-wrap">
     <div class="loading-circle">
-      <div class="loading-dash"></div>
+      <svg class="loading-svg" viewBox="0 0 220 220" aria-hidden="true">
+        <path id="ld-ring-dash" class="ld-ring-dash" fill="none" d=""></path>
+        <circle class="ld-bg" cx="110" cy="110" r="80"></circle>
+        <path id="ld-ring" class="ld-ring" fill="none" d=""></path>
+      </svg>
       <div class="loading-dots">
         <span></span><span></span><span></span>
       </div>
     </div>
     <div class="loading-text">loading</div>
-    <div class="loading-hearts">🌷 🐣 🌷</div>
+    <div class="loading-quote" id="loading-quote">好東西，都值得慢慢等。</div>
   </div>
 </div>
 
-<!-- ══════════ 屋外（佔位） ══════════ -->
-<div id="screen-outside" class="screen polka hidden">
-  <div class="outside-card pop-in">
-    <div class="outside-emoji">🏡</div>
-    <div class="outside-title">可愛國 · 外面</div>
-    <div class="outside-text">外面的世界還在認真建設中……<br>先回小屋休息一下吧！</div>
-    <button class="btn btn-big btn-pink" id="btn-back-home">回到小屋 🏠</button>
+<!-- ══════════ 麥當勞商店 ══════════ -->
+<div id="screen-shop" class="screen hidden">
+  <button class="scene-x" id="shop-x" title="返回地圖">✕</button>
+  <div class="shop-panel pop-in">
+    <div class="shop-title">麥當勞 <span class="shop-sub">· 打工小舖</span></div>
+    <div class="shop-body">
+      <div class="shop-items">
+        <div class="shop-item">
+          <canvas class="shop-icon" id="icon-uniform" width="84" height="84"></canvas>
+          <div class="shop-item-name">制服</div>
+          <button class="btn shop-buy" id="buy-uniform">50 元</button>
+        </div>
+        <div class="shop-item">
+          <canvas class="shop-icon" id="icon-hat" width="84" height="84"></canvas>
+          <div class="shop-item-name">帽子</div>
+          <button class="btn shop-buy" id="buy-hat">30 元</button>
+        </div>
+      </div>
+      <div class="shop-preview">
+        <canvas id="shop-char-canvas" width="170" height="190"></canvas>
+        <div class="shop-preview-name">打工的小島</div>
+      </div>
+    </div>
+    <div class="shop-foot">
+      <div class="shop-money"><span class="coin"></span> <b id="shop-money">100</b> 元</div>
+      <button class="btn btn-big btn-pink" id="btn-start-work">開始打工 ▶</button>
+    </div>
   </div>
+</div>
+
+<!-- ══════════ 打工（左上角 ✕ 回地圖） ══════════ -->
+<div id="screen-work" class="screen hidden">
+  <button class="scene-x" id="work-x" title="回地圖">✕</button>
 </div>
 
 <!-- toast -->

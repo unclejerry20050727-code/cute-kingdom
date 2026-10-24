@@ -3,7 +3,7 @@
 
 const Game = {
   state: 'cover',   // cover | title | create | game
-  sub: null,        // wake | awake | meet | talk | tutBuild | placeBed | goOut | free | loading | outside
+  sub: null,        // fp | talk | meet | tutBuild | placeBed | praise | goOut | free | loading | map | work
   t: 0,
   canvas: null,
   ctx: null,
@@ -40,11 +40,6 @@ function init() {
   $('#btn-new').onclick = () => { sfx('click'); newGame(); };
   $('#create-back').onclick = () => { sfx('back'); showScreen('title'); };
   $('#create-confirm').onclick = () => { sfx('confirm'); confirmCreate(); };
-  $('#btn-back-home').onclick = () => {
-    sfx('whoosh');
-    $('#screen-outside').classList.add('hidden');
-    setSub('free');
-  };
   $('#build-btn').onclick = () => { sfx('pop'); toggleBuildPanel(); };
   $('#out-btn').onclick = () => {
     if (Game.sub === 'goOut') hideHint();
@@ -52,6 +47,10 @@ function init() {
   };
   $('#btn-mute').onclick = toggleMute;
   updateMuteBtn();
+
+  /* 手寫風 loading 圈圈（種子化手繪 path） */
+  document.getElementById('ld-ring').setAttribute('d', handCirclePathD(110, 110, 82, 7, 2.6));
+  document.getElementById('ld-ring-dash').setAttribute('d', handCirclePathD(110, 110, 96, 13, 3.4));
 
   requestAnimationFrame(frame);
 }
@@ -71,7 +70,7 @@ function onResize() {
 }
 
 function showScreen(name) {
-  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-game', 'screen-loading', 'screen-outside']) {
+  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-game', 'screen-loading']) {
     document.getElementById(id).classList.add('hidden');
   }
   hideHint();
@@ -120,7 +119,7 @@ function beginGame(save, skipIntro) {
 
   $('#hud-name').textContent = '小島';
   Game.state = 'game';
-  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading', 'screen-outside']) {
+  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading']) {
     document.getElementById(id).classList.add('hidden');
   }
   $('#screen-game').classList.remove('hidden');
@@ -207,8 +206,7 @@ function updateGame(dt) {
       Game.loadingTimer += dt;
       if (Game.loadingTimer >= 3.2) {
         $('#screen-loading').classList.add('hidden');
-        $('#screen-outside').classList.remove('hidden');
-        setSub('outside');
+        setSub('free'); /* 暫定：地圖場景完成後改成進 map */
       }
       break;
     }
@@ -266,12 +264,29 @@ function showDpad(on = true) {
 }
 
 function goOutside() {
-  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done' });
+  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done', money: Game.money ?? 100, gear: Game.gear ?? { uniform: false, hat: false } });
   setSub('loading');
   Game.loadingTimer = 0;
   sfx('whoosh');
+  setLoadingQuote();
   $('#screen-loading').classList.remove('hidden');
   hideHint();
+}
+
+/* Loading 金句（每次隨機） */
+const LOADING_QUOTES = [
+  '好東西，都值得慢慢等。',
+  '走路不趕，才會看見風景。',
+  '今天的我，比昨天多會一點點。',
+  '慢慢來，比較快。',
+  '肚子餓了，就去找漢堡。',
+  '開心是最好的裝潢。',
+  '走錯路，也是風景的一部分。',
+  '一天一小步，累積一大步。',
+];
+function setLoadingQuote() {
+  const q = LOADING_QUOTES[Math.floor(Math.random() * LOADING_QUOTES.length)];
+  document.getElementById('loading-quote').textContent = '「' + q + '」';
 }
 
 /* ══════════ 移動 ══════════ */
@@ -434,7 +449,7 @@ function frame(ts) {
   Game.t += dt;
   Dialogue.update(dt);
   if (Game.state === 'create') updatePreview();
-  if (Game.state === 'game' && Game.sub !== 'outside') {
+  if (Game.state === 'game' && Game.sub) {
     updateGame(dt);
     if (Game.sub !== 'loading') renderGame();
   }

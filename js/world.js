@@ -13,6 +13,98 @@ const C_ROOM = {
   doorFrame: '#FFF7EA', door: '#F5A8C0', doorKnob: '#FFF7EA',
 };
 
+/* ══════════ 手繪風工具（種子化抖動，預渲染不會閃爍） ══════════ */
+const INK = '#7A5236';
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* 手繪多邊形（anchor 點 + 每邊細分抖動） */
+function handPoly(ctx, pts, seed = 1, amp = 2.5, segs = 3) {
+  const rnd = mulberry32(seed);
+  const n = pts.length;
+  const p = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    for (let s = 0; s <= segs; s++) {
+      if (i === n - 1 && s === segs) break;
+      const t = s / segs;
+      p.push([
+        lerp(a[0], b[0], t) + (rnd() - 0.5) * amp * 2,
+        lerp(a[1], b[1], t) + (rnd() - 0.5) * amp * 2,
+      ]);
+    }
+  }
+  ctx.beginPath();
+  ctx.moveTo(p[0][0], p[0][1]);
+  for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+  ctx.closePath();
+}
+
+/* 手繪形狀：填色 + 描邊 */
+function handShape(ctx, pts, opt = {}) {
+  const { fill, stroke = INK, lw = 3, seed = 1, amp = 2.5, segs = 3 } = opt;
+  handPoly(ctx, pts, seed, amp, segs);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) {
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+
+/* 手繪橢圓/圓 */
+function handEllipse(ctx, x, y, rx, ry, opt = {}) {
+  const { fill, stroke = INK, lw = 3, seed = 2, amp = 2, n = 26 } = opt;
+  const rnd = mulberry32(seed);
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const j = 1 + (rnd() - 0.5) * (amp / Math.max(rx, ry)) * 2;
+    pts.push([x + Math.cos(a) * rx * j, y + Math.sin(a) * ry * j]);
+  }
+  ctx.beginPath();
+  ctx.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
+  for (let i = 0; i < n; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+
+/* 手繪直線（微抖動） */
+function handLine(ctx, x1, y1, x2, y2, opt = {}) {
+  const { stroke = INK, lw = 3, seed = 3, amp = 2, segs = 4 } = opt;
+  const rnd = mulberry32(seed);
+  ctx.beginPath();
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs;
+    const x = lerp(x1, x2, t) + (s === 0 || s === segs ? 0 : (rnd() - 0.5) * amp * 2);
+    const y = lerp(y1, y2, t) + (s === 0 || s === segs ? 0 : (rnd() - 0.5) * amp * 2);
+    s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+/* 手繪圓的 SVG path（loading 圈圈用） */
+function handCirclePathD(cx, cy, r, seed = 1, amp = 3, n = 42) {
+  const rnd = mulberry32(seed);
+  let d = '';
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const rr = r + (rnd() - 0.5) * amp * 2;
+    d += (i ? 'L' : 'M') + (cx + Math.cos(a) * rr).toFixed(1) + ' ' + (cy + Math.sin(a) * rr).toFixed(1);
+  }
+  return d + 'Z';
+}
+
 /* 虛擬視口（世界座標），由 game.js 縮放貼合視窗 */
 const VW = 980, VH = 660;
 let OX = VW / 2, OY = 0;
