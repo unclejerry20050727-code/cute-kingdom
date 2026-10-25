@@ -320,7 +320,7 @@ body {
 
 /* ══════════ 對話框 ══════════ */
 .dialogue {
-  position: absolute; left: 50%; bottom: 96px;
+  position: absolute; left: 50%; bottom: 36px;
   transform: translateX(-50%);
   width: min(760px, calc(100vw - 36px));
   background: var(--panel);

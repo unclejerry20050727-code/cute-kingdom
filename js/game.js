@@ -797,17 +797,25 @@ function positionHint() {
   const r = hintTarget.getBoundingClientRect();
   const h = $('#hint');
   const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
   h.style.left = cx + 'px';
   h.style.top = (r.top + r.height / 2) + 'px';
-  /* 氣泡置中在目標上方，且不出畫面 */
+  /* 氣泡置中在目標上方，且不出畫面；若目標靠畫面上方（如「回家」鈕）則翻到下方 */
+  const flip = r.top < 200;
+  const a = $('#hint .hint-arrow');
+  if (a) {
+    a.textContent = flip ? '⬆️' : '⬇️';
+    a.style.top = flip ? (r.bottom - cy + 12) + 'px' : '';
+  }
   const b = $('#hint .hint-bubble');
-  if (b.offsetWidth) {
+  if (b && b.offsetWidth) {
     const pad = 10;
     let left = -b.offsetWidth / 2;
     let bl = cx + left, br = cx + left + b.offsetWidth;
     if (br > innerWidth - pad) left -= br - (innerWidth - pad);
     if (bl < pad) left += pad - bl;
     b.style.left = left + 'px';
+    b.style.top = flip ? (r.bottom - cy + 66) + 'px' : '';
   }
 }
 function hideHint() {
