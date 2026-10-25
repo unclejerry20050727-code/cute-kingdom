@@ -121,10 +121,10 @@
 - [x] J. 眼睛（大動漫眼：大虹膜+上眼瞼粗線+大高光+小高光；眨眼/眼型變體保留）
 - [x] K. 頭髮（女長髮＝中分瀏海+側發+波浪髮尾；男短髮＝碎刺瀏海；呆毛改細捲髮；髮絲高光）
 - [x] L. 衣服（帆布鞋鞋帶/鞋底、牛仔褲翻邊、T恤袖口、小宥拉鍊外套+領子、工裝褲口袋）
-- [ ] M. 測試截圖對照（create 預覽 + 房間 + 頭像）+ PROGRESS/commit ← **進行中**
+- [x] M. 測試截圖對照（create 預覽 + 房間 + 頭像）+ PROGRESS/commit
 
-### 第三輪 session 交接筆記（若中斷從這裡接）
-**已完成（已 commit 到 `51ef673` 之後，尚未 commit）：**
+### 第三輪 session 交接筆記（已完成，留檔供回顧）
+**J/K/L 實作內容：**
 1. **J 眼睛**（js/character.js）：
    - `drawEye(ctx, c, x, y, R, side)` 新增 `side` 參數（左/右眼，貓貓眼外眼角用）；drawFace 呼叫處已改 `drawEye(ctx, c, exx, eyy, R, side)`
    - 虹膜加大（round 預設 R*0.18×0.23）、下半深色陰影（clip+rgba(35,22,14,0.30)）、大高光左上+小高光右下、上眼瞼粗線 `#2E2018`（arc 1.08π→1.92π，lw max(1.8, rx*0.32)）
@@ -145,18 +145,28 @@
 4. **測試工具**：新建 `test/peek-character.mjs` → `shots/char-lineup.png`（全身 lineup）+ `shots/char-face.png`（頭部特寫+3 頭像）
 5. **微調（已做）**：碎刺尖從 -1.2/-1.42/-1.26 降到 -1.12/-1.3/-1.18（太像角）；瀏海碎刺 y 值 0.36/0.42/0.44→0.34/0.38/0.4（太深）；test 頭像 label `[object Object]` bug 已修
 
-**尚未做（M 剩下的）：**
-1. 重跑 `node test/peek-character.mjs` 確認最新微調（碎刺/瀏海）效果，看 `shots/char-lineup.png` + `shots/char-face.png` 滿意度
-2. 跑完整 `node test/flow.mjs`（31 張）確認遊戲內角色（create 預覽、房間、對話頭像、小宥登場、商店預覽）無回歸
-3. 對照 art/ 看是否還需微調（眼睛大小、瀏海、衣服配色）
-4. 滿意後 commit（建議訊息：`feat: 角色造型對照 art/ 立繪優化（大動漫眼/中分瀏海/碎刺短髮/帆布鞋/小宥拉鍊外套）`）+ 把 M 勾掉 + PROGRESS「角色細節（腮紅加深、頭髮高光）」已勾
+**M 完成確認：**
+1. ✅ 重跑 peek-character 確認碎刺/瀏海微調效果（char-lineup/char-face 都過）
+2. ✅ 跑完整 `node test/flow.mjs`（31 張）無 pageerror、money=40 count=1
+3. ✅ 對照 art/ 微調完成；順手修了兩個佈局 bug（見下）
+4. ✅ 最終 commit
+
+**順手修的佈局 bug（本輪發現）：**
+- **對話框遮角色/床**：WALL_H 300 後房間變高，玩家（feet y≈541@1280×720）和教學放的床（底邊 y≈541）都被對話框（top≈500）遮住。修法：`css/style.css` 的 `.dialogue` `bottom: 96px → 36px`，對話框 top 降到 ≈548，玩家/床/小宥全部完整可見
+- **地圖「回家」提示被 mute 鈕吃掉**：`.hint-bubble` 固定在按鈕上方 -126px，但「回家」鈕在螢幕右上角（top:74px），氣泡被頂到畫面外。修法：`js/game.js` `positionHint()` 加 `flip` 判斷（目標 `r.top < 200` 時），氣泡/箭頭翻到按鈕**下方**、箭頭換 ⬆️；下方按鈕（出門/建造）維持原本 ⬇️ 朝上氣泡
+
+**驗證結果：**
+- `node test/flow.mjs` 31 張全過、0 pageerror、money=40 count=1
+- `node test/peek-map.mjs`：買裝備/打工/錯點 shake/回地圖/回家 free 全過
+- `node test/peek-fp.mjs`：第一人稱睜眼/平移/對話/切第三人稱全過
+- 目視對照 art/：女（中分長髮+側髮+呆毛+大眼）、男（碎刺短髮）、小宥（拉鍊外套+工裝褲口袋）皆符合；create 預覽/房間/商店預覽/對話頭像/地圖全场景正常
 
 **注意：**
 - `drawCharacter` 有 `o.blink` 參數（0/1）；test 用 `{ blink: 1 }` 測眨眼
 - 頭像 `drawPortrait(ctx, cfg, size, o)` 會自帶 clearRect + 後髮，scale 由 R/25 決定
 - 第三人稱房間 / 地圖 / 商店預覽 / 對話頭像都用同一套 drawCharacter/drawPortrait，改動會全面生效
 - mini.js 的顧客 `drawCustomer` 是另一套簡易臉，**不在本輪範圍**（未改）
-- 無 git 衝突風險：目前只有 js/character.js + test/peek-character.mjs + 2 張新截圖未 commit
+- 無 git 衝突風險：J/K/L 已 commit 到 `2e6ac45`，M（佈局修復+截圖+PROGRESS）隨最終 commit 收尾
 
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
