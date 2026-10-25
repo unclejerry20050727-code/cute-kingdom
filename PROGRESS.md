@@ -118,10 +118,45 @@
 
 ## 🎨 第三輪：角色造型對照 art/ 優化（2026-10-25）
 對照 art/小島-女版.png、小島-男版.png、小宥.png 的 Q 版立繪：
-- [ ] J. 眼睛（大動漫眼：大虹膜+上眼瞼粗線+大高光+小高光；眨眼/眼型變體保留）
-- [ ] K. 頭髮（女長髮＝中分瀏海+側發+波浪髮尾；男短髮＝碎刺瀏海；呆毛改細捲髮；髮絲高光）
-- [ ] L. 衣服（帆布鞋鞋帶/鞋底、牛仔褲翻邊、T恤袖口、小宥拉鍊外套+領子、工裝褲口袋）
-- [ ] M. 測試截圖對照（create 預覽 + 房間 + 頭像）+ PROGRESS/commit
+- [x] J. 眼睛（大動漫眼：大虹膜+上眼瞼粗線+大高光+小高光；眨眼/眼型變體保留）
+- [x] K. 頭髮（女長髮＝中分瀏海+側發+波浪髮尾；男短髮＝碎刺瀏海；呆毛改細捲髮；髮絲高光）
+- [x] L. 衣服（帆布鞋鞋帶/鞋底、牛仔褲翻邊、T恤袖口、小宥拉鍊外套+領子、工裝褲口袋）
+- [ ] M. 測試截圖對照（create 預覽 + 房間 + 頭像）+ PROGRESS/commit ← **進行中**
+
+### 第三輪 session 交接筆記（若中斷從這裡接）
+**已完成（已 commit 到 `51ef673` 之後，尚未 commit）：**
+1. **J 眼睛**（js/character.js）：
+   - `drawEye(ctx, c, x, y, R, side)` 新增 `side` 參數（左/右眼，貓貓眼外眼角用）；drawFace 呼叫處已改 `drawEye(ctx, c, exx, eyy, R, side)`
+   - 虹膜加大（round 預設 R*0.18×0.23）、下半深色陰影（clip+rgba(35,22,14,0.30)）、大高光左上+小高光右下、上眼瞼粗線 `#2E2018`（arc 1.08π→1.92π，lw max(1.8, rx*0.32)）
+   - 豆豆眼保持簡潔；貓貓眼外眼角挑線保留
+   - 腮紅改兩層（0.22/0.30 alpha、y+0.4R、R*0.24/0.16）
+2. **K 頭髮**（js/character.js）：
+   - `ahoge()` 改細捲髮（stroke 捕捉 fillStyle 作髮色、lw2.2、小捲）
+   - `bangPoints`：`long` 改中分瀏海（9 點，中分 0.08R 高、兩側 0.48R 弧垂）；`short` 改碎刺瀏海（9 點深淺交替）；pony/twins/bob/curly 不變
+   - `drawBangs`：short 頭頂 3 顆碎刺三角（-0.52/-0.08/0.45 r 基點，尖 -1.12/-1.3/-1.18 r）；long 兩側側髮（過耳到下巴，±0.92r、到 +0.98r）；髮絲高光（左上大片 arc 1.08π-1.36π lw0.16r + 頂上一小塊 1.44π-1.52π lw0.1r，rgba(255,255,255,0.3)）
+   - `drawBackHair long`：髮尾加長到 +50、波浪更深、左側一條高光（0.18 alpha）
+   - `drawBackViewHair long`：背面加兩條高光 streak
+3. **L 衣服**（js/character.js）：
+   - 鞋＝帆布鞋（白鞋面 5.6×3.8 + 鞋底弧 `#D9C8AE` + 雙鞋帶線 `#E8DCC8`）
+   - 牛仔短褲翻邊（shade +0.22 淺色滾邊 -6.8 處）
+   - T 恤下擺線（-12.5→-10.5 弧線）
+   - 小宥 `blackL` 外套：領子兩片小三角 + 拉鍊線 `#9A9AAC`（y0+14→27）+ 拉鍊頭
+   - `coffeeLong` 工裝褲：兩腿各一個口袋（5.4×4.6 roundRect）
+4. **測試工具**：新建 `test/peek-character.mjs` → `shots/char-lineup.png`（全身 lineup）+ `shots/char-face.png`（頭部特寫+3 頭像）
+5. **微調（已做）**：碎刺尖從 -1.2/-1.42/-1.26 降到 -1.12/-1.3/-1.18（太像角）；瀏海碎刺 y 值 0.36/0.42/0.44→0.34/0.38/0.4（太深）；test 頭像 label `[object Object]` bug 已修
+
+**尚未做（M 剩下的）：**
+1. 重跑 `node test/peek-character.mjs` 確認最新微調（碎刺/瀏海）效果，看 `shots/char-lineup.png` + `shots/char-face.png` 滿意度
+2. 跑完整 `node test/flow.mjs`（31 張）確認遊戲內角色（create 預覽、房間、對話頭像、小宥登場、商店預覽）無回歸
+3. 對照 art/ 看是否還需微調（眼睛大小、瀏海、衣服配色）
+4. 滿意後 commit（建議訊息：`feat: 角色造型對照 art/ 立繪優化（大動漫眼/中分瀏海/碎刺短髮/帆布鞋/小宥拉鍊外套）`）+ 把 M 勾掉 + PROGRESS「角色細節（腮紅加深、頭髮高光）」已勾
+
+**注意：**
+- `drawCharacter` 有 `o.blink` 參數（0/1）；test 用 `{ blink: 1 }` 測眨眼
+- 頭像 `drawPortrait(ctx, cfg, size, o)` 會自帶 clearRect + 後髮，scale 由 R/25 決定
+- 第三人稱房間 / 地圖 / 商店預覽 / 對話頭像都用同一套 drawCharacter/drawPortrait，改動會全面生效
+- mini.js 的顧客 `drawCustomer` 是另一套簡易臉，**不在本輪範圍**（未改）
+- 無 git 衝突風險：目前只有 js/character.js + test/peek-character.mjs + 2 張新截圖未 commit
 
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
