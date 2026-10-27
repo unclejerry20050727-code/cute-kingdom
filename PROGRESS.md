@@ -168,6 +168,25 @@
 - mini.js 的顧客 `drawCustomer` 是另一套簡易臉，**不在本輪範圍**（未改）
 - 無 git 衝突風險：J/K/L 已 commit 到 `2e6ac45`，M（佈局修復+截圖+PROGRESS）隨最終 commit 收尾
 
+## 🎨 第四輪：瀏海修高 + 安裝 svg-creator skill（2026-10-27）
+
+### 需求（Jerry 口頭回饋）
+1. 安裝 svg-creator skill（https://github.com/upbrew-tech/svg-creator-skill）提升人物美觀 ✅
+2. 人物前額的頭髮（瀏海）太低、看起來恐怖 → 對照 art/ 三張立繪把髮線修高並更精緻 ✅
+
+### 實作
+- [x] N. 安裝 skill 到 `~/.agents/skills/svg-creator/`（git archive 排除 .git；含 SKILL.md 170 行 + references/advanced-techniques.md 885 行 + scripts/svg_loop.py；`python3 scripts/svg_loop.py status` 驗證 OK，render 用系統 chromium）
+- [x] O. 瀏海髮線全面修高（js/character.js `bangPoints`，對照 art/ 立繪：前額露出大半、最低發絲只到眉上方）：
+  - **short 碎刺**：舊最低點 +0.4R（蓋過眉毛、貼到眼睛＝恐怖主因）→ 新髮線拱形：中心谷 -0.5R、4 顆碎刺尖 -0.22~-0.3R、耳側錨點 +0.08R；眉頂約 -0.29R 完全露出
+  - **long 中分**：舊中心 +0.08R、兩側 +0.48R → 新中分最高 -0.52R、±0.16R 兩撮細發絲垂到 -0.36R、兩側弧垂 -0.4~-0.22R、耳錨 +0.1R
+  - **bob**：深 U +0.42R → 高拱（中心 -0.44R）
+  - **pony/twins**：+0.4R → 微掃高拱（-0.4~-0.18R）
+  - **curly**：+0.34R → 高拱（-0.42R）+ 波浪控制點 0.16R→0.12R（避免波峰壓到眉）
+
+### 驗證
+- `node test/peek-character.mjs`：正面/側視/背面/眨眼/頭像全確認前額露出、眉毛可見（shots/char-face.png、char-lineup.png）
+- `node test/flow.mjs`：31 張全過、0 pageerror、money=40 count=1
+
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
 - [x] 真正的屋外場景（直式道路地圖，麥當勞打工）
