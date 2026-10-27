@@ -1,0 +1,24 @@
+═══════════════════════════════════════
+  可愛國 BGM 版權說明
+═══════════════════════════════════════
+
+1) Sugar Cookie — 샛별 (Daystar)
+   來源：https://www.youtube.com/watch?v=jFVguCEVAUs
+   官方下載：https://drive.google.com/file/d/1QCNy0_6O3Z4lQjgiNakrYOW84jKGL5PH/view
+   授權範圍：免費使用限影片/社群平台（需標註出處）
+   ⚠️ 依原作者條款，遊戲/網站使用屬「可付費授權」用途。
+      本遊戲為本地個人作品、未公開發布；若要公開上架或商業使用，
+      請先向 Daystar（별 헤는 다락방 Starry Attic）取得付費授權。
+
+2) Marshmallow — Lukrembo
+   來源：https://freetouse.com/music/lukrembo/marshmallow
+   授權：Free To Use（個人及商業影片皆可，需標註出處）
+
+3) Sunset — Lukrembo
+   來源：https://freetouse.com/music/lukrembo/sunset
+   授權：Free To Use（個人及商業影片皆可，需標註出處）
+
+───────────────────────────────────────
+字體：資源圓體 Resource Han Rounded (CyanoHao, OFL-1.1)
+  https://github.com/CyanoHao/Resource-Han-Rounded
+  （本專案僅含 fonts/rhr.woff2 子集；重跑 tools/make-font.py 可更新）

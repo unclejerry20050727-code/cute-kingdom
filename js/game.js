@@ -612,7 +612,7 @@ function renderGame() {
         });
         if (n.popT < 1) {
           ctx.fillStyle = '#FF8FB2';
-          ctx.font = '900 30px "M PLUS Rounded 1c", sans-serif';
+          ctx.font = '700 30px "RHR", sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText('!', tileScreen(n.x, n.y)[0], tileScreen(n.x, n.y)[1] - 95 - (1 - n.popT) * 20);
         }

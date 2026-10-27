@@ -1,4 +1,12 @@
 /* ═══════════════ 可愛國 — 樣式 ═══════════════ */
+/* 資源圓體 (Resource Han Rounded, OFL) 子集變體字；新增文字後重跑 tools/make-font.py */
+@font-face {
+  font-family: 'RHR';
+  src: url('../fonts/rhr.woff2') format('woff2 supports variations'),
+       url('../fonts/rhr.woff2') format('woff2');
+  font-weight: 200 900;
+  font-style: normal;
+}
 :root {
   --bg-base: #EDD3AE;      /* 淺咖啡底 */
   --bg-dot: #5A3E2B;       /* 深咖啡波點 */
@@ -13,7 +21,7 @@
   --blue: #7EC8E3;
   --shadow: 0 6px 0 rgba(122, 82, 54, .25);
   --radius: 22px;
-  --font: 'M PLUS Rounded 1c', 'Baloo 2', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font: 'RHR', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -49,7 +57,7 @@ body {
 /* ══════════ 通用按鈕 ══════════ */
 .btn {
   font-family: var(--font);
-  font-size: 20px; font-weight: 800;
+  font-size: 20px; font-weight: 700;
   color: var(--ink);
   background: var(--panel);
   border: 3px solid var(--panel-border);
@@ -77,21 +85,26 @@ body {
 }
 .cover-hearts { font-size: 30px; letter-spacing: 12px; }
 .cover-title {
-  font-size: 84px; font-weight: 900; letter-spacing: 8px;
+  font-size: 62px; font-weight: 700; letter-spacing: 6px;
   color: var(--pink-deep);
   text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(122,82,54,.25);
   margin: 10px 0 6px;
 }
-.cover-note { font-size: 17px; color: var(--ink-soft); margin-bottom: 26px; }
+.cover-note { font-size: 17px; color: var(--ink-soft); margin-bottom: 6px; }
+.cover-credit { font-size: 12px; color: var(--ink-soft); opacity: .85; margin-bottom: 24px; }
 
 /* ══════════ 標題畫面 ══════════ */
 .title-wrap { text-align: center; }
 .title-logo { display: flex; gap: 14px; justify-content: center; }
 .t-char {
-  font-size: 110px; font-weight: 900; line-height: 1;
+  font-size: 84px; font-weight: 700; line-height: 1;
   display: inline-block;
-  -webkit-text-stroke: 3px var(--panel-border);
-  paint-order: stroke fill;
+  /* 8 方向 shadow 偽外框（避開 Chromium 對 CFF2 字體 -webkit-text-stroke 的渲染 bug） */
+  text-shadow:
+    3px 0 0 var(--panel-border), -3px 0 0 var(--panel-border),
+    0 3px 0 var(--panel-border), 0 -3px 0 var(--panel-border),
+    2px 2px 0 var(--panel-border), -2px 2px 0 var(--panel-border),
+    2px -2px 0 var(--panel-border), -2px -2px 0 var(--panel-border);
   animation: floaty 2.6s ease-in-out infinite;
   filter: drop-shadow(0 8px 0 rgba(122,82,54,.22));
 }
@@ -120,7 +133,7 @@ body {
   box-shadow: 0 8px 0 rgba(122,82,54,.25);
 }
 .panel-title {
-  font-size: 22px; font-weight: 800; text-align: center;
+  font-size: 22px; font-weight: 700; text-align: center;
   padding: 12px 0 10px;
   border-bottom: 3px dashed rgba(122,82,54,.25);
 }
@@ -136,7 +149,7 @@ body {
 .preview-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 #preview-canvas { width: 100%; flex: 1; }
 .preview-name {
-  text-align: center; font-size: 22px; font-weight: 800;
+  text-align: center; font-size: 22px; font-weight: 700;
   padding: 8px 0 12px;
 }
 .create-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -146,7 +159,7 @@ body {
 
 .opt-group { margin-top: 12px; }
 .opt-label {
-  font-size: 17px; font-weight: 800; color: var(--pink-deep);
+  font-size: 17px; font-weight: 700; color: var(--pink-deep);
   margin-bottom: 7px;
   display: flex; align-items: center; gap: 8px;
 }
@@ -215,7 +228,7 @@ body {
   padding: 7px 16px;
   display: flex; gap: 10px; align-items: center;
   box-shadow: var(--shadow);
-  font-weight: 800;
+  font-weight: 700;
 }
 .hud-flag { font-size: 15px; }
 .hud-name { font-size: 17px; color: var(--pink-deep); }
@@ -225,7 +238,7 @@ body {
   right: 22px; bottom: 26px;
   font-family: var(--font);
   display: flex; align-items: center; gap: 8px;
-  font-size: 21px; font-weight: 800; color: var(--ink);
+  font-size: 21px; font-weight: 700; color: var(--ink);
   background: var(--panel);
   border: 4px solid var(--panel-border);
   border-radius: 999px;
@@ -254,7 +267,7 @@ body {
 .build-tabs { display: flex; gap: 4px; padding: 8px 8px 4px; flex-wrap: wrap; }
 .btab {
   font-family: var(--font);
-  font-size: 15px; font-weight: 800; color: var(--ink-soft);
+  font-size: 15px; font-weight: 700; color: var(--ink-soft);
   background: transparent;
   border: 3px solid transparent;
   border-radius: 12px;
@@ -281,7 +294,7 @@ body {
 }
 .build-item:hover { transform: translateY(-4px) scale(1.04); border-color: var(--pink-deep); }
 .build-item canvas { width: 100%; height: 84px; }
-.build-item .bi-name { font-size: 16px; font-weight: 800; margin-top: 2px; }
+.build-item .bi-name { font-size: 16px; font-weight: 700; margin-top: 2px; }
 .build-empty { color: var(--ink-soft); font-weight: 700; font-size: 17px; text-align: center; width: 100%; }
 
 /* 方向鍵 */
@@ -292,7 +305,7 @@ body {
 }
 .dpad button {
   width: 52px; height: 44px;
-  font-size: 20px; font-weight: 900;
+  font-size: 20px; font-weight: 700;
   font-family: var(--font);
   color: var(--ink);
   background: var(--panel);
@@ -312,7 +325,7 @@ body {
   border: 3px solid var(--panel-border);
   border-radius: 999px;
   padding: 10px 26px;
-  font-size: 18px; font-weight: 800;
+  font-size: 18px; font-weight: 700;
   box-shadow: var(--shadow);
   white-space: nowrap;
   animation: pop-in .25s cubic-bezier(.34,1.56,.64,1);
@@ -346,7 +359,7 @@ body {
   position: absolute; top: -18px; left: -8px;
   background: var(--pink);
   color: #fff;
-  font-size: 17px; font-weight: 800;
+  font-size: 17px; font-weight: 700;
   padding: 4px 16px;
   border-radius: 999px;
   border: 3px solid var(--panel-border);
@@ -355,7 +368,7 @@ body {
 .dlg-text { font-size: 20px; font-weight: 700; line-height: 1.55; }
 .dlg-next {
   flex: 0 0 30px; text-align: center;
-  color: var(--pink-deep); font-size: 18px; font-weight: 900;
+  color: var(--pink-deep); font-size: 18px; font-weight: 700;
   animation: bounce-down 1s ease-in-out infinite;
 }
 @keyframes bounce-down { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
@@ -392,7 +405,7 @@ body {
   left: 0; top: -126px;
   background: var(--ink);
   color: #fff;
-  font-size: 17px; font-weight: 800;
+  font-size: 17px; font-weight: 700;
   padding: 7px 16px;
   border-radius: 14px;
   white-space: nowrap;
@@ -407,7 +420,7 @@ body {
   border: 3px solid var(--panel-border);
   border-radius: 999px;
   padding: 10px 26px;
-  font-size: 18px; font-weight: 800;
+  font-size: 18px; font-weight: 700;
   box-shadow: var(--shadow);
   animation: bounce-down 1.2s ease-in-out infinite;
 }
@@ -473,7 +486,7 @@ body {
 .scene-x {
   position: absolute; top: 16px; left: 16px;
   width: 50px; height: 50px;
-  font-size: 24px; font-weight: 900;
+  font-size: 24px; font-weight: 700;
   font-family: var(--font);
   color: var(--ink);
   background: var(--panel);
@@ -529,7 +542,7 @@ body {
   padding: 10px 8px; gap: 4px;
 }
 .shop-icon { width: 76px; height: 76px; }
-.shop-item-name { font-size: 19px; font-weight: 800; }
+.shop-item-name { font-size: 19px; font-weight: 700; }
 .shop-buy { font-size: 16px; padding: 5px 16px; }
 .shop-buy.owned { background: #C8EFD9; cursor: default; transform: none; }
 .shop-preview {
@@ -542,9 +555,9 @@ body {
   padding: 4px;
 }
 #shop-char-canvas { width: 164px; height: 178px; }
-.shop-preview-name { font-size: 16px; font-weight: 800; color: var(--ink-soft); }
+.shop-preview-name { font-size: 16px; font-weight: 700; color: var(--ink-soft); }
 .shop-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
-.shop-money { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.shop-money { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 
 /* ══════════ 打工畫面（場景畫在 main canvas，這只是 ✕） ══════════ */
 #screen-work { z-index: 15; pointer-events: none; }
@@ -556,7 +569,7 @@ body {
   transform: translateX(-50%);
   background: var(--ink);
   color: #fff;
-  font-size: 17px; font-weight: 800;
+  font-size: 17px; font-weight: 700;
   padding: 10px 26px;
   border-radius: 999px;
   z-index: 99;
@@ -591,6 +604,6 @@ body {
 @media (max-width: 820px) {
   .create-wrap { flex-direction: column; height: auto; overflow-y: auto; }
   .create-preview { flex: none; height: 300px; }
-  .t-char { font-size: 72px; }
-  .cover-title { font-size: 56px; }
+  .t-char { font-size: 56px; }
+  .cover-title { font-size: 44px; }
 }

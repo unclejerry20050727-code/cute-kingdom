@@ -5,9 +5,7 @@ const AudioSys = {
   ctx: null,
   muted: (function () { try { return localStorage.getItem('cute-kingdom-muted') === '1'; } catch (e) { return false; } })(),
   bgmPlaying: false,
-  bgmTimer: null,
-  nextTime: 0,
-  step: 0,
+  bgmEl: null,
   _master: null,
 };
 
@@ -129,51 +127,49 @@ function sfx(name) {
   }
 }
 
-/* ── BGM：可愛小循環（C大調，132bpm，32 個八分音符） ── */
-const BGM = {
-  bpm: 132,
-  steps: 32,
-  /* 旋律（midi，0=休止）：I - IV - vi - IV 感覺 */
-  melody: [
-    72, 76, 79, 76, 72, 74, 76, 76,
-    77, 76, 74, 72, 74, 0, 67, 0,
-    72, 76, 79, 76, 81, 79, 76, 74,
-    77, 79, 81, 79, 76, 74, 72, 0,
-  ],
-  /* 貝斯（每兩步一個音）：C F A F / C F A F→C */
-  bass: [
-    48, 0, 48, 0, 41, 0, 41, 0, 45, 0, 45, 0, 41, 0, 41, 0,
-    48, 0, 48, 0, 41, 0, 41, 0, 45, 0, 45, 0, 41, 0, 48, 0,
-  ],
-};
+/* ── BGM：三首實音軌（版權見 music/CREDITS.txt） ── */
+const BGM_TRACKS = [
+  'music/sugar-cookie.mp3', /* Sugar Cookie — Daystar (샛별) */
+  'music/marshmallow.mp3',  /* Marshmallow — Lukrembo */
+  'music/sunset.mp3',       /* Sunset — Lukrembo */
+];
+let bgmIdx = -1;
 
 function startBGM() {
   if (AudioSys.bgmPlaying) return;
   let ac;
   try { ac = audioCtx(); } catch (e) { return; }
+  if (!AudioSys.bgmEl) {
+    const el = new Audio();
+    const src = ac.createMediaElementSource(el);
+    const g = ac.createGain();
+    g.gain.value = 0.5; /* BGM 比音效輕 */
+    src.connect(g);
+    g.connect(masterGain());
+    el.addEventListener('ended', () => {
+      if (!AudioSys.bgmPlaying) return;
+      pickBGMTrack();
+      AudioSys.bgmEl.play().catch(() => {});
+    });
+    AudioSys.bgmEl = el;
+  }
   AudioSys.bgmPlaying = true;
-  AudioSys.nextTime = ac.currentTime + 0.12;
-  AudioSys.step = 0;
-  const stepDur = 60 / BGM.bpm / 2;
-  const tick = () => {
-    if (!AudioSys.bgmPlaying) return;
-    while (AudioSys.nextTime < ac.currentTime + 0.4) {
-      const s = AudioSys.step;
-      const m = BGM.melody[s];
-      if (m) tone(NOTE(m), AudioSys.nextTime, stepDur * 0.92, { type: 'triangle', vol: 0.042, attack: 0.02, release: 0.06 });
-      const b = BGM.bass[s];
-      if (b) tone(NOTE(b), AudioSys.nextTime, stepDur * 1.7, { type: 'sine', vol: 0.05, attack: 0.02, release: 0.12 });
-      AudioSys.nextTime += stepDur;
-      AudioSys.step = (s + 1) % BGM.steps;
-    }
-    AudioSys.bgmTimer = setTimeout(tick, 90);
-  };
-  tick();
+  pickBGMTrack();
+  AudioSys.bgmEl.play().catch(() => {});
+}
+
+/* 隨機選一首（不連重複），ended 時自動接下一首 */
+function pickBGMTrack() {
+  let i;
+  do { i = Math.floor(Math.random() * BGM_TRACKS.length); }
+  while (BGM_TRACKS.length > 1 && i === bgmIdx);
+  bgmIdx = i;
+  AudioSys.bgmEl.src = BGM_TRACKS[i];
 }
 
 function stopBGM() {
   AudioSys.bgmPlaying = false;
-  if (AudioSys.bgmTimer) clearTimeout(AudioSys.bgmTimer);
+  if (AudioSys.bgmEl) AudioSys.bgmEl.pause();
 }
 
 function toggleMute() {

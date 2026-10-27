@@ -12,6 +12,8 @@
 - [x] 遊戲主流程（wake→talk→tutBuild→placeBed→praise→goOut→outside→free）
 - [x] Playwright 流程測試（test/flow.mjs，24 張截圖）
 - [x] 角色外觀對照 art/ 設定圖（小島男女版、小宥）
+- [x] BGM 實音軌（Sugar Cookie‑Daystar／Marshmallow・Sunset‑Lukrembo，music/）
+- [x] 字體換資源圓體 RHR（子集 WOFF2 516KB，tools/make-font.py 可重跑）
 
 ## 0️⃣ 初始化 ✅
 
@@ -186,6 +188,36 @@
 ### 驗證
 - `node test/peek-character.mjs`：正面/側視/背面/眨眼/頭像全確認前額露出、眉毛可見（shots/char-face.png、char-lineup.png）
 - `node test/flow.mjs`：31 張全過、0 pageerror、money=40 count=1
+
+## 🎨 第五輪：真實音樂 + 資源圓體字體（2026-10-27）
+
+**Jerry 的要求**：
+- N. BGM 換三首：Sugar Cookie（Daystar）／Marshmallow（Lukrembo）／Sunset（Lukrembo）
+- O. 字體換「資源漢圓粗」：不要太大、不要太粗、也不要太細
+
+### 完成
+- [x] **BGM 實音軌**（music/ 共 8.5MB，160kbps）：
+  - sugar-cookie.mp3 — Daystar（샛별／별 헤는 다락방），官方 Google Drive 下載
+  - marshmallow.mp3、sunset.mp3 — Lukrembo，freetouse.com 直連
+  - 版權見 music/CREDITS.txt；封面加「BGM：Daystar ・ Lukrembo」謝卡
+  - ⚠️ Daystar 授權：免費範圍限影片/社群平台；遊戲/網站屬「可付費授權」用途。
+    本遊戲為本地個人作品不公開故無問題；**若要公開上架或商業化，需先向 Daystar 取得付費授權**
+- [x] **js/audio.js**：移除合成 BGM，改 `<audio>` + `createMediaElementSource` 接 master gain（靜音鈕同步有效）；三首隨機播放、ended 自動換下一首（不連重複）；SFX 維持 Web Audio 合成
+- [x] **字體資源圓體（RHR）**：
+  - 來源：CyanoHao/Resource-Han-Rounded v1.910（OFL，CFF2 變體字 wght 200-900 + ROND 圓度軸）
+  - TW 地區子集 OTF（10.9MB 7z）→ pyftsubset 子集化（遊戲用到的 747 字）→ `fonts/rhr.woff2`（516KB）
+  - `tools/make-font.py`：從 index.html/js/css 重新收集字元並重跑子集（⚠️ 遊戲新增中文字後要重跑）
+  - `tools/full/` 本地留存完整 VF（已 gitignore），需要時從 GitHub Releases 重下
+  - CSS：`@font-face RHR`（font-weight 200 900）＋ `--font` 改 'RHR'；**字重統一 700（Bold）**＝「粗」但不超粗、不偏細
+  - 移除 Google Fonts 的 Baloo 2／M PLUS Rounded 1c（保留 Caveat + Long Cang 手寫體）
+  - Canvas 繪字（dialogue 的 ?／game 的 !）同步改 RHR 700
+- [x] **字級調整（不要太大）**：封面標題 84→62px、標題畫面大字 110→84px、小螢幕 media query 等比縮
+- [x] **規避 Chromium CFF2 渲染 bug**：`-webkit-text-stroke` 套在 CFF2 字體的有封閉空間字形（國/園/回）會畫出毛線內框 → `.t-char` 改 8 方向 `text-shadow` 偽外框，效果一樣且不挑字體格式
+- [x] 驗證：test/flow.mjs 31 張截圖全過、0 pageerror；headless 確認 BGM 真的在播（currentTime 增加）、靜音/取消靜音無錯
+
+### 檔案
+- 新增：`fonts/rhr.woff2`、`music/*.mp3` + `CREDITS.txt`、`tools/make-font.py`、`test/peek-audio.mjs`（抓 freetouse 音訊直連 URL 用）
+- 修改：`css/style.css`、`js/audio.js`、`js/dialogue.js`、`js/game.js`、`index.html`、`.gitignore`、`shots/*`
 
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）

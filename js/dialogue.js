@@ -68,7 +68,7 @@ const Dialogue = {
       ctx.arc(size / 2, size / 2, size * 0.34, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#FFF8EC';
-      ctx.font = `900 ${size * 0.42}px "M PLUS Rounded 1c", sans-serif`;
+      ctx.font = `700 ${size * 0.42}px "RHR", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('?', size / 2, size / 2 + 2);
