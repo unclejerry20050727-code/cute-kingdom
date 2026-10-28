@@ -214,10 +214,48 @@
 - [x] **字級調整（不要太大）**：封面標題 84→62px、標題畫面大字 110→84px、小螢幕 media query 等比縮
 - [x] **規避 Chromium CFF2 渲染 bug**：`-webkit-text-stroke` 套在 CFF2 字體的有封閉空間字形（國/園/回）會畫出毛線內框 → `.t-char` 改 8 方向 `text-shadow` 偽外框，效果一樣且不挑字體格式
 - [x] 驗證：test/flow.mjs 31 張截圖全過、0 pageerror；headless 確認 BGM 真的在播（currentTime 增加）、靜音/取消靜音無錯
+  - ⚠️ 後記：此驗證有盲點——headless Chromium 不強制 autoplay 政策，無法重現真實 Chrome 擋播情境（見第六輪）
 
 ### 檔案
 - 新增：`fonts/rhr.woff2`、`music/*.mp3` + `CREDITS.txt`、`tools/make-font.py`、`test/peek-audio.mjs`（抓 freetouse 音訊直連 URL 用）
 - 修改：`css/style.css`、`js/audio.js`、`js/dialogue.js`、`js/game.js`、`index.html`、`.gitignore`、`shots/*`
+
+## 🎧 第六輪：Chrome BGM 無聲排查與修復（2026-10-28）
+
+### 現象（Jerry 回報）
+- 同一個 MP3 拖曳進 Chrome 能播；但遊戲裡完全聽不到 BGM
+- 音樂開關鈕反覆切換也沒用
+
+### 根因分析（js/audio.js）
+1. **`play().catch(() => {})` 吞掉所有失敗**：首次 play() 若被 Chrome autoplay 政策擋（NotAllowedError），BGM 永久中斷、无任何回饋、無重試機制
+2. **靜音鈕不會重播 BGM**：`toggleMute` 只改 master gain；若 BGM element 是 paused 狀態，怎麼切都靜音 → 正好對上「反覆切換都聽不到」
+3. **換歌 play() 無 gesture**：`ended` handler 裡的 play() 不是使用者互動，政策邊緣時可能被擋 → 第一首播完就沒了
+
+### 修復
+- [x] `playBgmNow()`：統一出口——先 `ctx.resume()` 再 `el.play()`；NotAllowedError 時 console.warn（DevTools 看得見）＋一次性 toast「🔊 瀏覽器擋了自動播放，點一下畫面就能開 BGM 囉」
+- [x] `bindBgmRetry()`：首次被擋後監聽 `pointerdown`/`keydown`，下一次互動自動重試播放
+- [x] `toggleMute` 取消靜音時：若 BGM 該播但 paused → 立即 `playBgmNow()`（音樂開關真正「開」音樂）
+- [x] BGM element 加 `preload='auto'`；`stopBGM` 重置 blocked 狀態
+- [x] test/flow.mjs 自帶 server 補 `.mp3`/`.woff2` MIME（之前是 octet-stream）
+
+### 驗證（headless，test/peek-bgm-*.mjs）
+- [x] 基礎：點封面→BGM 起播、Analyser 量 master gain 輸出 RMS≈0.03-0.08（真有声波）、靜音 gain 1→0.0001→1
+- [x] 模擬被擋（hook play 強制 reject NotAllowedError）：
+  - 情境1：首次被擋→toast+warn 出現→點畫面→BGM 自動恢復（RMS 0.048）✅
+  - 情境2：首次被擋→mute→unmute→BGM 恢復（RMS 0.048）✅
+- [x] ended 換歌鏈：短音檔連續觸發 23 次 play() 零失敗
+- [x] flow.mjs 31 步全流程回歸、0 pageerror
+- ⚠️ headless 無法開嚴格 autoplay 政策（試過 `--autoplay-policy=user-gesture-required` 仍放行；且此 build 上 `--disable-field-trial-config` 與 `--autoplay-policy=document-user-activation` 會 crash，需 `ignoreDefaultArgs` 移除），所以真實 Chrome 政策行為靠「模擬 reject」驗證
+
+### 若 Jerry 的 Chrome 修完還是不響（使用者端檢查清單）
+1. **最可能：網站被瀏覽器層級靜音**——地址列 🔒/🔊 圖示 → 看 Sound 是否被關；`chrome://settings/content/sound` 看「不允許播放聲音」清單有沒有遊戲的 origin（被擋時頁面內所有音效+ BGM 都靜，但單獨開 MP3 的 tab 正常，正符合症狀）
+2. DevTools Console 看有沒有 `[BGM] play() 被拒絕： NotAllowedError`（新代碼會印出來）
+3. 確認有點「點擊進入 ✨」按鈕（BGM 從封面那一下 gesture 開始）
+4. `file://` 開與 http server 開都可行，但 localhost/127.0.0.1 最穩（安全環境）
+
+### 檔案
+- 新增：`test/peek-bgm-diag.mjs`（基礎診斷+RMS）、`test/peek-bgm-strict.mjs`（政策旗標+ended 鏈）、`test/peek-bgm-blocked.mjs`（模擬 NotAllowedError）、`test/short.mp3`（0.4s 測試音檔）
+- 修改：`js/audio.js`、`test/flow.mjs`、`shots/*`（回歸重拍）
 
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）

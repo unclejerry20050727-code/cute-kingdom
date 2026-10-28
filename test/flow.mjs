@@ -17,6 +17,7 @@ await mkdir(SHOTS, { recursive: true });
 const MIME = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript',
   '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.mp3': 'audio/mpeg', '.woff2': 'font/woff2',
 };
 
 /* ── 簡易 static server ── */

@@ -134,31 +134,11 @@ const BGM_TRACKS = [
   'music/sunset.mp3',       /* Sunset — Lukrembo */
 ];
 let bgmIdx = -1;
+let bgmBlocked = false;    /* play() 被瀏覽器自動播放政策拒絕中 */
+let bgmHintShown = false;
+let bgmRetryBound = false;
 
-function startBGM() {
-  if (AudioSys.bgmPlaying) return;
-  let ac;
-  try { ac = audioCtx(); } catch (e) { return; }
-  if (!AudioSys.bgmEl) {
-    const el = new Audio();
-    const src = ac.createMediaElementSource(el);
-    const g = ac.createGain();
-    g.gain.value = 0.5; /* BGM 比音效輕 */
-    src.connect(g);
-    g.connect(masterGain());
-    el.addEventListener('ended', () => {
-      if (!AudioSys.bgmPlaying) return;
-      pickBGMTrack();
-      AudioSys.bgmEl.play().catch(() => {});
-    });
-    AudioSys.bgmEl = el;
-  }
-  AudioSys.bgmPlaying = true;
-  pickBGMTrack();
-  AudioSys.bgmEl.play().catch(() => {});
-}
-
-/* 隨機選一首（不連重複），ended 時自動接下一首 */
+/* 隨機選一首（不連重複） */
 function pickBGMTrack() {
   let i;
   do { i = Math.floor(Math.random() * BGM_TRACKS.length); }
@@ -167,8 +147,70 @@ function pickBGMTrack() {
   AudioSys.bgmEl.src = BGM_TRACKS[i];
 }
 
+/* 播放 + 兜底：被 autoplay 政策擋住就記下，等下次使用者互動自動重試 */
+function playBgmNow() {
+  const el = AudioSys.bgmEl;
+  if (!el || !AudioSys.bgmPlaying) return Promise.resolve(false);
+  let ok = Promise.resolve();
+  try { ok = audioCtx().resume(); } catch (e) { /* ignore */ }
+  return ok.then(() => el.play()).then(
+    () => { bgmBlocked = false; return true; },
+    (e) => {
+      console.warn('[BGM] play() 被拒絕：', (e && e.name) || e);
+      if (e && e.name === 'NotAllowedError') {
+        bgmBlocked = true;
+        bindBgmRetry();
+        if (!bgmHintShown) {
+          bgmHintShown = true;
+          showToast('🔊 瀏覽器擋了自動播放，點一下畫面就能開 BGM 囉');
+        }
+      }
+      return false;
+    }
+  );
+}
+
+/* 首次被擋後，監聽下一次互動（點擊／按鍵）自動重試播放 */
+function bindBgmRetry() {
+  if (bgmRetryBound) return;
+  bgmRetryBound = true;
+  const retry = () => {
+    if (!AudioSys.bgmPlaying) return;
+    if (AudioSys.bgmEl && !AudioSys.bgmEl.paused) return;
+    playBgmNow();
+  };
+  window.addEventListener('pointerdown', retry, { passive: true });
+  window.addEventListener('keydown', retry, { passive: true });
+}
+
+function startBGM() {
+  if (AudioSys.bgmPlaying) return;
+  let ac;
+  try { ac = audioCtx(); } catch (e) { return; }
+  if (!AudioSys.bgmEl) {
+    const el = new Audio();
+    el.preload = 'auto';
+    const src = ac.createMediaElementSource(el);
+    const g = ac.createGain();
+    g.gain.value = 0.5; /* BGM 比音效輕 */
+    src.connect(g);
+    g.connect(masterGain());
+    el.addEventListener('ended', () => {
+      if (!AudioSys.bgmPlaying) return;
+      pickBGMTrack();
+      playBgmNow(); /* ended 無 gesture，失敗時走重試兜底 */
+    });
+    AudioSys.bgmEl = el;
+  }
+  AudioSys.bgmPlaying = true;
+  pickBGMTrack();
+  console.debug('[BGM] 開始播放:', BGM_TRACKS[bgmIdx], '| ctx state:', ac.state);
+  playBgmNow();
+}
+
 function stopBGM() {
   AudioSys.bgmPlaying = false;
+  bgmBlocked = false;
   if (AudioSys.bgmEl) AudioSys.bgmEl.pause();
 }
 
@@ -180,7 +222,11 @@ function toggleMute() {
     masterGain().gain.setTargetAtTime(AudioSys.muted ? 0.0001 : 1, ac.currentTime, 0.02);
   } catch (e) { /* ignore */ }
   updateMuteBtn();
-  if (!AudioSys.muted) sfx('click');
+  if (!AudioSys.muted) {
+    sfx('click');
+    /* 音樂開關切回開：BGM 該播但停著（例如剛被擋）就立即重播 */
+    if (AudioSys.bgmPlaying && AudioSys.bgmEl && AudioSys.bgmEl.paused) playBgmNow();
+  }
 }
 
 function updateMuteBtn() {
