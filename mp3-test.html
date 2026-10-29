@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MP3 聲音測試 — 可愛國</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink:#5B4636; --line:#E8D9C0; --pink:#F7C8D8; --pink-d:#E893A8;
+          --green:#4C9A52; --red:#D06060; --muted:#9A8570; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:20px; background:#FDF7EC; color:var(--ink);
+         font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif; }
+  .wrap { max-width:820px; margin:0 auto; }
+  h1 { text-align:center; margin:8px 0 2px; font-size:26px; }
+  .sub { text-align:center; margin:0 0 16px; color:var(--muted); font-size:14px; }
+  .card { background:#fff; border:2px solid var(--line); border-radius:16px;
+          padding:14px 18px; margin:12px 0; }
+  .card h2 { margin:0 0 10px; font-size:16px; }
+  button { font-family:inherit; font-size:15px; color:var(--ink);
+           background:var(--pink); border:2px solid var(--pink-d); border-radius:12px;
+           padding:8px 14px; cursor:pointer; }
+  button:hover { filter:brightness(0.97); }
+  button.on { background:var(--pink-d); color:#fff; }
+  button.big { font-size:17px; padding:12px 20px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .row button { flex:1 1 auto; min-width:180px; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  td, th { border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  .ok  { color:var(--green); font-weight:bold; }
+  .bad { color:var(--red);   font-weight:bold; }
+  .meter { height:20px; background:#F0E6D6; border-radius:10px; overflow:hidden; }
+  .meter > div { height:100%; width:0%;
+                 background:linear-gradient(90deg,var(--pink),var(--pink-d));
+                 transition:width 60ms linear; }
+  #log { background:#2E2A26; color:#F2E9DC; font-size:12px; line-height:1.55;
+         padding:10px; border-radius:10px; max-height:200px; overflow:auto; white-space:pre-wrap; }
+  code { background:#F5EBDB; padding:1px 5px; border-radius:6px; }
+  .tip { font-size:13px; color:var(--muted); margin-top:8px; }
+  .kv { font-size:14px; margin:4px 0; }
+  .kv b { display:inline-block; min-width:190px; font-weight:normal; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎧 MP3 聲音測試頁</h1>
+  <p class="sub">用遊戲同一首 BGM（music/sugar-cookie.mp3）四種方式播，找出聲音卡在哪一層</p>
+
+  <div class="card">
+    <h2>0️⃣ 目前狀態</h2>
+    <div class="kv"><b>開法（protocol）</b><span id="proto"></span></div>
+    <div class="kv"><b>遊戲靜音記憶 <code>cute-kingdom-muted</code></b>
+      <span id="lsval"></span>
+      <button id="lsreset" style="font-size:13px;padding:4px 10px">重置為開（0）</button>
+    </div>
+    <div class="kv"><b>AudioContext 狀態</b><span id="ctxstate">尚未建立</span></div>
+    <div class="kv"><b>A 純 &lt;audio&gt; 元素</b><span id="st-a">未播</span></div>
+    <div class="kv"><b>B Web Audio（遊戲同路徑）</b><span id="st-b">未播</span></div>
+    <div class="kv"><b>C Web Audio 解碼 buffer</b><span id="st-c">未播</span></div>
+    <div class="kv"><b>D 蜂鳴器（無 MP3）</b><span id="st-d">未播</span></div>
+    <div class="kv"><b>本頁總音量</b>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="1" style="vertical-align:middle">
+      <span id="volval">100%</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>▶️ 播放測試（點一次開、再點一次關）</h2>
+    <div class="row">
+      <button id="b-all">▶ 全部一起播（A+B+C+D）</button>
+      <button id="b-none">⏹ 全部停止</button>
+    </div>
+    <div class="row">
+      <button id="b-a">1️⃣ 純 &lt;audio&gt;（不經過 Web Audio）</button>
+      <button id="b-b">2️⃣ Web Audio MediaElementSource（遊戲同路徑）</button>
+      <button id="b-c">3️⃣ Web Audio fetch＋解碼 buffer</button>
+      <button id="b-d">4️⃣ 蜂鳴器 440Hz（純 Web Audio、無 MP3）</button>
+    </div>
+    <p class="tip">
+      判讀方式：<br>
+      ・1️⃣ 也沒聲 → 問題在 Chrome 這個分頁/網站的音量或系統輸出（點分頁上的喇叭圖示看音量條）<br>
+      ・1️⃣ 有聲、2️⃣3️⃣4️⃣ 沒聲 → Web Audio 輸出層的問題<br>
+      ・全部有聲 → 測試頁正常，問題在遊戲代碼的狀態（例如靜音記憶）
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>📊 聲音量計（有聲波才動，不騙人）</h2>
+    <div class="meter"><div id="meterbar"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>📝 結果紀錄（請勾「我有聽到」再告訴我）</h2>
+    <table>
+      <tr><th>測試</th><th>技術狀態</th><th>👂 我有聽到</th></tr>
+      <tr><td>1️⃣ 純 &lt;audio&gt;</td><td id="res-a">-</td><td><input type="checkbox" id="hear-a" style="transform:scale(1.4)"></td></tr>
+      <tr><td>2️⃣ Web Audio（遊戲同路徑）</td><td id="res-b">-</td><td><input type="checkbox" id="hear-b" style="transform:scale(1.4)"></td></tr>
+      <tr><td>3️⃣ Web Audio 解碼 buffer</td><td id="res-c">-</td><td><input type="checkbox" id="hear-c" style="transform:scale(1.4)"></td></tr>
+      <tr><td>4️⃣ 蜂鳴器</td><td id="res-d">-</td><td><input type="checkbox" id="hear-d" style="transform:scale(1.4)"></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🐛 偵錯日誌</h2>
+    <pre id="log"></pre>
+  </div>
+</div>
+
+<script>
+'use strict';
+const TRACK = 'music/sugar-cookie.mp3';
+const logEl = document.getElementById('log');
+function log(msg) {
+  const t = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  logEl.textContent += '[' + t + '] ' + msg + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log('[mp3-test]', msg);
+}
+function setRes(k, text, bad) {
+  const el = document.getElementById('res-' + k);
+  el.textContent = text;
+  el.className = bad ? 'bad' : 'ok';
+}
+
+/* ── Web Audio 骨架（本頁自己的，跟遊戲互不干擾） ── */
+let ac = null, master = null, analyser = null;
+function getCtx() {
+  if (!ac) {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain();
+    master.gain.value = parseFloat(vol.value);
+    analyser = ac.createAnalyser();
+    analyser.fftSize = 2048;
+    master.connect(analyser);
+    analyser.connect(ac.destination);
+    log('AudioContext 建立，state = ' + ac.state);
+  }
+  return ac;
+}
+document.getElementById('vol').addEventListener('input', function () {
+  document.getElementById('volval').textContent = Math.round(this.value * 100) + '%';
+  if (master) master.gain.value = parseFloat(this.value);
+});
+
+/* ── 音量計 ── */
+const meterBar = document.getElementById('meterbar');
+const meterBuf = { data: null };
+function tick() {
+  requestAnimationFrame(tick);
+  if (!analyser) return;
+  if (!meterBuf.data || meterBuf.data.length !== analyser.fftSize) {
+    meterBuf.data = new Float32Array(analyser.fftSize);
+  }
+  analyser.getFloatTimeDomainData(meterBuf.data);
+  let sum = 0;
+  for (let i = 0; i < meterBuf.data.length; i++) sum += meterBuf.data[i] * meterBuf.data[i];
+  const rms = Math.sqrt(sum / meterBuf.data.length);
+  const db = 20 * Math.log10(rms + 1e-7);
+  meterBar.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)).toFixed(1) + '%';
+}
+requestAnimationFrame(tick);
+
+/* ── 四個測試源 ── */
+const on = { a: false, b: false, c: false, d: false };
+let elA = null, elB = null, srcC = null, nodeD = null;
+
+async function setA(v) {
+  on.a = v;
+  if (v) {
+    if (!elA) { elA = new Audio(TRACK); elA.loop = true; elA.preload = 'auto'; }
+    try { await elA.play(); setRes('a', 'playing'); log('A 純<audio> play() ok'); }
+    catch (e) { setRes('a', '被拒絕：' + e.name, true); log('A play() 被拒絕：' + e.name); }
+  } else { if (elA) elA.pause(); setRes('a', '已停'); }
+  sync();
+}
+async function setB(v) {
+  on.b = v;
+  if (v) {
+    const ctx = getCtx();
+    if (!elB) {
+      elB = new Audio(TRACK); elB.loop = true; elB.preload = 'auto';
+      const src = ctx.createMediaElementSource(elB);
+      const g = ctx.createGain(); g.gain.value = 0.5; /* 跟遊戲 BGM gain 一樣 */
+      src.connect(g); g.connect(master);
+    }
+    try { await ctx.resume(); } catch (e) { /* ignore */ }
+    try { await elB.play(); setRes('b', 'playing（ctx ' + ctx.state + '）'); log('B WebAudio play() ok'); }
+    catch (e) { setRes('b', '被拒絕：' + e.name, true); log('B play() 被拒絕：' + e.name); }
+  } else { if (elB) elB.pause(); setRes('b', '已停'); }
+  sync();
+}
+async function setC(v) {
+  on.c = v;
+  if (v) {
+    const ctx = getCtx();
+    try { await ctx.resume(); } catch (e) { /* ignore */ }
+    if (!srcC) {
+      try {
+        const res = await fetch(TRACK, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const ab = await res.arrayBuffer();
+        const abuf = await ctx.decodeAudioData(ab);
+        srcC = ctx.createBufferSource();
+        srcC.buffer = abuf; srcC.loop = true;
+        srcC.connect(master);
+      } catch (e) { setRes('c', '失敗：' + e.message, true); log('C fetch/decode 失敗：' + e.message); on.c = false; sync(); return; }
+    }
+    if (!srcC._started) { srcC.start(); srcC._started = true; }
+    setRes('c', 'playing'); log('C buffer source playing');
+  } else { if (srcC && srcC._started) { try { srcC.stop(); } catch (e) { /* ignore */ } srcC._started = false; setRes('c', '已停'); }
+    else setRes('c', '已停'); }
+  sync();
+}
+async function setD(v) {
+  on.d = v;
+  const ctx = getCtx();
+  try { await ctx.resume(); } catch (e) { /* ignore */ }
+  if (nodeD) { try { nodeD.stop(); } catch (e) { /* ignore */ } nodeD = null; }
+  if (v) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 440; g.gain.value = 0.15;
+    o.connect(g); g.connect(master); o.start();
+    nodeD = o;
+    setRes('d', 'playing'); log('D 蜂鳴器 440Hz 開');
+  } else setRes('d', '已停');
+  sync();
+}
+
+function sync() {
+  document.getElementById('b-a').classList.toggle('on', on.a);
+  document.getElementById('b-b').classList.toggle('on', on.b);
+  document.getElementById('b-c').classList.toggle('on', on.c);
+  document.getElementById('b-d').classList.toggle('on', on.d);
+}
+document.getElementById('b-a').onclick = () => setA(!on.a);
+document.getElementById('b-b').onclick = () => setB(!on.b);
+document.getElementById('b-c').onclick = () => setC(!on.c);
+document.getElementById('b-d').onclick = () => setD(!on.d);
+document.getElementById('b-all').onclick = () => { setA(true); setB(true); setC(true); setD(true); };
+document.getElementById('b-none').onclick = () => { setA(false); setB(false); setC(false); setD(false); };
+
+/* ── 狀態面板 ── */
+function updateStatus() {
+  const proto = document.getElementById('proto');
+  proto.innerHTML = location.protocol === 'http:' || location.protocol === 'https:'
+    ? location.origin + ' ✅' : location.protocol + ' ⚠️ 測試3需要 http，建議用 localhost 開';
+  let ls = '(無)';
+  try {
+    const v = localStorage.getItem('cute-kingdom-muted');
+    ls = v === '1' ? '<span class="bad">1（遊戲是靜音的！）</span>'
+       : v === '0' ? '<span class="ok">0（開）</span>' : '（沒有這筆資料＝預設開）';
+  } catch (e) { ls = '讀不到：' + e.message; }
+  document.getElementById('lsval').innerHTML = ls;
+  document.getElementById('ctxstate').textContent = ac ? ac.state : '尚未建立';
+  document.getElementById('st-a').textContent = elA ? (elA.paused ? 'paused @ ' + elA.currentTime.toFixed(1) + 's' : '▶ 播放中 @ ' + elA.currentTime.toFixed(1) + 's') : '未播';
+  document.getElementById('st-b').textContent = elB ? (elB.paused ? 'paused @ ' + elB.currentTime.toFixed(1) + 's' : '▶ 播放中 @ ' + elB.currentTime.toFixed(1) + 's') : '未播';
+  document.getElementById('st-c').textContent = (srcC && srcC._started) ? '▶ 播放中' : '未播';
+  document.getElementById('st-d').textContent = nodeD ? '▶ 播放中' : '未播';
+}
+setInterval(updateStatus, 400);
+document.getElementById('lsreset').onclick = function () {
+  try { localStorage.setItem('cute-kingdom-muted', '0'); } catch (e) { log('寫 localStorage 失敗：' + e.message); return; }
+  log('已把 cute-kingdom-muted 設為 0（回遊戲要重新整理才生效）');
+  updateStatus();
+};
+
+log('測試頁載入完成。protocol = ' + location.protocol);
+try {
+  const v = localStorage.getItem('cute-kingdom-muted');
+  log('cute-kingdom-muted = ' + (v === null ? '(無)' : v));
+} catch (e) { log('讀 localStorage 失敗：' + e.message); }
+updateStatus();
+</script>
+</body>
+</html>
