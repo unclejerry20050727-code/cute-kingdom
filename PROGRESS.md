@@ -257,10 +257,44 @@
 - 新增：`test/peek-bgm-diag.mjs`（基礎診斷+RMS）、`test/peek-bgm-strict.mjs`（政策旗標+ended 鏈）、`test/peek-bgm-blocked.mjs`（模擬 NotAllowedError）、`test/short.mp3`（0.4s 測試音檔）
 - 修改：`js/audio.js`、`test/flow.mjs`、`shots/*`（回歸重拍）
 
+## ✏️ 第七輪：角色美術 v2（對照 art/ 立繪 + 書包）
+
+### 動機
+- Jerry 要求用 svg-creator 參考 `art/小宥.png`、`art/小島-女版.png`、`art/小島-男版.png` 重新設計角色，再搬回 Canvas 程式碼
+- 舊版問題：女長髮太平板像安全帽、男短髮是三角幾何刺刺、兩性都沒書包
+
+### 設計流程（svg-creator 迴圈）
+- 新建 `design/character-v2.svg`：四格設計圖（女前/女背/男前/男背），用遊戲同一套座標系（腳為原點、頭心 (0,-58)、R=25）方便搬運
+- `rsvg-convert` 渲染 `design/character-v2-preview.png` 反覆對照（3 輪：修女版瀏海「長角」、男版鋸齒瀏海、後頸碎髮被頭蓋住）
+- 最終版已過目：女＝中分簾幕瀏海+長側髮+白短袖+牛仔短褲+米色書包；男＝蓬蓬短髮（深色底+髮片+碎刺）+深藍連帽外套+深咖長褲+棕色書包
+
+### 程式碼（js/character.js）
+- [x] `defaultConfig`：女＝long/whiteS/shortDenim/pack:beige；男＝short/blackL/coffeeLong/pack:brown
+- [x] 新增 `PACKS`（beige/brown）、`drawPackStraps`（正面/側面背帶+釦環）、`drawPackBody`（背面包體+口袋+提把）
+- [x] 書包畫在手臂之後（背帶穿在最外層）；`gear.uniform` 時不畫（制服覆蓋）
+- [x] `drawBangs` 重構：`long`/`short` 走新 helper（`drawLongBangsCap` 中分簾幕+中分細髮；`drawShortBangsCap` 深色底+耳朵+平滑髮線+四撮寬圓髮片+四顆碎刺+兩條高光），bob/pony/twins/curly 保留舊路徑
+- [x] 長髮側髮改到鎖骨（對照小島女版）；`drawBackHair` long 改四尖波浪垂髮+髮絲陰影
+- [x] `drawBackViewHair`：long 改四尖垂髮（髮尾垂到書包下方）+髮絲；default 改後頸小鋸齒，short 加三撮後頭頂碎刺+高光
+- [x] `XIAOYOU_CFG` 對照小宥：女/long/白T/牛仔短褲/beige 書包
+
+### 程式碼（js/game.js）
+- [x] 建角換性別：同步重置 hairStyle/top/bottom/pack（造型模板跟性別走）
+- [x] `beginGame`：舊存檔缺 `pack` 時依性別補預設值（向后相容）
+
+### 驗證
+- [x] `node --check` character.js / game.js 通過
+- [x] `test/flow.mjs` 31 步全流程回歸、0 pageerror
+- [x] 截圖確認：03/04 建角頁男女新造型+書包帶、10 小宥對話、27 背面視角（書包蓋在垂髮前、後腦碎刺）
+
+### 檔案
+- 新增：`design/character-v2.svg`、`design/character-v2-preview.png`
+- 修改：`js/character.js`、`js/game.js`、`shots/*`（回歸重拍）
+
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
 - [x] 真正的屋外場景（直式道路地圖，麥當勞打工）
 - [x] 角色細節（腮紅加深、頭髮高光）→ 見第三輪 J~M
+- [x] 角色美術 v2（對照 art/ 立繪：女長髮簾幕瀏海/男蓬蓬短髮/書包）→ 見第七輪
 - [ ] 過場動畫
 
 ## 📦 打包

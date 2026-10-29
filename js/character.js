@@ -85,11 +85,11 @@ function defaultConfig(gender) {
   return gender === 'female' ? {
     gender, skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
     hairStyle: 'long', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
-    top: 'whiteS', bottom: 'shortDenim',
+    top: 'whiteS', bottom: 'shortDenim', pack: 'beige',
   } : {
     gender, skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
     hairStyle: 'short', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
-    top: 'whiteS', bottom: 'shortDenim',
+    top: 'blackL', bottom: 'coffeeLong', pack: 'brown',
   };
 }
 
@@ -291,6 +291,9 @@ function drawCharacter(ctx, cfg, o) {
     ellipse(ctx, ax + swing, handY, 3.7, 3.7);
   }
 
+  /* 書包背帶（畫在手臂上：背帶穿在最外面；制服時不畫） */
+  if (c.pack && f !== 'up' && !(o.gear && o.gear.uniform)) drawPackStraps(ctx, c, bob);
+
   /* ── 頭 ── */
   const headX = fx * 1.6;
   const R = 25;
@@ -307,6 +310,9 @@ function drawCharacter(ctx, cfg, o) {
     /* 臉 */
     drawFace(ctx, c, headX, headY, R, gz, closed, t);
   }
+
+  /* 書包包體（背面視角，畫在垂髮之後→包在髮前，對應角色立繪） */
+  if (c.pack && f === 'up' && !(o.gear && o.gear.uniform)) drawPackBody(ctx, c, bob);
 
   /* ── 打工裝備：制服（白T+紅領+紅圍裙） / 帽子（紅帽+M） ── */
   if (o.gear) {
@@ -380,30 +386,111 @@ function ahoge(ctx, x, y, R) {
   ctx.restore();
 }
 
+/* ── 書包（對應角色立繪：玩家與小宥都背書包） ── */
+const PACKS = {
+  beige: { base: '#E8D5B3', dark: '#C9B28D', pocket: '#DCC8A4', strap: '#D9C4A0' },
+  brown: { base: '#8A6A4F', dark: '#6E5440', pocket: '#7A5C46', strap: '#8A6A4F' },
+};
+/* 正面：胸前兩條背帶 */
+function drawPackStraps(ctx, c, bob) {
+  const p = PACKS[c.pack];
+  if (!p) return;
+  const y0 = -40 + bob * 0.3;
+  ctx.fillStyle = p.strap;
+  ctx.strokeStyle = p.dark;
+  ctx.lineWidth = 1;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 13.5, y0 + 2);
+    ctx.quadraticCurveTo(side * 13, y0 - 0.5, side * 10.5, y0);
+    ctx.lineTo(side * 8.6, y0 + 25);
+    ctx.quadraticCurveTo(side * 8.4, y0 + 27.6, side * 11.4, y0 + 27);
+    ctx.lineTo(side * 13.9, y0 + 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  /* 背帶中段小橫線（釦環） */
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-11.3, y0 + 9.5);
+  ctx.lineTo(-10.9, y0 + 14);
+  ctx.moveTo(10.9, y0 + 9.5);
+  ctx.lineTo(11.3, y0 + 14);
+  ctx.stroke();
+}
+/* 背面：包體＋前置口袋＋提把 */
+function drawPackBody(ctx, c, bob) {
+  const p = PACKS[c.pack];
+  if (!p) return;
+  const y0 = -40 + bob * 0.3;
+  ctx.fillStyle = p.base;
+  ctx.strokeStyle = p.dark;
+  ctx.lineWidth = 1.5;
+  roundRectPath(ctx, -13, y0, 26, 27, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-13, y0 + 8);
+  ctx.lineTo(13, y0 + 8);
+  ctx.stroke();
+  ctx.fillStyle = p.pocket;
+  roundRectPath(ctx, -9, y0 + 15, 18, 9, 3);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-4, y0);
+  ctx.quadraticCurveTo(0, y0 - 4.5, 4, y0);
+  ctx.stroke();
+}
+
 /* ── 後層頭髮（身前側看） ── */
 function drawBackHair(ctx, c, fx, headY) {
   const x = fx * 1.6;
   ctx.fillStyle = c.hairColor;
   switch (c.hairStyle) {
     case 'long': {
-      /* 長髮：下緣波浪更長更蓬（對照小島女版，髮尾到胸） */
+      /* 長髮：四尖波浪，髮尾到胸口（對應小島女版） */
       ctx.beginPath();
-      ctx.moveTo(x - 28, headY - 5);
-      ctx.bezierCurveTo(x - 33, headY + 24, x - 29, headY + 38, x - 20, headY + 50);
-      ctx.quadraticCurveTo(x - 13, headY + 41, x - 6, headY + 52);
-      ctx.quadraticCurveTo(x + 2, headY + 42, x + 9, headY + 52);
-      ctx.quadraticCurveTo(x + 16, headY + 41, x + 20, headY + 50);
-      ctx.bezierCurveTo(x + 29, headY + 38, x + 33, headY + 24, x + 28, headY - 5);
+      ctx.moveTo(x - 27, headY - 6);
+      ctx.bezierCurveTo(x - 32, headY + 8, x - 33, headY + 26, x - 29, headY + 38);
+      ctx.bezierCurveTo(x - 28, headY + 42, x - 26, headY + 44, x - 24, headY + 44.5);
+      ctx.quadraticCurveTo(x - 20, headY + 38, x - 16.5, headY + 38.5);
+      ctx.quadraticCurveTo(x - 13, headY + 44.5, x - 9.5, headY + 46.5);
+      ctx.quadraticCurveTo(x - 5, headY + 41.5, x, headY + 41);
+      ctx.quadraticCurveTo(x + 5, headY + 41.5, x + 9.5, headY + 46.5);
+      ctx.quadraticCurveTo(x + 13, headY + 44.5, x + 16.5, headY + 38.5);
+      ctx.quadraticCurveTo(x + 20, headY + 38, x + 24, headY + 44.5);
+      ctx.bezierCurveTo(x + 26, headY + 44, x + 28, headY + 42, x + 29, headY + 38);
+      ctx.bezierCurveTo(x + 33, headY + 26, x + 32, headY + 8, x + 27, headY - 6);
       ctx.closePath();
       ctx.fill();
-      /* 髮絲高光（左側一條） */
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      ctx.lineWidth = 3.5;
+      /* 髮絲：兩暗兩亮 */
       ctx.lineCap = 'round';
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = shade(c.hairColor, -0.22);
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x - 17, headY + 4);
-      ctx.bezierCurveTo(x - 22, headY + 20, x - 20, headY + 34, x - 14, headY + 46);
+      ctx.moveTo(x - 14, headY + 6);
+      ctx.bezierCurveTo(x - 16, headY + 18, x - 16, headY + 30, x - 13, headY + 41);
+      ctx.moveTo(x + 12, headY + 8);
+      ctx.bezierCurveTo(x + 14, headY + 20, x + 14, headY + 31, x + 11, headY + 42);
       ctx.stroke();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = shade(c.hairColor, 0.35);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 19, headY + 12);
+      ctx.bezierCurveTo(x - 21, headY + 22, x - 21, headY + 34, x - 19, headY + 43);
+      ctx.moveTo(x + 16, headY - 12);
+      ctx.bezierCurveTo(x + 20, headY - 8, x + 23, headY - 2, x + 24, headY + 4);
+      ctx.stroke();
+      ctx.restore();
       /* 呆毛 */
       ahoge(ctx, x, headY, 27);
       break;
@@ -467,23 +554,38 @@ function drawBackViewHair(ctx, c, x, y, R) {
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
       ctx.fill();
+      /* 垂髮：四尖波浪（背面視角，髮尾垂到書包下方） */
       ctx.beginPath();
-      ctx.moveTo(x - R - 1, y);
-      ctx.bezierCurveTo(x - R - 6, y + 32, x - R + 4, y + 46, x - 10, y + 48);
-      ctx.quadraticCurveTo(x, y + 42, x + 10, y + 48);
-      ctx.bezierCurveTo(x + R - 4, y + 46, x + R + 6, y + 32, x + R + 1, y);
+      ctx.moveTo(x - R * 1.04, y + R * 0.32);
+      ctx.bezierCurveTo(x - R * 1.24, y + R * 0.88, x - R * 1.24, y + R * 1.44, x - R * 1.08, y + R * 1.96);
+      ctx.quadraticCurveTo(x - R * 0.88, y + R * 1.72, x - R * 0.72, y + R * 1.9);
+      ctx.quadraticCurveTo(x - R * 0.44, y + R * 1.68, x - R * 0.22, y + R * 1.98);
+      ctx.quadraticCurveTo(x, y + R * 1.76, x + R * 0.22, y + R * 1.98);
+      ctx.quadraticCurveTo(x + R * 0.44, y + R * 1.68, x + R * 0.72, y + R * 1.9);
+      ctx.quadraticCurveTo(x + R * 0.88, y + R * 1.72, x + R * 1.08, y + R * 1.96);
+      ctx.bezierCurveTo(x + R * 1.24, y + R * 1.44, x + R * 1.24, y + R * 0.88, x + R * 1.04, y + R * 0.32);
       ctx.closePath();
       ctx.fill();
-      /* 髮絲高光（背面兩條） */
-      ctx.strokeStyle = 'rgba(255,255,255,0.16)';
-      ctx.lineWidth = 3.5;
+      /* 髮絲（兩亮一暗） */
       ctx.lineCap = 'round';
-      for (const off of [-R * 0.45, R * 0.35]) {
-        ctx.beginPath();
-        ctx.moveTo(x + off * 0.6, y - R * 0.3);
-        ctx.bezierCurveTo(x + off, y + R * 0.5, x + off, y + R * 1.3, x + off * 0.7, y + R * 1.7);
-        ctx.stroke();
-      }
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = shade(c.hairColor, 0.3);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x - R * 0.48, y - R * 0.64);
+      ctx.bezierCurveTo(x - R * 0.56, y, x - R * 0.56, y + R * 0.72, x - R * 0.44, y + R * 1.6);
+      ctx.moveTo(x + R * 0.32, y - R * 0.72);
+      ctx.bezierCurveTo(x + R * 0.4, y - R * 0.08, x + R * 0.4, y + R * 0.64, x + R * 0.32, y + R * 1.52);
+      ctx.stroke();
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = shade(c.hairColor, -0.2);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - R * 0.16, y - R * 0.8);
+      ctx.bezierCurveTo(x - R * 0.2, y - R * 0.16, x - R * 0.2, y + R * 0.56, x - R * 0.12, y + R * 1.44);
+      ctx.stroke();
+      ctx.restore();
       ahoge(ctx, x, y, R);
       break;
     }
@@ -518,11 +620,16 @@ function drawBackViewHair(ctx, c, x, y, R) {
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
       ctx.fill();
-      /* 後頸小髮梢 */
+      /* 後頸碎髮（小鋸齒） */
       ctx.beginPath();
-      ctx.moveTo(x - 8, y + R - 2);
-      ctx.quadraticCurveTo(x, y + R + 7, x + 8, y + R - 2);
-      ctx.quadraticCurveTo(x, y + R + 2, x - 8, y + R - 2);
+      ctx.moveTo(x - R * 0.44, y + R * 1.06);
+      ctx.lineTo(x - R * 0.24, y + R * 1.2);
+      ctx.lineTo(x - R * 0.04, y + R * 1.06);
+      ctx.lineTo(x + R * 0.18, y + R * 1.22);
+      ctx.lineTo(x + R * 0.4, y + R * 1.08);
+      ctx.lineTo(x + R * 0.4, y + R * 0.96);
+      ctx.quadraticCurveTo(x, y + R * 1.06, x - R * 0.44, y + R * 1.06);
+      ctx.closePath();
       ctx.fill();
       if (c.hairStyle === 'bob') {
         for (const side of [-1, 1]) {
@@ -531,35 +638,179 @@ function drawBackViewHair(ctx, c, x, y, R) {
           ctx.fill();
         }
       }
-      if (c.hairStyle === 'short') ahoge(ctx, x, y, R);
+      if (c.hairStyle === 'short') {
+        /* 後頭頂碎刺（三撮，對應小島男版） */
+        for (const [a, b, cc] of [
+          [[-0.48, -0.88], [-0.56, -1.32], [-0.2, -1.08]],
+          [[-0.04, -1.08], [0.16, -1.52], [0.32, -1.04]],
+          [[0.32, -1.0], [0.56, -1.28], [0.52, -0.8]],
+        ]) {
+          ctx.beginPath();
+          ctx.moveTo(x + a[0] * R, y + a[1] * R);
+          ctx.lineTo(x + b[0] * R, y + b[1] * R);
+          ctx.lineTo(x + cc[0] * R, y + cc[1] * R);
+          ctx.closePath();
+          ctx.fill();
+        }
+        /* 一條高光 */
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = shade(c.hairColor, 0.3);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - R * 0.4, y - R * 0.64);
+        ctx.quadraticCurveTo(x - R * 0.24, y - R * 0.88, x, y - R * 0.96);
+        ctx.stroke();
+        ctx.restore();
+        ahoge(ctx, x, y, R);
+      }
       break;
     }
   }
+}
+
+/* 長髮：中分簾幕瀏海（中央最高、平滑凹弧掃到太陽穴，對應小島女版） */
+function drawLongBangsCap(ctx, c, x, y, R, r) {
+  ctx.fillStyle = c.hairColor;
+  ctx.beginPath();
+  ctx.arc(x, y, r, Math.PI, Math.PI * 2);
+  ctx.quadraticCurveTo(x + R * 0.92, y + R * 0.04, x + R * 0.72, y - R * 0.08);
+  ctx.quadraticCurveTo(x + R * 0.44, y - R * 0.28, x + R * 0.28, y - R * 0.52);
+  ctx.quadraticCurveTo(x + R * 0.12, y - R * 0.76, x, y - R * 0.88);
+  ctx.quadraticCurveTo(x - R * 0.12, y - R * 0.76, x - R * 0.28, y - R * 0.52);
+  ctx.quadraticCurveTo(x - R * 0.44, y - R * 0.28, x - R * 0.72, y - R * 0.08);
+  ctx.quadraticCurveTo(x - R * 0.92, y + R * 0.04, x - r, y);
+  ctx.closePath();
+  ctx.fill();
+  /* 中分兩側細細碎髮 */
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = shade(c.hairColor, -0.18);
+  ctx.lineWidth = Math.max(1, R * 0.056);
+  ctx.lineCap = 'round';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(x + side * R * 0.06, y - R * 0.76);
+    ctx.quadraticCurveTo(x + side * R * 0.152, y - R * 0.58, x + side * R * 0.112, y - R * 0.38);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* 蓬蓬短髮：深色底＋耳朵＋平滑髮線＋四撮寬圓髮片＋四顆頭頂碎刺（對應小島男版） */
+function drawShortBangsCap(ctx, c, x, y, R, r) {
+  /* 深色底（髮際線加層 depth） */
+  ctx.fillStyle = shade(c.hairColor, -0.25);
+  ctx.beginPath();
+  ctx.arc(x, y + R * 0.08, R + 3, Math.PI, Math.PI * 2);
+  ctx.lineTo(x + R + 3, y + R * 0.48);
+  ctx.quadraticCurveTo(x, y + R * 0.32, x - R - 3, y + R * 0.48);
+  ctx.closePath();
+  ctx.fill();
+  /* 耳朵 */
+  ctx.fillStyle = c.skinColor;
+  for (const side of [-1, 1]) ellipse(ctx, x + side * R * 0.98, y + R * 0.24, R * 0.14, R * 0.18);
+  ctx.strokeStyle = shade(c.skinColor, -0.12);
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(x + side * R * 1.02, y + R * 0.18);
+    ctx.quadraticCurveTo(x + side * R * 0.96, y + R * 0.24, x + side * R * 1.01, y + R * 0.31);
+    ctx.stroke();
+  }
+  /* 主瀏海帽（平滑波浪髮線，最低點在眉上） */
+  ctx.fillStyle = c.hairColor;
+  ctx.beginPath();
+  ctx.arc(x, y, r, Math.PI, Math.PI * 2);
+  ctx.quadraticCurveTo(x + R * 1.04, y + R * 0.32, x + R * 0.98, y + R * 0.48);
+  ctx.quadraticCurveTo(x + R * 0.88, y + R * 0.44, x + R * 0.8, y + R * 0.32);
+  ctx.quadraticCurveTo(x + R * 0.64, y + R * 0.08, x + R * 0.48, y);
+  ctx.quadraticCurveTo(x + R * 0.24, y - R * 0.12, x, y - R * 0.12);
+  ctx.quadraticCurveTo(x - R * 0.24, y - R * 0.12, x - R * 0.48, y);
+  ctx.quadraticCurveTo(x - R * 0.64, y + R * 0.08, x - R * 0.8, y + R * 0.32);
+  ctx.quadraticCurveTo(x - R * 0.88, y + R * 0.44, x - R * 0.98, y + R * 0.48);
+  ctx.quadraticCurveTo(x - R * 1.04, y + R * 0.32, x - r, y);
+  ctx.closePath();
+  ctx.fill();
+  /* 四撮寬圓瀏海髮片（不對稱，髮片間露出額頭） */
+  for (const t of [
+    [-0.72, 0.04, -0.62, 0.34, -0.52, 0.38, -0.46, 0.28, -0.4, -0.08],
+    [-0.32, -0.04, -0.22, 0.3, -0.12, 0.34, -0.06, 0.22, 0, 0.02],
+    [0.08, -0.04, 0.18, 0.26, 0.28, 0.3, 0.34, 0.2, 0.4, 0.02],
+    [0.42, 0.04, 0.52, 0.36, 0.62, 0.4, 0.68, 0.3, 0.74, 0.1],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x + t[0] * R, y + t[1] * R);
+    ctx.quadraticCurveTo(x + t[2] * R, y + t[3] * R, x + t[4] * R, y + t[5] * R);
+    ctx.quadraticCurveTo(x + t[6] * R, y + t[7] * R, x + t[8] * R, y + t[9] * R);
+    ctx.closePath();
+    ctx.fill();
+  }
+  /* 頭頂碎刺（四顆，不對稱） */
+  for (const [a, b, cc] of [
+    [[-0.68, -0.84], [-0.84, -1.4], [-0.36, -1.0]],
+    [[-0.32, -1.0], [-0.12, -1.6], [0.16, -0.96]],
+    [[0.2, -0.96], [0.48, -1.36], [0.6, -0.8]],
+    [[0.6, -0.76], [0.88, -1.04], [0.84, -0.52]],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x + a[0] * R, y + a[1] * R);
+    ctx.lineTo(x + b[0] * R, y + b[1] * R);
+    ctx.lineTo(x + cc[0] * R, y + cc[1] * R);
+    ctx.closePath();
+    ctx.fill();
+  }
+  /* 兩條髮絲高光 */
+  ctx.save();
+  ctx.strokeStyle = shade(c.hairColor, 0.3);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(x - R * 0.48, y - R * 0.72);
+  ctx.quadraticCurveTo(x - R * 0.32, y - R * 1.04, x - R * 0.08, y - R * 1.12);
+  ctx.stroke();
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(x + R * 0.24, y - R * 0.88);
+  ctx.quadraticCurveTo(x + R * 0.4, y - R * 1.04, x + R * 0.56, y - R * 0.96);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /* ── 瀏海帽（前面/側面） ── */
 function drawBangs(ctx, c, x, y, R, fx) {
   ctx.fillStyle = c.hairColor;
   const r = R + 2;
-  ctx.beginPath();
-  /* 上半圓（從左端點繞頂端至右端點） */
-  ctx.arc(x, y, r, Math.PI, Math.PI * 2);
-  /* 瀏海下緣（由右往左回到起點）；座標需加上頭中心偏移 */
-  const pts = bangPoints(c.hairStyle, R, fx).map(p => [x + p[0], y + p[1]]);
-  if (c.hairStyle === 'curly') {
-    /* 波浪邊 */
-    const n = 4;
-    for (let i = 0; i < n; i++) {
-      const p0 = pts[pts.length - 1 - i];
-      const p1 = pts[pts.length - 2 - i];
-      const mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2 + R * 0.12;
-      ctx.quadraticCurveTo(mx, my, p1[0], p1[1]);
-    }
+  if (c.hairStyle === 'long') {
+    /* 長髮：中分簾幕瀏海（對應小島女版） */
+    drawLongBangsCap(ctx, c, x, y, R, r);
+  } else if (c.hairStyle === 'short') {
+    /* 蓬蓬短髮：底＋耳朵＋瀏海帽＋髮片＋碎刺（對應小島男版） */
+    drawShortBangsCap(ctx, c, x, y, R, r);
   } else {
-    for (let i = pts.length - 1; i >= 1; i--) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.beginPath();
+    /* 上半圓（從左端點繞頂端至右端點） */
+    ctx.arc(x, y, r, Math.PI, Math.PI * 2);
+    /* 瀏海下緣（由右往左回到起點）；座標需加上頭中心偏移 */
+    const pts = bangPoints(c.hairStyle, R, fx).map(p => [x + p[0], y + p[1]]);
+    if (c.hairStyle === 'curly') {
+      /* 波浪邊 */
+      const n = 4;
+      for (let i = 0; i < n; i++) {
+        const p0 = pts[pts.length - 1 - i];
+        const p1 = pts[pts.length - 2 - i];
+        const mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2 + R * 0.12;
+        ctx.quadraticCurveTo(mx, my, p1[0], p1[1]);
+      }
+    } else {
+      for (let i = pts.length - 1; i >= 1; i--) ctx.lineTo(pts[i][0], pts[i][1]);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
-  ctx.closePath();
-  ctx.fill();
 
   /* 側臉時，後側多補一塊髮 */
   if (fx !== 0) {
@@ -578,32 +829,14 @@ function drawBangs(ctx, c, x, y, R, fx) {
     ctx.fill();
   }
 
-  /* 小髮飾（女生雙馬尾/馬尾 的髮圈在前層也露出） */
-  if (c.hairStyle === 'short') {
-    /* 蓬蓬短髮：頭頂碎刺（對照小島男版/小宥的亂糟糟短髮） */
-    for (const [bx, by, tx, ty] of [
-      [-0.52 * r, -0.85 * r, -0.68 * r, -1.12 * r],
-      [-0.08 * r, -0.99 * r, 0.02 * r, -1.3 * r],
-      [0.45 * r, -0.9 * r, 0.6 * r, -1.18 * r],
-    ]) {
-      ctx.beginPath();
-      ctx.moveTo(x + bx - r * 0.2, y + by + r * 0.12);
-      ctx.lineTo(x + tx, y + ty);
-      ctx.lineTo(x + bx + r * 0.24, y + by - r * 0.04);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-
-  /* 長髮：臉頰兩側側髮（過耳垂到下巴，對照小島女版） */
+  /* 長髮：臉頰兩側側髮（過耳垂到鎖骨，對照小島女版） */
   if (c.hairStyle === 'long') {
     for (const side of [-1, 1]) {
-      const sx = x + side * r * 0.92;
       ctx.beginPath();
-      ctx.moveTo(sx - side * r * 0.12, y - r * 0.5);
-      ctx.bezierCurveTo(sx + side * r * 0.3, y - r * 0.05, sx + side * r * 0.3, y + r * 0.5, sx + side * r * 0.06, y + r * 0.98);
-      ctx.quadraticCurveTo(sx - side * r * 0.16, y + r * 0.66, sx - side * r * 0.32, y + r * 0.18);
-      ctx.quadraticCurveTo(sx - side * r * 0.42, y - r * 0.28, sx - side * r * 0.12, y - r * 0.5);
+      ctx.moveTo(x + side * R * 0.96, y - R * 0.08);
+      ctx.bezierCurveTo(x + side * R * 1.12, y + R * 0.48, x + side * R * 1.12, y + R * 1.2, x + side * R * 0.92, y + R * 1.8);
+      ctx.quadraticCurveTo(x + side * R * 0.78, y + R * 1.64, x + side * R * 0.82, y + R * 1.4);
+      ctx.bezierCurveTo(x + side * R * 0.92, y + R * 0.92, x + side * R * 0.88, y + R * 0.4, x + side * R * 0.78, y - R * 0.04);
       ctx.closePath();
       ctx.fill();
     }
@@ -632,17 +865,11 @@ function bangPoints(style, R, fx) {
   /* 瀏海高度基準（對照 art/ 立繪）：髮線要高，前額露出大半，
    * 最低發絲也只到眉毛上方（眉頂約在 -0.29R），兩側耳上保留低點包住頭髮 */
   switch (style) {
-    case 'short':
-      /* 碎刺瀏海（對照小島男版/小宥：高髮線 + 4 顆碎刺） */
-      return [P(-R * 1.06, R * 0.08), P(-R * 0.84, -R * 0.26), P(-R * 0.62, -R * 0.22), P(-R * 0.42, -R * 0.44), P(-R * 0.2, -R * 0.3), P(0, -R * 0.5), P(R * 0.2, -R * 0.3), P(R * 0.42, -R * 0.44), P(R * 0.62, -R * 0.22), P(R * 0.84, -R * 0.26), P(R * 1.06, R * 0.08)];
     case 'bob':
       return [P(-R * 1.06, R * 0.06), P(-R * 0.6, -R * 0.26), P(-R * 0.3, -R * 0.4), P(0, -R * 0.44), P(R * 0.3, -R * 0.4), P(R * 0.6, -R * 0.26), P(R * 1.06, R * 0.06)];
     case 'pony':
     case 'twins':
       return [P(-R * 1.06, R * 0.08), P(-R * 0.6, -R * 0.24), P(-R * 0.15, -R * 0.4), P(R * 0.35, -R * 0.34), P(R * 0.75, -R * 0.18), P(R * 1.06, R * 0.08)];
-    case 'long':
-      /* 中分瀏海（對照小島女版：中分最高、兩側弧垂、兩撮細發絲） */
-      return [P(-R * 1.06, R * 0.1), P(-R * 0.84, -R * 0.22), P(-R * 0.6, -R * 0.4), P(-R * 0.36, -R * 0.5), P(-R * 0.16, -R * 0.36), P(0, -R * 0.52), P(R * 0.16, -R * 0.36), P(R * 0.36, -R * 0.5), P(R * 0.6, -R * 0.4), P(R * 0.84, -R * 0.22), P(R * 1.06, R * 0.1)];
     case 'curly':
     default:
       return [P(-R * 1.06, R * 0.1), P(-R * 0.55, -R * 0.3), P(0, -R * 0.42), P(R * 0.55, -R * 0.3), P(R * 1.06, R * 0.1)];
@@ -878,8 +1105,8 @@ function drawPortrait(ctx, cfg, size, o = {}) {
 
 /* ══════════ NPC：小宥（參考 art/小宥.png） ══════════ */
 const XIAOYOU_CFG = {
-  gender: 'male',
+  gender: 'female',
   skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
-  hairStyle: 'short', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
-  top: 'blackL', bottom: 'coffeeLong',
+  hairStyle: 'long', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
+  top: 'whiteS', bottom: 'shortDenim', pack: 'beige',
 };

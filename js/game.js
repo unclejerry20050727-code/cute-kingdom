@@ -118,6 +118,10 @@ function confirmCreate() {
 
 function beginGame(save, skipIntro) {
   Game.playerCfg = save.cfg;
+  /* 書包（舊存檔補預設值） */
+  if (!Game.playerCfg.pack) {
+    Game.playerCfg.pack = Game.playerCfg.gender === 'male' ? 'brown' : 'beige';
+  }
   Game.furniture = save.furniture || [];
   Game.stage = save.stage || 'created';
   rebuildBlocked();
@@ -940,8 +944,13 @@ function setupCreateUI() {
   for (const btn of document.querySelectorAll('#opt-gender .chip')) {
     btn.onclick = () => {
       sfx('click');
-      Game.playerCfg.gender = btn.dataset.val;
-      Game.playerCfg.hairStyle = defaultConfig(btn.dataset.val).hairStyle;
+      const d = defaultConfig(btn.dataset.val);
+      Game.playerCfg.gender = d.gender;
+      /* 切換性別時同步重置造型模板（髮型/上衣/下裝/書包） */
+      Game.playerCfg.hairStyle = d.hairStyle;
+      Game.playerCfg.top = d.top;
+      Game.playerCfg.bottom = d.bottom;
+      Game.playerCfg.pack = d.pack;
       refreshCreateUI();
     };
   }
