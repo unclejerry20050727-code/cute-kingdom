@@ -1,4 +1,4 @@
-/* ══════════ 音效系統（Web Audio 合成，無外部音檔） ══════════ */
+/* ══════════ 音效系統（SFX Web Audio 合成；BGM 純 <audio>，見下方註記） ══════════ */
 'use strict';
 
 const AudioSys = {
@@ -127,7 +127,14 @@ function sfx(name) {
   }
 }
 
-/* ── BGM：三首實音軌（版權見 music/CREDITS.txt） ── */
+/* ── BGM：三首實音軌（版權見 music/CREDITS.txt） ──
+ * 第八輪：BGM 改純 <audio> 直接輸出，不走 Web Audio。
+ * 原因：createMediaElementSource 對 file:// 媒體資源會被當跨域（opaque origin），
+ *       Chrome/Firefox/Edge 直接輸出零（console: "MediaElementAudioSource outputs
+ *       zeroes due to CORS access restrictions"），只有 Safari(WebKit) 寬容 →
+ *       遊戲 BGM 在 file:// 開法下只有 Safari 有聲。純 <audio> 在 file:// 全平台正常，
+ *       靜音改用 el.muted 控制。Web Audio 只留給 SFX（震盪器，不依賴音檔）。 */
+const BGM_VOLUME = 0.5; /* BGM 比音效輕 */
 const BGM_TRACKS = [
   'music/sugar-cookie.mp3', /* Sugar Cookie — Daystar (샛별) */
   'music/marshmallow.mp3',  /* Marshmallow — Lukrembo */
@@ -151,9 +158,7 @@ function pickBGMTrack() {
 function playBgmNow() {
   const el = AudioSys.bgmEl;
   if (!el || !AudioSys.bgmPlaying) return Promise.resolve(false);
-  let ok = Promise.resolve();
-  try { ok = audioCtx().resume(); } catch (e) { /* ignore */ }
-  return ok.then(() => el.play()).then(
+  return el.play().then(
     () => { bgmBlocked = false; return true; },
     (e) => {
       console.warn('[BGM] play() 被拒絕：', (e && e.name) || e);
@@ -185,16 +190,11 @@ function bindBgmRetry() {
 
 function startBGM() {
   if (AudioSys.bgmPlaying) return;
-  let ac;
-  try { ac = audioCtx(); } catch (e) { return; }
   if (!AudioSys.bgmEl) {
     const el = new Audio();
     el.preload = 'auto';
-    const src = ac.createMediaElementSource(el);
-    const g = ac.createGain();
-    g.gain.value = 0.5; /* BGM 比音效輕 */
-    src.connect(g);
-    g.connect(masterGain());
+    el.volume = BGM_VOLUME;
+    el.muted = AudioSys.muted;
     el.addEventListener('ended', () => {
       if (!AudioSys.bgmPlaying) return;
       pickBGMTrack();
@@ -204,7 +204,7 @@ function startBGM() {
   }
   AudioSys.bgmPlaying = true;
   pickBGMTrack();
-  console.debug('[BGM] 開始播放:', BGM_TRACKS[bgmIdx], '| ctx state:', ac.state);
+  console.debug('[BGM] 開始播放:', BGM_TRACKS[bgmIdx], '| 純 <audio>（不走 Web Audio，file:// 也有效）');
   playBgmNow();
 }
 
@@ -217,10 +217,13 @@ function stopBGM() {
 function toggleMute() {
   AudioSys.muted = !AudioSys.muted;
   try { localStorage.setItem('cute-kingdom-muted', AudioSys.muted ? '1' : '0'); } catch (e) { /* ignore */ }
+  /* SFX：Web Audio master gain */
   try {
     const ac = audioCtx();
     masterGain().gain.setTargetAtTime(AudioSys.muted ? 0.0001 : 1, ac.currentTime, 0.02);
   } catch (e) { /* ignore */ }
+  /* BGM：純 <audio>，直接控元素（file:// 下也真正有效） */
+  if (AudioSys.bgmEl) AudioSys.bgmEl.muted = AudioSys.muted;
   updateMuteBtn();
   if (!AudioSys.muted) {
     sfx('click');

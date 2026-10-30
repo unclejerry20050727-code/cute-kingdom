@@ -1,3 +1,6 @@
 node_modules/
 tools/full/
 tools/.chars.txt
+
+# 參考照片（非遊戲資產）
+*.HEIC

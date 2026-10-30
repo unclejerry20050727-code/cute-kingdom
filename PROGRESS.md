@@ -290,6 +290,52 @@
 - 新增：`design/character-v2.svg`、`design/character-v2-preview.png`
 - 修改：`js/character.js`、`js/game.js`、`shots/*`（回歸重拍）
 
+## 🎙️ 第八輪：BGM file:// 無聲真凶（CORS 零輸出）+ BGM 脫離 Web Audio（2026-10-29）
+
+### Jerry 的八平台測試矩陣（mp3-test.html）
+| 平台 | 1️⃣純audio | 2️⃣MediaElementSource | 4️⃣蜂鳴器 | index.html 遊戲 BGM |
+|---|---|---|---|---|
+| macOS Safari | ✅ | ✅ | ✅ | ✅ |
+| macOS Chrome / Firefox | ✅ | ❌ | ✅ | ❌ |
+| Win Edge / Chrome / Firefox | ✅ | ❌ | ✅ | ❌ |
+| SteamOS Chrome | ✅ | ❌ | ✅ | ❌ |
+| Omarchy Chrome | ✅ | ❌ | ✅ | ❌ |
+
+規律：除 Safari 外全平台 2️⃣（MediaElementSource）與遊戲 BGM 同時沒聲，但 1️⃣（純 audio）與 4️⃣（Web Audio 震盪器）都正常。
+
+### 排查過程
+1. **MP3 檔案無恙**：ffprobe 三首都正常（44.1kHz/160kbps/立體聲）；decodeAudioData 在 Chromium 全部解得出
+2. **headless Chromium + http server：四層全通、遊戲 BGM RMS 正常** → 圖形邏輯沒問題，差異在「環境」
+3. **關鍵轉折：改用 file:// 載入** → 重現！Chrome console 直接宣判：
+   `MediaElementAudioSource outputs zeroes due to CORS access restrictions for file:///...sugar-cookie.mp3`
+   - file:// 頁面是 opaque origin（null）；Chromium/Gecko 對 file:// 媒體資源視為跨域 → `createMediaElementSource` 依 spec 輸出零（跟 canvas tainting 同款保護）
+   - 同場 fetch() 也被 CORS 擋（測試 3️⃣ 全平台失敗的原因）
+   - WebKit(Safari) 對同目錄 file:// 寬容當同源 → 只有 Safari 全通
+   - 純 `<audio>`（1️⃣）與震盪器（4️⃣）不涉跨域 → 全平台正常
+   **＝ Jerry 各平台都是雙擊 index.html 用 file:// 開的**
+4. **第六輪為什麼沒抓到**：當時 headless 驗證都用 http:// server，正好繞過 file:// 的 CORS 情境；「play() 被 autoplay 擋」是假根因（file:// 下 play() 根本不被拒，元素照播，只是 Web Audio 端收到零）
+
+### 修復（js/audio.js）
+- [x] **BGM 改純 `<audio>` 直接輸出，不再走 createMediaElementSource** → file:// 與 http、全瀏覽器一致有效
+- [x] 靜音鈕：BGM 改用 `el.muted` 控制（SFX 仍走 Web Audio master gain）；BGM 音量改 `el.volume = 0.5`（BGM_VOLUME 常數）
+- [x] playBgmNow 簡化（不需要 ctx.resume）；ended 換歌鏈、被擋重試兜底保留
+- [x] mp3-test.html 加 file:// 說明（2️⃣/3️⃣ 在 file:// 下沒聲是瀏覽器 spec 行為，非 bug）
+
+### 驗證（test/peek-bgm-filefix.mjs，http + file:// 兩情境 × 10 項）
+- [x] BGM 元素在播、進度在走（file:// 下＝真有聲音）、音量 0.5
+- [x] 靜音/取消靜音：el.muted + master gain + localStorage 三聯動、靜音中不中斷
+- [x] 靜音記憶 reload 後生效（BGM 播但 el.muted=true）
+- [x] SFX 震盪器不受影響（peak≈0.018）
+- [x] flow.mjs 31 步全流程回歸 0 pageerror
+
+### 給 Jerry
+- **现在雙擊開（file://）也有 BGM 了**，不用架 server；若要 http 也可以（`python3 -m http.server` 或 flow.mjs 自帶 server）
+- 測試頁 2️⃣3️⃣ 在 file:// 下沒聲是預期（已寫進頁面判讀說明），要看那兩層請用 localhost 開
+
+### 檔案
+- 新增：`test/peek-mp3-deep.mjs`（四層逐一 RMS + 解碼測）、`test/peek-fileproto.mjs`（file:// 重現）、`test/peek-bgm-filefix.mjs`（兩情境回歸）
+- 修改：`js/audio.js`、`mp3-test.html`、`shots/*`（回歸重拍）
+
 ## 🖼️ 進階美術
 - [ ] 更多家具（桌子/椅子/立燈/盆栽/地毯）
 - [x] 真正的屋外場景（直式道路地圖，麥當勞打工）

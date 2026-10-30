@@ -80,6 +80,7 @@
       判讀方式：<br>
       ・1️⃣ 也沒聲 → 問題在 Chrome 這個分頁/網站的音量或系統輸出（點分頁上的喇叭圖示看音量條）<br>
       ・1️⃣ 有聲、2️⃣3️⃣4️⃣ 沒聲 → Web Audio 輸出層的問題<br>
+      ・1️⃣ 有聲、2️⃣3️⃣4️⃣ 沒聲 → 若在 file:// 開：Chrome/FF/Edge 屬預期（2️⃣ 被 CORS 零輸出、3️⃣ fetch 被擋），Safari 不受影響；遊戲 BGM 已改純 <audio>（第八輪），不再依賴這兩條路徑<br>
       ・全部有聲 → 測試頁正常，問題在遊戲代碼的狀態（例如靜音記憶）
     </p>
   </div>
@@ -244,7 +245,7 @@ document.getElementById('b-none').onclick = () => { setA(false); setB(false); se
 function updateStatus() {
   const proto = document.getElementById('proto');
   proto.innerHTML = location.protocol === 'http:' || location.protocol === 'https:'
-    ? location.origin + ' ✅' : location.protocol + ' ⚠️ 測試3需要 http，建議用 localhost 開';
+    ? location.origin + ' ✅' : location.protocol + ' ⚠️ file 開法：Chrome/FF/Edge 的 2️⃣ 會靜音（CORS 零輸出）、3️⃣ fetch 被擋；建議用 localhost 開';
   let ls = '(無)';
   try {
     const v = localStorage.getItem('cute-kingdom-muted');
