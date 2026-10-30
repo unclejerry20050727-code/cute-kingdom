@@ -354,7 +354,7 @@ body {
   border-radius: 50%;
   display: block;
 }
-.dlg-main { flex: 1; min-height: 74px; position: relative; padding-top: 6px; }
+.dlg-main { flex: 1; min-height: 84px; position: relative; padding-top: 22px; }
 .dlg-name {
   position: absolute; top: -18px; left: -8px;
   background: var(--pink);

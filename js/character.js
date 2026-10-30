@@ -700,12 +700,17 @@ function drawLongBangsCap(ctx, c, x, y, R, r) {
 
 /* 蓬蓬短髮：深色底＋耳朵＋平滑髮線＋四撮寬圓髮片＋四顆頭頂碎刺（對應小島男版） */
 function drawShortBangsCap(ctx, c, x, y, R, r) {
-  /* 深色底（髮際線加層 depth） */
+  /* 深色底（髮際線加層 depth；髮線與主帽同步抬高，不蓋眼睛） */
   ctx.fillStyle = shade(c.hairColor, -0.25);
   ctx.beginPath();
   ctx.arc(x, y + R * 0.08, R + 3, Math.PI, Math.PI * 2);
-  ctx.lineTo(x + R + 3, y + R * 0.48);
-  ctx.quadraticCurveTo(x, y + R * 0.32, x - R - 3, y + R * 0.48);
+  ctx.lineTo(x + R + 3, y + R * 0.38);
+  ctx.quadraticCurveTo(x + R * 0.88, y + R * 0.28, x + R * 0.8, y + R * 0.22);
+  ctx.quadraticCurveTo(x + R * 0.64, y, x + R * 0.48, y - R * 0.1);
+  ctx.quadraticCurveTo(x + R * 0.24, y - R * 0.24, x, y - R * 0.24);
+  ctx.quadraticCurveTo(x - R * 0.24, y - R * 0.24, x - R * 0.48, y - R * 0.1);
+  ctx.quadraticCurveTo(x - R * 0.64, y, x - R * 0.8, y + R * 0.22);
+  ctx.quadraticCurveTo(x - R * 0.88, y + R * 0.28, x - R - 3, y + R * 0.38);
   ctx.closePath();
   ctx.fill();
   /* 耳朵 */
@@ -724,22 +729,22 @@ function drawShortBangsCap(ctx, c, x, y, R, r) {
   ctx.fillStyle = c.hairColor;
   ctx.beginPath();
   ctx.arc(x, y, r, Math.PI, Math.PI * 2);
-  ctx.quadraticCurveTo(x + R * 1.04, y + R * 0.32, x + R * 0.98, y + R * 0.48);
-  ctx.quadraticCurveTo(x + R * 0.88, y + R * 0.44, x + R * 0.8, y + R * 0.32);
-  ctx.quadraticCurveTo(x + R * 0.64, y + R * 0.08, x + R * 0.48, y);
-  ctx.quadraticCurveTo(x + R * 0.24, y - R * 0.12, x, y - R * 0.12);
-  ctx.quadraticCurveTo(x - R * 0.24, y - R * 0.12, x - R * 0.48, y);
-  ctx.quadraticCurveTo(x - R * 0.64, y + R * 0.08, x - R * 0.8, y + R * 0.32);
-  ctx.quadraticCurveTo(x - R * 0.88, y + R * 0.44, x - R * 0.98, y + R * 0.48);
-  ctx.quadraticCurveTo(x - R * 1.04, y + R * 0.32, x - r, y);
+  ctx.quadraticCurveTo(x + R * 1.04, y + R * 0.26, x + R * 0.98, y + R * 0.3);
+  ctx.quadraticCurveTo(x + R * 0.9, y + R * 0.24, x + R * 0.8, y + R * 0.14);
+  ctx.quadraticCurveTo(x + R * 0.62, y - R * 0.06, x + R * 0.48, y - R * 0.18);
+  ctx.quadraticCurveTo(x + R * 0.24, y - R * 0.32, x, y - R * 0.32);
+  ctx.quadraticCurveTo(x - R * 0.24, y - R * 0.32, x - R * 0.48, y - R * 0.18);
+  ctx.quadraticCurveTo(x - R * 0.62, y - R * 0.06, x - R * 0.8, y + R * 0.14);
+  ctx.quadraticCurveTo(x - R * 0.9, y + R * 0.24, x - R * 0.98, y + R * 0.3);
+  ctx.quadraticCurveTo(x - R * 1.04, y + R * 0.26, x - r, y);
   ctx.closePath();
   ctx.fill();
-  /* 四撮寬圓瀏海髮片（不對稱，髮片間露出額頭） */
+  /* 四撮寬圓瀏海髮片（不對稱；尖端全在眉眼之上，露出整片額頭） */
   for (const t of [
-    [-0.72, 0.04, -0.62, 0.34, -0.52, 0.38, -0.46, 0.28, -0.4, -0.08],
-    [-0.32, -0.04, -0.22, 0.3, -0.12, 0.34, -0.06, 0.22, 0, 0.02],
-    [0.08, -0.04, 0.18, 0.26, 0.28, 0.3, 0.34, 0.2, 0.4, 0.02],
-    [0.42, 0.04, 0.52, 0.36, 0.62, 0.4, 0.68, 0.3, 0.74, 0.1],
+    [-0.8, -0.14, -0.7, -0.02, -0.58, -0.04, -0.48, -0.16, -0.42, -0.26],
+    [-0.46, -0.22, -0.36, -0.08, -0.26, -0.12, -0.16, -0.24, -0.08, -0.3],
+    [0.12, -0.3, 0.2, -0.24, 0.3, -0.14, 0.4, -0.1, 0.46, -0.22],
+    [0.5, -0.24, 0.58, -0.1, 0.66, -0.06, 0.74, -0.02, 0.78, -0.08],
   ]) {
     ctx.beginPath();
     ctx.moveTo(x + t[0] * R, y + t[1] * R);
