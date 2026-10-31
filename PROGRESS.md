@@ -14,6 +14,8 @@
 - [x] 角色外觀對照 art/ 設定圖（小島男女版、小宥）
 - [x] BGM 實音軌（Sugar Cookie‑Daystar／Marshmallow・Sunset‑Lukrembo，music/）
 - [x] 字體換資源圓體 RHR（子集 WOFF2 516KB，tools/make-font.py 可重跑）
+- [x] 房間建造系統（第九輪：家具 8／擺飾 4／地飾 4／牆飾 6 款＋裝潢 10 色＋移除）
+- [x] README.md（玩法／操作／建造表／測試說明）
 
 ## 0️⃣ 初始化 ✅
 
@@ -434,3 +436,14 @@
 6. ✅ node test/flow.mjs：31 步 0 pageerror（面板移位不影響教學 hint 與卡片點擊）
 
 **剩餘待辦**：9f 全回歸＋文件。
+
+### 9f ✅ 全回歸＋文件（本輪 commit）
+1. ✅ 六套件全回歸全過：
+   - flow.mjs：31 步 0 pageerror
+   - peek-build.mjs：48 項建造檢查
+   - peek-recover.mjs：3 種異常存檔自愈 0 pageerror
+   - peek-bgm-filefix.mjs：BGM＋靜音 http／file:// 雙情境
+   - peek-map.mjs：地圖→商店→打工→走回家 0 error
+   - peek-character.mjs：角色造型對照截圖
+2. ✅ 新增 README.md：快速開始／玩法／操作／建造品項表／音訊說明／專案結構／測試表
+3. ✅ 第九輪全部完成（9a 髮型對話徽章 → 9b 建造核心 → 9c 擺飾地飾 → 9d 牆飾 → 9e 裝潢收尾 → 9f 回歸文件），無剩餘待辦
