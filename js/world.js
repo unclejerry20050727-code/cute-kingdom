@@ -997,10 +997,178 @@ function countItem(id) {
   return Game.furniture.filter(f => f.id === id).length;
 }
 
-/* ── 牆飾：空目錄（第九輪d 填入）＋槽位規則 ──
+/* ── 牆飾（第九輪d）＋槽位規則 ──
    牆 A：ty=0 右後牆（窗戶 2.7~5.7、心形框 7.6）
-   牆 B：tx=0 左後牆（門 6.2~8.2） */
-const WALL_ITEMS = {};   // id → { name, tab:'wall', max, span, hMid, draw(ctx, wall, pos, o) }
+   牆 B：tx=0 左後牆（門 6.2~8.2）
+   draw(ctx, wall, pos, o)：pos = 跨幅中心座標（左槽+0.5*span）；
+   用 wallSpace 進本地 2D（x 沿牆向右 px、y 向下、原點 = 離地 hMid） */
+function starPath(ctx, x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function drawWallHeartFrame(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 170);
+  const bad = o.tint === 'bad';
+  ctx.fillStyle = bad ? '#DE8794' : '#FFF6FA';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.rect(-17, -23, 34, 46); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = bad ? '#C96A7A' : '#FF9FBE'; ctx.lineWidth = 3;
+  ctx.strokeRect(-12.5, -18.5, 25, 37);
+  ctx.fillStyle = bad ? '#DE8794' : '#FF6E97';
+  drawHeartPath(ctx, 0, 0, 10);
+  ctx.fill();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+function drawWallStarFrame(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 165);
+  const bad = o.tint === 'bad';
+  ctx.fillStyle = bad ? '#DE8794' : '#FFFDF4';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.rect(-16, -22, 32, 44); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = bad ? '#C96A7A' : '#9FD8E8'; ctx.lineWidth = 3;
+  ctx.strokeRect(-11.5, -17.5, 23, 35);
+  ctx.fillStyle = bad ? '#DE8794' : '#FFC94D';
+  starPath(ctx, 0, 0, 10.5);
+  ctx.fill();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+function drawWallClock(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 185);
+  const bad = o.tint === 'bad';
+  ctx.fillStyle = bad ? '#DE8794' : '#FFF8E7';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = bad ? '#C96A7A' : '#E8B4B8'; ctx.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 12.5, Math.sin(a) * 12.5);
+    ctx.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, -4.5); ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+function drawWallPoster(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 150);
+  const bad = o.tint === 'bad';
+  ctx.save();
+  ctx.rotate(-0.05);
+  ctx.fillStyle = bad ? '#DE8794' : '#FFFDF4';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.rect(-15, -21, 30, 42); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? 'rgba(222,135,148,.85)' : 'rgba(255,214,230,.95)';
+  ctx.fillRect(-12, -24, 10, 6);
+  ctx.fillRect(3, -24, 10, 6);
+  ctx.fillStyle = bad ? '#C96A7A' : '#FF6E97';
+  drawHeartPath(ctx, 0, -6, 7);
+  ctx.fill();
+  ctx.strokeStyle = bad ? '#C96A7A' : '#E8B4B8';
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-9, 8); ctx.lineTo(9, 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-9, 14); ctx.lineTo(4, 14); ctx.stroke();
+  ctx.restore();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+function drawWallShelf(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 105);
+  const bad = o.tint === 'bad';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.fillStyle = bad ? '#DE8794' : '#FF9FBE';
+  ctx.beginPath(); ctx.rect(-15, -16, 7, 16); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#DE8794' : '#9FD8E8';
+  ctx.beginPath(); ctx.rect(-7, -19, 7, 19); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.translate(4, 0); ctx.rotate(0.18);
+  ctx.fillStyle = bad ? '#DE8794' : '#B8E0C0';
+  ctx.beginPath(); ctx.rect(-3, -15, 7, 15); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = bad ? '#DE8794' : '#E8A87C';
+  ctx.beginPath(); ctx.rect(11, -8, 9, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#C96A7A' : '#7FC98F';
+  ellipse(ctx, 15.5, -11, 4, 5.5);
+  ctx.fillStyle = bad ? '#DE8794' : '#D9A05B';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.rect(-19, 0, 38, 5); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-14, 5); ctx.lineTo(-14, 11); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(14, 5); ctx.lineTo(14, 11); ctx.stroke();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+function drawWallGarland(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, 232);
+  const bad = o.tint === 'bad';
+  const P0 = [-36, -10], P1 = [0, 12], P2 = [36, -10];
+  ctx.strokeStyle = bad ? '#C96A7A' : INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(P0[0], P0[1]);
+  ctx.quadraticCurveTo(P1[0], P1[1], P2[0], P2[1]);
+  ctx.stroke();
+  const cols = bad
+    ? ['#DE8794', '#DE8794', '#DE8794', '#DE8794', '#DE8794']
+    : ['#FF9FBE', '#FFF6E5', '#A8DFC0', '#9FD8E8', '#FF9FBE'];
+  for (let i = 1; i <= 5; i++) {
+    const t = i / 6;
+    const x = (1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * P1[0] + t ** 2 * P2[0];
+    const y = (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * P1[1] + t ** 2 * P2[1];
+    ctx.fillStyle = cols[i - 1];
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - 5.5, y);
+    ctx.lineTo(x + 5.5, y);
+    ctx.lineTo(x, y + 11);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.fillStyle = bad ? '#C96A7A' : '#B08968';
+  ctx.beginPath(); ctx.arc(P0[0], P0[1], 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(P2[0], P2[1], 1.8, 0, Math.PI * 2); ctx.fill();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+/* id → { name, tab:'wall', max, span, hMid, hitW, draw(ctx, wall, pos, o) } */
+const WALL_ITEMS = {
+  heartFrame: { name: '心形框', tab: 'wall', max: 2, span: 1, hMid: 170, hitW: 17, draw: drawWallHeartFrame },
+  starFrame:  { name: '星星框', tab: 'wall', max: 2, span: 1, hMid: 165, hitW: 16, draw: drawWallStarFrame },
+  clock:      { name: '時鐘',   tab: 'wall', max: 1, span: 1, hMid: 185, hitW: 17, draw: drawWallClock },
+  poster:     { name: '海報',   tab: 'wall', max: 2, span: 1, hMid: 150, hitW: 15, draw: drawWallPoster },
+  wallShelf:  { name: '牆架',   tab: 'wall', max: 2, span: 1, hMid: 105, hitW: 19, draw: drawWallShelf },
+  garland:    { name: '彩旗',   tab: 'wall', max: 1, span: 2, hMid: 232, hitW: 36, draw: drawWallGarland },
+};
+
 const WALL_FORBID = { A: [2, 3, 4, 5, 7], B: [6, 7, 8] };
 
 function wallSlotValid(id, wall, pos) {
@@ -1025,13 +1193,14 @@ function wallSlotFromMouse() {
   const [ax, ay] = P(0, 0);
   const [bx, by] = P(N, 0);
   const [cx, cy] = P(0, N);
+  /* 槽位由 x 座標決定（P 的 z 偏移只動 y，不影響 x）；高度不影響投影 */
   if (mx >= ax && mx <= bx && my < ay + (mx - ax) * 0.5 + 8) {
-    const t = ((mx - ax) * (bx - ax) + (my - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2);
-    return { wall: 'A', pos: clamp(Math.round(t * N - 0.5), 0, N - 1) };
+    const u = (mx - ax) / (bx - ax) * N;
+    return { wall: 'A', pos: clamp(Math.round(u - 0.5), 0, N - 1) };
   }
   if (mx >= cx && mx <= ax && my < ay + (ax - mx) * 0.5 + 8) {
-    const t = ((mx - ax) * (cx - ax) + (my - ay) * (cy - ay)) / ((cx - ax) ** 2 + (cy - ay) ** 2);
-    return { wall: 'B', pos: clamp(Math.round(t * N - 0.5), 0, N - 1) };
+    const u = (ax - mx) / (ax - cx) * N;
+    return { wall: 'B', pos: clamp(Math.round(u - 0.5), 0, N - 1) };
   }
   return null;
 }
@@ -1049,7 +1218,8 @@ function wallSpaceEnd(ctx) { ctx.restore(); }
 function wallItemHit(w, mx, my) {
   const it = WALL_ITEMS[w.id];
   const hMid = it ? (it.hMid ?? 110) : 110;
-  const [cx, cy] = P(w.wall === 'A' ? w.pos + 0.5 : 0, w.wall === 'A' ? 0 : w.pos + 0.5, -hMid);
+  const span = it ? (it.span || 1) : 1;
+  const [cx, cy] = P(w.wall === 'A' ? w.pos + 0.5 * span : 0, w.wall === 'A' ? 0 : w.pos + 0.5 * span, -hMid);
   const ux = w.wall === 'A' ? 0.8944 : -0.8944;
   const relx = mx - cx, rely = my - cy;
   const along = relx * ux + rely * 0.4472;

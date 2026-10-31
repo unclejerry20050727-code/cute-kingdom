@@ -402,3 +402,25 @@
 1. `beginGame` 載入時存檔消毒＋一致性：furniture 無 id 者補為 bed（舊格式）、床最多留一張；`stage:'created'` 已有床→升 `'bed'`（進 goOut）；`stage:'bed'` 無床→降 `'created'`（重播教學）。
 2. `updateGame` 加 `tutBuild` case 運行時自愈：若 `countItem('bed')>=1` → 直接 `setSub('goOut')`＋出門提示（異常 session 也能自救）。
 **驗證**：`test/peek-recover.mjs` 三種異常存檔（created+有床／舊格式無 id／bed 無床）全數自愈、0 pageerror；`flow.mjs` 31 步回歸全過（正常教學不受影響）。
+
+### 9d ✅ 牆飾 6 款入 WALL_ITEMS（本輪 commit）
+1. ✅ world.js：6 個牆飾繪圖函式（全部用 wallSpace 等距空間，中心對齊 local x=0）——
+   - 心形框 drawWallHeartFrame（hMid 170：白框＋粉邊＋愛心）
+   - 星星框 drawWallStarFrame（hMid 165：米框＋天藍邊＋黃星；新增 starPath 五角星 helper）
+   - 時鐘 drawWallClock（hMid 185：圓盤＋4 刻度＋約 10:10 時針分針）
+   - 海報 drawWallPoster（hMid 150：微傾斜紙張＋膠帶＋愛心＋文字線）
+   - 牆架 drawWallShelf（hMid 105：木板＋3 本書＋斜放書＋小盆栽）
+   - 彩旗 drawWallGarland（hMid 232、span 2：二次曲線繩＋5 面三角旗＋釘點）
+2. ✅ world.js：WALL_ITEMS 填 6 條（tab:'wall'、span、hMid、hitW；max 心形框/星星框/海報/牆架=2、時鐘/彩旗=1）
+3. ✅ **座標慣例統一**：所有牆飾 draw 以 local x=0 為中心，呼叫端（renderGame 牆飾 loop、ghost、wallItemHit）一律傳 `pos + 0.5*span` → 視覺中心＝槽位中心（與卡片預覽 pos 0.5 一致）
+4. ✅ **wallSlotFromMouse 改以 x 座標投影**（舊版用 2D 點積含 y 高度分碼，游標離地越高槽位越偏 → 放進錯槽、窗戶槽誤判、移除點不中）。現在：A 側 `u=(mx-ax)/(bx-ax)*N`、B 側 `u=(ax-mx)/(ax-cx)*N`，pos=round(u-0.5) clamp
+5. ✅ game.js：renderGame 牆飾 loop 與 ghost 改傳 `pos + 0.5*(it.span||1)`
+6. ✅ **抓到 9b 遗留 bug：卡片 max 計數用 render 時舊值**（floorCard/wallCard onclick 閉包 capture 舊 n＋openBuildPanel 不重渲）→ 放完同一品項可再點超量。修法：onclick 改即時 `countItem/countWallItem`，且 openBuildPanel 一律重渲當前 tab（卡片 (n/max)、dis 狀態即時更新）
+7. ✅ test/peek-build.mjs 擴充：牆飾 6 卡、放 5 件（心形框 A1/時鐘 B2/海報 A8/牆架 A6/彩旗 B0 span2）、槽位精確斷言、窗戶槽(A3)判無效、彩旗 max 拒絕、移除心形框、reload 4 件持久化 → 34 項全過
+8. ✅ node test/flow.mjs：31 步 0 pageerror（教學/建造/出門全回歸）
+
+**設計決定**：
+- 彩旗 span=2（牆 A 可用連續槽最多 2 格；span 3 以上牆 A 永遠放不下）。
+- 窗戶（A 2.7~5.7）、靜態心形框（A 7.6）、門（B 6.2~8.2）槽位由 WALL_FORBID 保護，掛不上去（ghost 轉紅）。
+
+**剩餘待辦**：9e 裝潢 UI 收尾、9f 全回歸＋文件。

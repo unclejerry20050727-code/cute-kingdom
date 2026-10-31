@@ -632,11 +632,11 @@ function renderGame() {
     const it = WALL_ITEMS[w.id];
     if (!it) return;
     const o = (rmTarget0 && rmTarget0.type === 'wall' && rmTarget0.idx === i) ? { highlight: true } : {};
-    it.draw(ctx, w.wall, w.pos, o);
+    it.draw(ctx, w.wall, w.pos + 0.5 * (it.span || 1), o);
   });
   if (Game.placement && Game.placement.mode === 'wall') {
     const pl = Game.placement, it = WALL_ITEMS[pl.item];
-    if (it) it.draw(ctx, pl.wall, pl.pos, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+    if (it) it.draw(ctx, pl.wall, pl.pos + 0.5 * (it.span || 1), { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
   }
 
   /* 地飾（地層：貼地板，先於家具與角色繪製；移除模式標紅） */
@@ -944,7 +944,7 @@ function setupBuildUI() {
 
 function openBuildPanel(tab) {
   $('#build-panel').classList.remove('hidden');
-  if (tab) selectBuildTab(tab, true);
+  selectBuildTab(tab || buildTab || 'furniture');
 }
 function closeBuildPanel() {
   $('#build-panel').classList.add('hidden');
@@ -1053,7 +1053,8 @@ function floorCard(id, it) {
   if (n >= it.max) item.classList.add('dis');
   item.onclick = () => {
     sfx('click');
-    if (n >= it.max) { showToast(`已經有 ${it.max} 個${it.name}囉～`); return; }
+    const cur = countItem(id);
+    if (cur >= it.max) { showToast(`已經有 ${cur} 個${it.name}囉～`); return; }
     if (!canPlaceNow()) return;
     startPlacement(id);
   };
@@ -1087,7 +1088,8 @@ function wallCard(id, it) {
   if (n >= it.max) item.classList.add('dis');
   item.onclick = () => {
     sfx('click');
-    if (n >= it.max) { showToast(`已經有 ${it.max} 個${it.name}囉～`); return; }
+    const cur = countWallItem(id);
+    if (cur >= it.max) { showToast(`已經有 ${cur} 個${it.name}囉～`); return; }
     if (!canPlaceNow()) return;
     startWallPlacement(id);
   };
