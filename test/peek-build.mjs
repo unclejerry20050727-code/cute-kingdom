@@ -93,14 +93,42 @@ check('放沙發 → 4 件家具', (await G(() => Game.furniture.length)) === 4)
 check('放完後 sub 回 free', (await G(() => Game.sub)) === 'free');
 await shot('room-furniture', '床+書桌+椅子+沙發');
 
-/* ── 4. 牆飾 / 擺飾 / 地飾：敬請期待 ── */
+/* ── 4. 牆飾：敬請期待 ── */
 await page.click('.btab[data-tab="wall"]'); await ms(300);
 check('牆飾 tab 顯示敬請期待', (await G(() => document.querySelector('#build-items').textContent)).includes('敬請期待'));
 await shot('tab-wall-empty');
-await page.click('.btab[data-tab="decor"]'); await ms(300);
-check('擺飾 tab 顯示敬請期待', (await G(() => document.querySelector('#build-items').textContent)).includes('敬請期待'));
 
-/* ── 5. 裝潢換色 ── */
+/* ── 5. 擺飾 tab：4 張卡，放盆栽 + 氣球 ── */
+await page.click('.btab[data-tab="decor"]'); await ms(300);
+const nDeco = await G(() => document.querySelectorAll('#build-items .build-item').length);
+check(`擺飾卡 4 張（實際 ${nDeco}）`, nDeco === 4);
+await shot('panel-decor');
+await placeItemByName('盆栽', 1.5, 3.5);
+check('放盆栽 → 5 件', (await G(() => Game.furniture.length)) === 5);
+await placeItemByName('氣球', 8.5, 4.5);
+check('放氣球 → 6 件', (await G(() => Game.furniture.length)) === 6);
+
+/* ── 6. 地飾 tab：4 張卡，放地毯/地板貼/門墊/小花叢 ── */
+await page.click('.btab[data-tab="floor"]'); await ms(300);
+const nFloor = await G(() => document.querySelectorAll('#build-items .build-item').length);
+check(`地飾卡 4 張（實際 ${nFloor}）`, nFloor === 4);
+await shot('panel-floor');
+await placeItemByName('地毯', 6.5, 4.5);
+check('放地毯(2x2) → 7 件', (await G(() => Game.furniture.length)) === 7);
+await placeItemByName('地板貼', 4.5, 3.5);
+check('放地板貼 → 8 件', (await G(() => Game.furniture.length)) === 8);
+await placeItemByName('門墊', 1.5, 8.5);
+check('放門墊 → 9 件', (await G(() => Game.furniture.length)) === 9);
+await placeItemByName('小花叢', 2.5, 4.5);
+check('放小花叢 → 10 件', (await G(() => Game.furniture.length)) === 10);
+check('放完後 sub 回 free', (await G(() => Game.sub)) === 'free');
+await shot('room-decor', '地毯+貼紙+門墊+小花+盆栽+氣球');
+/* 同層重疊：第二張地毯壓第一張 → 拒絕 */
+await placeItemByName('地毯', 7.5, 5.5);
+check('地毯重疊被拒 → 仍 10 件', (await G(() => Game.furniture.length)) === 10);
+await page.keyboard.press('Escape'); await ms(300);
+
+/* ── 7. 裝潢換色 ── */
 await page.click('.btab[data-tab="renovate"]'); await ms(300);
 await shot('tab-renovate');
 await page.locator('.tint-row').nth(0).locator('.tint-chip').nth(1).click(); /* 牆→粉嫩 */
@@ -112,7 +140,7 @@ await G(() => closeBuildPanel());
 await ms(300);
 await shot('tinted-room', '牆粉嫩+地板薄荷');
 
-/* ── 6. 移除模式 ── */
+/* ── 8. 移除模式 ── */
 await page.click('#build-btn'); await ms(400);
 await page.click('.btab[data-tab="remove"]'); await ms(300);
 await page.click('#build-items .build-item'); await ms(400);
@@ -122,21 +150,30 @@ await page.mouse.move(chairPt.x, chairPt.y); await ms(400);
 check('椅子被標記', (await G(() => Game.placement.target))?.type === 'floor');
 await shot('remove-hover', '椅子紅色標記');
 await page.mouse.click(chairPt.x, chairPt.y); await ms(500);
-check('移除椅子 → 3 件家具', (await G(() => Game.furniture.length)) === 3);
+check('移除椅子 → 9 件家具', (await G(() => Game.furniture.length)) === 9);
 /* 床不可移除 */
 const bedPt = await tilePt(6.5, 3.5);
 await page.mouse.move(bedPt.x, bedPt.y); await ms(400);
 await page.mouse.click(bedPt.x, bedPt.y); await ms(400);
-check('床不可移除 → 仍 3 件', (await G(() => Game.furniture.length)) === 3);
+check('床不可移除 → 仍 9 件', (await G(() => Game.furniture.length)) === 9);
 await shot('remove-bed-toast');
+/* 再移除盆栽＋氣球（不擋路的擺飾也可移除） */
+const plantPt = await tilePt(1.5, 3.5);
+await page.mouse.move(plantPt.x, plantPt.y); await ms(400);
+await page.mouse.click(plantPt.x, plantPt.y); await ms(500);
+check('移除盆栽 → 8 件', (await G(() => Game.furniture.length)) === 8);
+const balloonPt = await tilePt(8.5, 4.5);
+await page.mouse.move(balloonPt.x, balloonPt.y); await ms(400);
+await page.mouse.click(balloonPt.x, balloonPt.y); await ms(500);
+check('移除氣球 → 7 件', (await G(() => Game.furniture.length)) === 7);
 await page.keyboard.press('Escape'); await ms(400);
 check('Esc 離開移除模式', (await G(() => Game.sub)) === 'free');
 
-/* ── 7. 重新載入 → 持久化 ── */
+/* ── 9. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
 await page.click('#cover-enter'); await ms(500);
 await page.click('#btn-start'); await ms(1200);
-check('reload 後 3 件家具', (await G(() => Game.furniture.length)) === 3);
+check('reload 後 7 件家具', (await G(() => Game.furniture.length)) === 7);
 check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":1,"floor":2}');
 await shot('after-reload', '換色+家具保留');
 

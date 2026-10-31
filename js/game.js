@@ -616,12 +616,30 @@ function renderGame() {
     if (it) it.draw(ctx, pl.wall, pl.pos, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
   }
 
+  /* 地飾（地層：貼地板，先於家具與角色繪製；移除模式標紅） */
+  Game.furniture.forEach((f, i) => {
+    const it = BUILD_ITEMS[f.id];
+    if (!it || it.layer !== 'floor') return;
+    it.draw(ctx, f.tx, f.ty);
+    if (rmTarget0 && rmTarget0.type === 'floor' && rmTarget0.idx === i) {
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#E05A6A';
+      const g0 = P(f.tx, f.ty), g1 = P(f.tx + it.w, f.ty), g2 = P(f.tx + it.w, f.ty + it.d), g3 = P(f.tx, f.ty + it.d);
+      poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
+      ctx.globalAlpha = 1;
+    }
+  });
+  if (Game.placement && Game.placement.mode === 'floor') {
+    const pl = Game.placement, it = BUILD_ITEMS[pl.item];
+    if (it && it.layer === 'floor') it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+  }
+
   /* 可繪項目（深度排序） */
   const items = [];
   const rmTarget = rmTarget0;
   Game.furniture.forEach((f, i) => {
     const it = BUILD_ITEMS[f.id];
-    if (!it) return;
+    if (!it || it.layer === 'floor') return;
     const isRm = rmTarget && rmTarget.type === 'floor' && rmTarget.idx === i;
     items.push({
       depth: f.tx + f.ty + it.w + it.d - 1,
@@ -659,7 +677,7 @@ function renderGame() {
   }
   if (Game.placement && Game.placement.mode === 'floor') {
     const pl = Game.placement, it = BUILD_ITEMS[pl.item];
-    if (it) {
+    if (it && it.layer !== 'floor') {
       items.push({
         depth: pl.tx + pl.ty + it.w + it.d - 1,
         draw: () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }),
@@ -998,9 +1016,10 @@ function floorCard(id, it) {
   const c2 = cv.getContext('2d');
   c2.save();
   const s = Math.min(0.72, 78 / (it.h + (it.w + it.d) * 8));
+  const pv = it.pv ?? (96 - it.h / 2);
   c2.translate(64, 42);
   c2.scale(s, s);
-  c2.translate(-OX, -(OY + 96 - it.h / 2)); /* 視覺中心（含高度一半）對齊卡片中央 */
+  c2.translate(-OX, -(OY + pv)); /* 視覺中心對齊卡片中央（pv 可自訂，如氣球） */
   it.draw(c2, 3 - it.w / 2, 3 - it.d / 2);
   c2.restore();
   const nm = document.createElement('div');

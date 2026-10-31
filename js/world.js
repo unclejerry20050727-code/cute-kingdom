@@ -690,7 +690,255 @@ function drawPiano(ctx, tx, ty, o = {}) {
   ctx.globalAlpha = saved;
 }
 
-/* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路） ── */
+/* ── 擺飾：盆栽 ── */
+function drawPlant(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  isoBox(ctx, tx + 0.3, ty + 0.3, 0.4, 0.4, 0, 14, { top: '#EDB289', right: o.tint === 'bad' ? '#DE8794' : '#DE9C6C', left: o.tint === 'bad' ? '#D47A88' : '#C98A58', lw: 2.4 });
+  const [bx, by] = P(tx + 0.5, ty + 0.5, -13);
+  const leaf = (ang, len, wid, col) => {
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(wid, -len * 0.55, 0, -len);
+    ctx.quadraticCurveTo(-wid, -len * 0.55, 0, 0);
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.restore();
+  };
+  leaf(-0.62, 30, 8, '#8CCB7E');
+  leaf(0.62, 30, 8, '#8CCB7E');
+  leaf(-0.3, 38, 8.5, '#79BE6C');
+  leaf(0.3, 38, 8.5, '#79BE6C');
+  leaf(0, 44, 9, '#9AD88B');
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 擺飾：花瓶 ── */
+function drawVase(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const [cx, cy] = P(tx + 0.5, ty + 0.5, -17);
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, cy + 17);
+  ctx.bezierCurveTo(cx - 12, cy + 10, cx - 11, cy - 4, cx - 3.5, cy - 12);
+  ctx.lineTo(cx - 4.5, cy - 16);
+  ctx.lineTo(cx + 4.5, cy - 16);
+  ctx.lineTo(cx + 3.5, cy - 12);
+  ctx.bezierCurveTo(cx + 11, cy - 4, cx + 12, cy + 10, cx + 4, cy + 17);
+  ctx.closePath();
+  ctx.fillStyle = o.tint === 'bad' ? '#DE8794' : '#A9D3E8';
+  ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - 16, 4.5, 1.8, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#7FB8D4';
+  ctx.fill(); ctx.stroke();
+  if (!o.ghost) {
+    ctx.fillStyle = '#FFF6E9';
+    for (const [dx, dy, r] of [[-5, 2, 1.7], [5, 6, 1.7], [0, -6, 1.7], [-6, -8, 1.4], [6, -3, 1.4]]) {
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = '#B08D5F'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(cx - 1, cy - 16); ctx.quadraticCurveTo(cx - 5, cy - 26, cx - 3, cy - 31); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 2, cy - 16); ctx.quadraticCurveTo(cx + 6, cy - 25, cx + 4, cy - 30); ctx.stroke();
+    ctx.fillStyle = '#FFD166';
+    ctx.beginPath(); ctx.arc(cx - 3, cy - 32, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 4, cy - 31, 2.2, 0, Math.PI * 2); ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 擺飾：泰迪熊 ── */
+function drawTeddy(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const fur = bad ? '#DE8794' : '#D9A066', furL = bad ? '#F2B4C0' : '#F0D5B0';
+  const [cx, cy] = P(tx + 0.5, ty + 0.5, -10);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(cx + s * 6.5, cy + 6, 4.5, 3.6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = fur; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx + s * 6.5, cy + 6.5, 2.2, 1.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = furL; ctx.fill();
+  }
+  ctx.beginPath(); ctx.ellipse(cx, cy, 10, 8.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = fur; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx, cy + 2, 5.5, 4.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = furL; ctx.fill();
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(cx + s * 10, cy - 3, 3.8, 5, s * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = fur; ctx.fill(); ctx.stroke();
+  }
+  const [hx, hy] = P(tx + 0.5, ty + 0.5, -22);
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.arc(hx + s * 6, hy - 6.5, 3.4, 0, Math.PI * 2);
+    ctx.fillStyle = fur; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + s * 6, hy - 6.5, 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = furL; ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(hx, hy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = fur; ctx.fill(); ctx.stroke();
+  if (!o.ghost) {
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(hx - 2.8, hy - 1.5, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + 2.8, hy - 1.5, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx, hy + 2.2, 3, 2.3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = furL; ctx.fill();
+    ctx.beginPath(); ctx.arc(hx, hy + 1.6, 1, 0, Math.PI * 2);
+    ctx.fillStyle = INK; ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(hx, hy + 3, 1.6, 0.2, Math.PI - 0.2); ctx.stroke();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 擺飾：氣球 ── */
+function drawBalloon(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const [bx, by] = P(tx + 0.5, ty + 0.5, -68);
+  const [sx, sy] = P(tx + 0.5, ty + 0.5, 0);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(sx, sy);
+  ctx.bezierCurveTo(sx - 5, sy - 20, sx + 5, sy - 42, bx, by + 13);
+  ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(bx, by, 12.5, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = o.tint === 'bad' ? '#DE8794' : '#FF9FBE';
+  ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bx - 3, by + 13); ctx.lineTo(bx + 3, by + 13); ctx.lineTo(bx, by + 17);
+  ctx.closePath();
+  ctx.fillStyle = o.tint === 'bad' ? '#D47A88' : '#F27DA4';
+  ctx.fill(); ctx.stroke();
+  if (!o.ghost) {
+    ctx.beginPath(); ctx.ellipse(bx - 4.5, by - 5.5, 3, 4.2, -0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fill();
+    ctx.fillStyle = '#FFF0F5';
+    drawHeartPath(ctx, bx + 1.5, by + 0.5, 4.5);
+    ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 地飾：地毯（貼地層） ── */
+function drawRug(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  isoBox(ctx, tx + 0.08, ty + 0.08, 1.84, 1.84, 0, 4, {
+    top: bad ? '#E3AEBB' : '#CDE8D5',
+    right: bad ? '#DE8794' : '#AFCFBB',
+    left: bad ? '#D47A88' : '#9FC0AB',
+    stroke: null,
+  });
+  const i0 = 0.34;
+  const r0 = P(tx + i0, ty + i0, -4), r1 = P(tx + 2 - i0, ty + i0, -4), r2 = P(tx + 2 - i0, ty + 2 - i0, -4), r3 = P(tx + i0, ty + 2 - i0, -4);
+  ctx.strokeStyle = bad ? '#C96A7A' : '#8FBCA4'; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(r0[0], r0[1]); ctx.lineTo(r1[0], r1[1]); ctx.lineTo(r2[0], r2[1]); ctx.lineTo(r3[0], r3[1]);
+  ctx.closePath(); ctx.stroke();
+  if (!o.ghost) {
+    ctx.fillStyle = bad ? '#E05A6A' : '#7FB89A';
+    const [hx, hy] = P(tx + 1, ty + 1, -4.5);
+    drawHeartPath(ctx, hx, hy, 5);
+    ctx.fill();
+    for (const [dx, dy] of [[0.55, 0.55], [1.45, 0.55], [0.55, 1.45], [1.45, 1.45]]) {
+      const [px, py] = P(tx + dx, ty + dy, -4);
+      ctx.beginPath(); ctx.arc(px, py, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 2, 2, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 地飾：門墊（貼地層） ── */
+function drawDoormat(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  isoBox(ctx, tx + 0.1, ty + 0.1, 0.8, 0.8, 0, 2.5, {
+    top: bad ? '#E3AEBB' : '#EBCFA4',
+    right: bad ? '#DE8794' : '#D8B586',
+    left: bad ? '#D47A88' : '#C7A26F',
+    lw: 2.2,
+  });
+  ctx.strokeStyle = bad ? '#C96A7A' : '#B08D5F'; ctx.lineWidth = 1.6;
+  for (const k of [0.32, 0.5, 0.68]) {
+    const a = P(tx + 0.2, ty + k, -2.5), b = P(tx + 0.8, ty + k, -2.5);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 地飾：地板貼（貼地層） ── */
+function drawDecal(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const d0 = P(tx + 0.16, ty + 0.16), d1 = P(tx + 0.84, ty + 0.16), d2 = P(tx + 0.84, ty + 0.84), d3 = P(tx + 0.16, ty + 0.84);
+  ctx.strokeStyle = bad ? '#E05A6A' : '#F0A9C2'; ctx.lineWidth = 2.6; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(d0[0], d0[1]); ctx.lineTo(d1[0], d1[1]); ctx.lineTo(d2[0], d2[1]); ctx.lineTo(d3[0], d3[1]); ctx.closePath(); ctx.stroke();
+  ctx.fillStyle = bad ? '#E05A6A' : '#FF9FBE';
+  const [hx, hy] = P(tx + 0.5, ty + 0.5, -1);
+  drawHeartPath(ctx, hx, hy, 4.5);
+  ctx.fill();
+  if (!o.ghost) {
+    ctx.fillStyle = '#FFC9D8';
+    for (const [dx, dy] of [[0.5, 0.3], [0.5, 0.7], [0.3, 0.5], [0.7, 0.5]]) {
+      const [px, py] = P(tx + dx, ty + dy, -0.5);
+      ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 地飾：小花叢 ── */
+function drawFlower(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const blooms = [
+    { x: 0.32, y: 0.62, h: 10, c: bad ? '#E3AEBB' : '#FFD3E0' },
+    { x: 0.58, y: 0.34, h: 14, c: bad ? '#E3AEBB' : '#CDB7F0' },
+    { x: 0.5, y: 0.72, h: 8, c: bad ? '#E3AEBB' : '#FFE3B8' },
+  ];
+  for (const b of blooms) {
+    const [bx, by] = P(tx + b.x, ty + b.y, 0);
+    const [tx2, ty2] = P(tx + b.x, ty + b.y, -b.h);
+    ctx.strokeStyle = bad ? '#C96A7A' : '#7FB89A'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + 2, by - b.h * 0.6, tx2, ty2); ctx.stroke();
+    if (!o.ghost) {
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        ctx.beginPath(); ctx.arc(tx2 + Math.cos(a) * 3.4, ty2 + Math.sin(a) * 3.4, 2.3, 0, Math.PI * 2);
+        ctx.fillStyle = b.c; ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(tx2, ty2, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFD166'; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(tx2, ty2, 2, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路、layer:'floor' 貼地層） ── */
 const BUILD_ITEMS = {
   bed:     { name: '床',     tab: 'furniture', w: 2, d: 1, h: 30, max: 1, block: true,  draw: drawBed },
   desk:    { name: '書桌',   tab: 'furniture', w: 2, d: 1, h: 34, max: 2, block: true,  draw: drawDesk },
@@ -700,6 +948,16 @@ const BUILD_ITEMS = {
   dresser: { name: '五斗櫃', tab: 'furniture', w: 1, d: 1, h: 48, max: 2, block: true,  draw: drawDresser },
   lamp:    { name: '落地燈', tab: 'furniture', w: 1, d: 1, h: 83, max: 3, block: true,  draw: drawLamp },
   piano:   { name: '鋼琴',   tab: 'furniture', w: 2, d: 1, h: 56, max: 1, block: true,  draw: drawPiano },
+  /* 第九輪c：擺飾（不擋路） */
+  plant:   { name: '盆栽',   tab: 'decor', w: 1, d: 1, h: 57, max: 3, block: false, draw: drawPlant },
+  vase:    { name: '花瓶',   tab: 'decor', w: 1, d: 1, h: 34, max: 3, block: false, draw: drawVase },
+  teddy:   { name: '泰迪熊', tab: 'decor', w: 1, d: 1, h: 30, max: 2, block: false, draw: drawTeddy },
+  balloon: { name: '氣球',   tab: 'decor', w: 1, d: 1, h: 82, max: 2, block: false, pv: 63, draw: drawBalloon },
+  /* 第九輪c：地飾（layer:'floor' 貼地層繪製） */
+  rug:     { name: '地毯',   tab: 'floor', w: 2, d: 2, h: 6,  max: 2, block: false, layer: 'floor', draw: drawRug },
+  doormat: { name: '門墊',   tab: 'floor', w: 1, d: 1, h: 3,  max: 1, block: false, layer: 'floor', draw: drawDoormat },
+  decal:   { name: '地板貼', tab: 'floor', w: 1, d: 1, h: 2,  max: 4, block: false, layer: 'floor', draw: drawDecal },
+  flower:  { name: '小花叢', tab: 'floor', w: 1, d: 1, h: 16, max: 3, block: false, draw: drawFlower },
 };
 
 /* 品項佔用格 */
@@ -723,6 +981,14 @@ function floorValid(id, tx, ty) {
     if (Game.blocked.has(x + ',' + y)) return false;
     if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
     if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
+  }
+  /* 同層品項不可重疊（地飾互不重疊、擺飾互不重疊；地飾可與擺飾/家具共存） */
+  const mine = new Set(itemTiles(id, tx, ty).map(([x, y]) => x + ',' + y));
+  const myL = it.layer === 'floor' ? 1 : 0;
+  for (const f of Game.furniture) {
+    const oit = BUILD_ITEMS[f.id];
+    if (!oit || (oit.layer === 'floor' ? 1 : 0) !== myL) continue;
+    for (const [x, y] of itemTiles(f.id, f.tx, f.ty)) if (mine.has(x + ',' + y)) return false;
   }
   return true;
 }

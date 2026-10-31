@@ -375,4 +375,22 @@
 - **放完家具 sub 卡在 'placing'**（placement=null 但 sub 沒回）→ placeItem else 分支與 click wall 分支成功後補 `setSub(prevSub||'free'); openBuildPanel();`。
 - **floorCard 預覽 y 變換公式錯**：物品全畫到 128×84 卡片畫布下方（卡面空白）。修法：以「足跡中心 OY+96 − h/2」為視覺中心對齊卡片 (64,42)。
 
-**剩餘待辦**：9c 擺飾＋地飾（plant/vase/teddy/balloon/rug/doormat/decal/flower）、9d 牆飾入 WALL_ITEMS、9e 裝潢 UI 收尾、9f 全回歸＋文件。
+**剩餘待辦**：9d 牆飾入 WALL_ITEMS、9e 裝潢 UI 收尾、9f 全回歸＋文件。
+
+### 9c ✅ 完成（本輪 commit）
+新增 8 款不擋路品項（擺飾 4＋地飾 4），全部走 9b 的通用放置/移除/存檔管道：
+
+1. ✅ world.js：8 個繪圖函式——drawPlant 盆栽（陶盆＋扇形 5 葉）、drawVase 花瓶（貝茲瓶身＋圓點＋乾燥花）、drawTeddy 泰迪熊（四肢＋耳朵＋臉）、drawBalloon 氣球（曲線線＋高光愛心）、drawRug 地毯（2x2 薄荷＋內框愛心）、drawDoormat 門墊（條紋）、drawDecal 地板貼（粉菱框＋愛心）、drawFlower 小花叢（3 朵 5 瓣）
+2. ✅ world.js：BUILD_ITEMS 加 8 條（tab decor/floor、block:false；地毯/門墊/地板貼 layer:'floor' 貼地層；氣球 pv:63 自訂預覽中心）
+3. ✅ world.js：floorValid 加「同層不可重疊」規則（地飾互斥、擺飾互斥；地飾可與擺飾/家具共存）
+4. ✅ game.js：renderGame 加地飾地層 pass（先於家具與角色繪製、移除模式標紅）＋地飾 ghost 走地層
+5. ✅ game.js：floorCard 預覽改用 `it.pv ?? (96 - h/2)` 視覺中心（氣球等高細品項不裁切）
+6. ✅ test/peek-build.mjs 擴充：25 項全過（擺飾 4 卡/地飾 4 卡/放 6 件/同層重疊拒絕/移除擺飾/reload 7 件持久化）
+7. ✅ node test/flow.mjs：31 步 0 pageerror
+
+**設計決定**：
+- 擺飾/地飾 `block:false` → 不進 Game.blocked，角色可走過（rebuildBlocked 原本就認 block 欄位）。
+- 地飾（地毯/門墊/地板貼）`layer:'floor'` → 在 drawRoom 後、家具前繪製，貼在地板上；玩家/家具永遠畫在牠們上面。
+- 同層重疊規則只限「同層」：地毯不能疊地毯，但盆栽可以站在地毯上（不同層）。
+
+**剩餘待辦**：9d 牆飾入 WALL_ITEMS（心形框/星星框/彩旗/時鐘/海報/牆架）、9e 裝潢 UI 收尾、9f 全回歸＋文件。
