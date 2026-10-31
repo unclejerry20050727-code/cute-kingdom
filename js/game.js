@@ -3,7 +3,7 @@
 
 const Game = {
   state: 'cover',   // cover | title | create | game
-  sub: null,        // fp | talk | meet | tutBuild | placeBed | praise | goOut | free | loading | map | work
+  sub: null,        // fp | talk | meet | tutBuild | placing | praise | goOut | free | loading | map | work
   mapTarget: null,
   t: 0,
   canvas: null,
@@ -14,8 +14,10 @@ const Game = {
   npc: { x: 0.9, y: 7.1, facing: 'right', visible: false, popT: 0, revealed: false },
   blink: makeBlinkState(),
   furniture: [],
+  wallItems: [],    // [{ id, wall:'A'|'B', pos }]
+  tints: { wall: 0, floor: 0 },
   blocked: new Set(),
-  placement: null,   // {tx, ty, valid}
+  placement: null,   // { mode:'floor'|'wall'|'remove', item, ... }
   moveTarget: null,
   keys: new Set(),
   dpadDir: null,
@@ -112,7 +114,7 @@ function newGame() {
 }
 
 function confirmCreate() {
-  saveGame({ cfg: Game.playerCfg, furniture: [], stage: 'created' });
+  saveGame({ cfg: Game.playerCfg, furniture: [], wallItems: [], tints: { wall: 0, floor: 0 }, stage: 'created' });
   beginGame({ cfg: Game.playerCfg, furniture: [], stage: 'created' }, false);
 }
 
@@ -123,6 +125,9 @@ function beginGame(save, skipIntro) {
     Game.playerCfg.pack = Game.playerCfg.gender === 'male' ? 'brown' : 'beige';
   }
   Game.furniture = save.furniture || [];
+  Game.wallItems = save.wallItems || [];
+  Game.tints = save.tints || { wall: 0, floor: 0 };
+  setRoomTints(Game.tints.wall, Game.tints.floor);
   Game.stage = save.stage || 'created';
   rebuildBlocked();
   /* 金錢 / 打工裝備（舊存檔補預設值） */
@@ -181,11 +186,11 @@ function beginGame(save, skipIntro) {
 function setSub(sub) {
   Game.sub = sub;
   if (sub !== 'fp') $('#click-next').classList.add('hidden');
-  const roomSub = ['meet', 'tutBuild', 'placeBed', 'praise', 'goOut', 'free'].includes(sub);
+  const roomSub = ['meet', 'tutBuild', 'placing', 'praise', 'goOut', 'free'].includes(sub);
   $('#out-btn').classList.toggle('hidden', !roomSub);
   $('#build-btn').classList.toggle('hidden', !roomSub);
   if (!roomSub) closeBuildPanel();
-  if (sub !== 'placeBed' && !roomSub) showDpad(false);
+  if (sub !== 'placing' && !roomSub) showDpad(false);
   if (sub === 'free' || sub === 'map') showDpad();
   $('#map-home').classList.toggle('hidden', sub !== 'map');
   syncMoneyUI();
@@ -275,12 +280,20 @@ function updateGame(dt) {
     case 'work':
       updateWork(dt);
       break;
-    case 'placeBed': {
-      if (Game.placement) {
-        const tx = Math.floor(Game.mouse.tx), ty = Math.floor(Game.mouse.ty);
-        Game.placement.tx = tx;
-        Game.placement.ty = ty;
-        Game.placement.valid = bedValid(tx, ty);
+    case 'placing': {
+      const pl = Game.placement;
+      if (!pl) break;
+      if (pl.mode === 'floor') {
+        const it = BUILD_ITEMS[pl.item];
+        pl.tx = clamp(Math.floor(Game.mouse.tx), 0, N - it.w);
+        pl.ty = clamp(Math.floor(Game.mouse.ty), 0, N - it.d);
+        pl.valid = floorValid(pl.item, pl.tx, pl.ty);
+      } else if (pl.mode === 'wall') {
+        const s = wallSlotFromMouse();
+        if (s) { pl.wall = s.wall; pl.pos = s.pos; }
+        pl.valid = wallSlotValid(pl.item, pl.wall, pl.pos);
+      } else if (pl.mode === 'remove') {
+        pl.target = removeTargetFromMouse();
       }
       break;
     }
@@ -350,7 +363,7 @@ function showDpad(on = true) {
 }
 
 function goOutside() {
-  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done', money: Game.money ?? 100, gear: Game.gear ?? { uniform: false, hat: false } });
+  saveGame(fullSave('done'));
   setSub('loading');
   Game.loadingTimer = 0;
   sfx('whoosh');
@@ -487,7 +500,7 @@ function buyGear(kind) {
   sfx('coin');
   syncMoneyUI();
   fillShopUI();
-  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done', money: Game.money, gear: Game.gear });
+  saveGame(fullSave(Game.stage));
 }
 
 /* ══════════ 移動 ══════════ */
@@ -554,18 +567,10 @@ function tryMove(p, dx, dy) {
 function rebuildBlocked() {
   Game.blocked.clear();
   for (const f of Game.furniture) {
-    for (const [tx, ty] of bedTiles(f.tx, f.ty)) Game.blocked.add(tx + ',' + ty);
+    const it = BUILD_ITEMS[f.id];
+    if (!it || !it.block) continue;
+    for (const [tx, ty] of itemTiles(f.id, f.tx, f.ty)) Game.blocked.add(tx + ',' + ty);
   }
-}
-
-function bedValid(tx, ty) {
-  if (tx < 0 || ty < 0 || tx + BED.w > N || ty + BED.d > N) return false;
-  for (const [x, y] of bedTiles(tx, ty)) {
-    if (Game.blocked.has(x + ',' + y)) return false;
-    if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
-    if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
-  }
-  return true;
 }
 
 /* ══════════ 渲染 ══════════ */
@@ -598,11 +603,40 @@ function renderGame() {
   ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
   drawRoom(ctx);
 
+  /* 牆飾（移除模式下標紅） */
+  const rmTarget0 = Game.placement && Game.placement.mode === 'remove' ? Game.placement.target : null;
+  Game.wallItems.forEach((w, i) => {
+    const it = WALL_ITEMS[w.id];
+    if (!it) return;
+    const o = (rmTarget0 && rmTarget0.type === 'wall' && rmTarget0.idx === i) ? { highlight: true } : {};
+    it.draw(ctx, w.wall, w.pos, o);
+  });
+  if (Game.placement && Game.placement.mode === 'wall') {
+    const pl = Game.placement, it = WALL_ITEMS[pl.item];
+    if (it) it.draw(ctx, pl.wall, pl.pos, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+  }
+
   /* 可繪項目（深度排序） */
   const items = [];
-  for (const f of Game.furniture) {
-    items.push({ depth: f.tx + f.ty + 2, draw: () => drawBed(ctx, f.tx, f.ty) });
-  }
+  const rmTarget = rmTarget0;
+  Game.furniture.forEach((f, i) => {
+    const it = BUILD_ITEMS[f.id];
+    if (!it) return;
+    const isRm = rmTarget && rmTarget.type === 'floor' && rmTarget.idx === i;
+    items.push({
+      depth: f.tx + f.ty + it.w + it.d - 1,
+      draw: () => {
+        it.draw(ctx, f.tx, f.ty);
+        if (isRm) {
+          ctx.globalAlpha = 0.4;
+          ctx.fillStyle = '#E05A6A';
+          const g0 = P(f.tx, f.ty), g1 = P(f.tx + it.w, f.ty), g2 = P(f.tx + it.w, f.ty + it.d), g3 = P(f.tx, f.ty + it.d);
+          poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
+          ctx.globalAlpha = 1;
+        }
+      },
+    });
+  });
   if (Game.npc.visible) {
     const n = Game.npc;
     items.push({
@@ -623,11 +657,14 @@ function renderGame() {
       },
     });
   }
-  if (Game.placement) {
-    items.push({
-      depth: Game.placement.tx + Game.placement.ty + 2,
-      draw: () => drawBed(ctx, Game.placement.tx, Game.placement.ty, { ghost: true, tint: Game.placement.valid ? 'ok' : 'bad' }),
-    });
+  if (Game.placement && Game.placement.mode === 'floor') {
+    const pl = Game.placement, it = BUILD_ITEMS[pl.item];
+    if (it) {
+      items.push({
+        depth: pl.tx + pl.ty + it.w + it.d - 1,
+        draw: () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }),
+      });
+    }
   }
   /* 玩家 */
   const p = Game.player;
@@ -703,7 +740,7 @@ function setupInput() {
       e.preventDefault();
     }
     if (e.key === 'Escape') {
-      if (Game.sub === 'placeBed') cancelPlacement();
+      if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
     }
   });
@@ -747,10 +784,28 @@ function setupInput() {
         }
         break;
       }
-      case 'placeBed': {
-        const px = Math.floor(Game.mouse.tx), py = Math.floor(Game.mouse.ty);
-        if (bedValid(px, py)) placeBed(px, py);
-        else showToast('這裡放不了喔，換個位置試試～');
+      case 'placing': {
+        const pl = Game.placement;
+        if (!pl) break;
+        if (pl.mode === 'floor') {
+          if (pl.valid) placeItem(pl.item, pl.tx, pl.ty);
+          else showToast('這裡放不了喔，換個位置試試～');
+        } else if (pl.mode === 'wall') {
+          if (pl.valid) {
+            const prevSub = pl.prevSub;
+            Game.wallItems.push({ id: pl.item, wall: pl.wall, pos: pl.pos });
+            Game.placement = null;
+            $('#hint-bar').classList.add('hidden');
+            sfx('place');
+            saveGame(fullSave(Game.stage));
+            showToast(`掛上${WALL_ITEMS[pl.item].name}～`);
+            setSub(prevSub || 'free');
+            openBuildPanel();
+          } else showToast('這裡掛不了喔，換個位置試試～');
+        } else if (pl.mode === 'remove') {
+          if (pl.target) removeItem(pl.target);
+          else showToast('點家具或牆飾把它移走');
+        }
         break;
       }
       case 'map': {
@@ -835,7 +890,10 @@ const BUILD_TABS = {
   wall: '🖼️ 牆飾',
   floor: '🌸 地飾',
   renovate: '🎨 裝潢',
+  remove: '🧹 移除',
 };
+const TINT_NAMES = { wall: ['原色', '粉嫩', '天空', '薄荷', '檸檬'], floor: ['原色', '粉嫩', '天空', '薄荷', '檸檬'] };
+const TINT_SWATCH = { wall: ['#FDF2DF', '#FCE4EC', '#DDEEF9', '#E5F2DF', '#FBF0CE'], floor: ['#FBEDD9', '#FBE3EA', '#E7F0F8', '#ECF3E3', '#F9EFD0'] };
 
 function setupBuildUI() {
   for (const tab of document.querySelectorAll('.btab')) {
@@ -866,76 +924,267 @@ function selectBuildTab(tab, force) {
   for (const b of document.querySelectorAll('.btab')) b.classList.toggle('sel', b.dataset.tab === tab);
   const box = $('#build-items');
   box.innerHTML = '';
-  if (tab === 'furniture') {
-    const hasBed = Game.furniture.some(f => f.id === 'bed');
-    const item = document.createElement('div');
-    item.className = 'build-item pop-in';
-    const cv = document.createElement('canvas');
-    cv.width = 128; cv.height = 84;
-    const c2 = cv.getContext('2d');
-    c2.save();
-    c2.translate(64, -9);
-    c2.scale(0.72, 0.72);
-    c2.translate(-OX, -OY);
-    drawBed(c2, 2, 2.5);
-    c2.restore();
-    const nm = document.createElement('div');
-    nm.className = 'bi-name';
-    nm.textContent = '床' + (hasBed ? '（已有）' : '');
-    item.append(cv, nm);
-    item.onclick = () => {
-      sfx('click');
-      if (hasBed) { showToast('你已經有一張床囉～🛏️'); return; }
-      if (Game.sub === 'tutBuild') startPlacement();
-      else if (Game.sub === 'free') startPlacement();
-    };
-    box.appendChild(item);
-    if (Game.sub === 'tutBuild' && !force) {
-      setTimeout(() => showHint(item, '點選『床』'), 500);
-    }
-  } else {
+  const inTutorial = Game.stage === 'created';
+
+  const emptyMsg = (msg) => {
     const empty = document.createElement('div');
     empty.className = 'build-empty';
-    empty.innerHTML = `🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`;
+    empty.innerHTML = msg;
     box.appendChild(empty);
+  };
+
+  if (tab === 'remove') {
+    if (inTutorial) { emptyMsg('🌟 先完成放床教學，才能移除喔～ 🌟'); return; }
+    const item = document.createElement('div');
+    item.className = 'build-item pop-in';
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 84;
+    const c2 = cv.getContext('2d');
+    c2.font = '44px serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle';
+    c2.fillText('🧹', 64, 42);
+    const nm = document.createElement('div'); nm.className = 'bi-name'; nm.textContent = '移除品項';
+    item.append(cv, nm);
+    item.onclick = () => { sfx('click'); startRemoveMode(); };
+    box.appendChild(item);
+    return;
+  }
+
+  if (tab === 'renovate') {
+    if (inTutorial) { emptyMsg('🌟 先完成放床教學，就能裝潢囉～ 🌟'); return; }
+    for (const kind of ['wall', 'floor']) {
+      const row = document.createElement('div');
+      row.className = 'tint-row';
+      const lab = document.createElement('div');
+      lab.className = 'tint-label';
+      lab.textContent = kind === 'wall' ? '牆面色' : '地板色';
+      row.appendChild(lab);
+      TINT_SWATCH[kind].forEach((sw, i) => {
+        const chip = document.createElement('button');
+        chip.className = 'tint-chip' + (Game.tints[kind] === i ? ' sel' : '');
+        chip.style.background = sw;
+        chip.title = TINT_NAMES[kind][i];
+        chip.onclick = () => setTint(kind, i);
+        row.appendChild(chip);
+      });
+      box.appendChild(row);
+    }
+    return;
+  }
+
+  if (tab === 'wall') {
+    const list = Object.entries(WALL_ITEMS);
+    if (!list.length) {
+      emptyMsg(inTutorial ? '🌟 先完成放床教學，就能掛牆飾囉～ 🌟' : `🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
+      return;
+    }
+    for (const [id, it] of list) box.appendChild(wallCard(id, it));
+    return;
+  }
+
+  const list = Object.entries(BUILD_ITEMS).filter(([id, it]) => it.tab === tab && (!inTutorial || id === 'bed'));
+  if (!list.length) {
+    emptyMsg(inTutorial ? '🌟 先完成放床教學，就能放更多家具囉～ 🌟' : `🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
+    return;
+  }
+  for (const [id, it] of list) box.appendChild(floorCard(id, it));
+  if (inTutorial && tab === 'furniture' && !force) {
+    setTimeout(() => showHint(box.querySelector('.build-item'), '點選『床』'), 500);
   }
 }
 
-function startPlacement() {
+function floorCard(id, it) {
+  const item = document.createElement('div');
+  item.className = 'build-item pop-in';
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 84;
+  const c2 = cv.getContext('2d');
+  c2.save();
+  const s = Math.min(0.72, 78 / (it.h + (it.w + it.d) * 8));
+  c2.translate(64, 42);
+  c2.scale(s, s);
+  c2.translate(-OX, -(OY + 96 - it.h / 2)); /* 視覺中心（含高度一半）對齊卡片中央 */
+  it.draw(c2, 3 - it.w / 2, 3 - it.d / 2);
+  c2.restore();
+  const nm = document.createElement('div');
+  nm.className = 'bi-name';
+  const n = countItem(id);
+  nm.textContent = it.name + (n >= it.max ? `（${n}/${it.max}）` : '');
+  item.append(cv, nm);
+  if (n >= it.max) item.classList.add('dis');
+  item.onclick = () => {
+    sfx('click');
+    if (n >= it.max) { showToast(`已經有 ${it.max} 個${it.name}囉～`); return; }
+    if (!canPlaceNow()) return;
+    startPlacement(id);
+  };
+  return item;
+}
+
+function wallCard(id, it) {
+  const item = document.createElement('div');
+  item.className = 'build-item pop-in';
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 84;
+  const c2 = cv.getContext('2d');
+  const n = countWallItem(id);
+  const [wx, wy] = P(0.5, 0, -(it.hMid ?? 110));
+  c2.save();
+  c2.translate(64, 40);
+  c2.scale(0.7, 0.7);
+  c2.translate(-wx, -wy);
+  const wpts = [P(-0.9, 0, -180), P(1.9, 0, -180), P(1.9, 0, -20), P(-0.9, 0, -20)];
+  c2.fillStyle = '#FDF2DF';
+  poly(c2, ...wpts);
+  c2.strokeStyle = '#E4CBA5'; c2.lineWidth = 2;
+  c2.beginPath(); c2.moveTo(wpts[0][0], wpts[0][1]);
+  for (let i = 1; i < 4; i++) c2.lineTo(wpts[i][0], wpts[i][1]);
+  c2.closePath(); c2.stroke();
+  it.draw(c2, 'A', 0.5);
+  c2.restore();
+  const nm = document.createElement('div');
+  nm.className = 'bi-name';
+  nm.textContent = it.name + (n >= it.max ? `（${n}/${it.max}）` : '');
+  item.append(cv, nm);
+  if (n >= it.max) item.classList.add('dis');
+  item.onclick = () => {
+    sfx('click');
+    if (n >= it.max) { showToast(`已經有 ${it.max} 個${it.name}囉～`); return; }
+    if (!canPlaceNow()) return;
+    startWallPlacement(id);
+  };
+  return item;
+}
+
+function canPlaceNow() {
+  return ['tutBuild', 'free', 'goOut'].includes(Game.sub);
+}
+
+function startPlacement(itemId) {
+  const item = BUILD_ITEMS[itemId];
+  if (!item) return;
+  const prevSub = Game.sub;
   closeBuildPanel();
   hideHint();
-  setSub('placeBed');  const tx = Math.floor(Game.mouse.tx), ty = Math.floor(Game.mouse.ty);
-  Game.placement = { tx: clamp(tx, 0, N - BED.w), ty: clamp(ty, 0, N - BED.d), valid: true };
-  Game.placement.valid = bedValid(Game.placement.tx, Game.placement.ty);
+  setSub('placing');
+  Game.placement = { mode: 'floor', item: itemId, prevSub, tx: 0, ty: 0, valid: false };
   const bar = $('#hint-bar');
-  bar.textContent = '🛏️ 滑鼠移到喜歡的位置，點擊放下床！（Esc 取消）';
+  bar.textContent = `🛏️ 滑鼠移到喜歡的位置，點擊放下${item.name}！（Esc 取消）`;
+  bar.classList.remove('hidden');
+}
+
+function startWallPlacement(id) {
+  const item = WALL_ITEMS[id];
+  if (!item) return;
+  const prevSub = Game.sub;
+  closeBuildPanel();
+  hideHint();
+  setSub('placing');
+  const s = wallSlotFromMouse() || { wall: 'A', pos: 3 };
+  Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false };
+  const bar = $('#hint-bar');
+  bar.textContent = `🖼️ 把滑鼠移到牆上，點擊掛上${item.name}！（Esc 取消）`;
+  bar.classList.remove('hidden');
+}
+
+function startRemoveMode() {
+  const prevSub = Game.sub;
+  closeBuildPanel();
+  hideHint();
+  setSub('placing');
+  Game.placement = { mode: 'remove', prevSub, target: null };
+  const bar = $('#hint-bar');
+  bar.textContent = '🧹 移除模式：點家具或牆飾把它移走！（Esc 取消）';
   bar.classList.remove('hidden');
 }
 
 function cancelPlacement() {
+  const prev = Game.placement ? Game.placement.prevSub : null;
   Game.placement = null;
   $('#hint-bar').classList.add('hidden');
-  if (Game.sub === 'placeBed') {
-    setSub(Game.stage === 'created' ? 'tutBuild' : 'free');
-    openBuildPanel('furniture');
+  if (Game.sub === 'placing') {
+    setSub(prev || (Game.stage === 'created' ? 'tutBuild' : 'free'));
+    openBuildPanel();
   }
 }
 
-function placeBed(tx, ty) {
-  Game.furniture.push({ id: 'bed', tx, ty });
+function fullSave(stage) {
+  return {
+    cfg: Game.playerCfg,
+    furniture: Game.furniture,
+    wallItems: Game.wallItems,
+    tints: Game.tints,
+    stage,
+    money: Game.money ?? 100,
+    gear: Game.gear ?? { uniform: false, hat: false },
+  };
+}
+
+function setTint(kind, i) {
+  Game.tints[kind] = i;
+  setRoomTints(Game.tints.wall, Game.tints.floor);
+  sfx('click');
+  saveGame(fullSave(Game.stage));
+  selectBuildTab('renovate', true);
+  showToast(kind === 'wall' ? '牆面換色囉～' : '地板換色囉～');
+}
+
+function placeItem(itemId, tx, ty) {
+  const item = BUILD_ITEMS[itemId];
+  const prevSub = Game.placement ? Game.placement.prevSub : null;
+  Game.furniture.push({ id: itemId, tx, ty });
   rebuildBlocked();
   Game.placement = null;
   $('#hint-bar').classList.add('hidden');
   sfx('place');
-  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'bed' });
-  setSub('praise');
-  Dialogue.start([
-    { who: 'npc', name: '小宥', text: '哇塞，你真的是做得太好了！' },
-  ], () => {
-    setSub('goOut');
-    showOutBtn();
-    setTimeout(() => showHint($('#out-btn'), '點『出門』'), 700);
-  });
+  if (itemId === 'bed' && Game.stage === 'created') {
+    saveGame(fullSave('bed'));
+    setSub('praise');
+    Dialogue.start([
+      { who: 'npc', name: '小宥', text: '哇塞，你真的是做得太好了！' },
+    ], () => {
+      setSub('goOut');
+      showOutBtn();
+      setTimeout(() => showHint($('#out-btn'), '點『出門』'), 700);
+    });
+  } else {
+    saveGame(fullSave(Game.stage));
+    showToast(`放好${item.name}囉～`);
+    setSub(prevSub || 'free');
+    openBuildPanel();
+  }
+}
+
+function removeTargetFromMouse() {
+  for (let i = 0; i < Game.wallItems.length; i++) {
+    if (wallItemHit(Game.wallItems[i], Game.mouse.wx, Game.mouse.wy)) return { type: 'wall', idx: i };
+  }
+  const mtx = Math.floor(Game.mouse.tx), mty = Math.floor(Game.mouse.ty);
+  for (let i = 0; i < Game.furniture.length; i++) {
+    const f = Game.furniture[i];
+    const it = BUILD_ITEMS[f.id];
+    if (!it) continue;
+    if (itemTiles(f.id, f.tx, f.ty).some(([x, y]) => x === mtx && y === mty)) return { type: 'floor', idx: i };
+  }
+  return null;
+}
+
+function removeItem(target) {
+  if (!target) return;
+  if (target.type === 'wall') {
+    const w = Game.wallItems[target.idx];
+    const it = WALL_ITEMS[w.id];
+    Game.wallItems.splice(target.idx, 1);
+    sfx('back');
+    saveGame(fullSave(Game.stage));
+    showToast(`移除了${it.name}～`);
+  } else {
+    const f = Game.furniture[target.idx];
+    const it = BUILD_ITEMS[f.id];
+    if (f.id === 'bed') { showToast('床是全屋最重要的家具，不能移除喔～'); return; }
+    Game.furniture.splice(target.idx, 1);
+    rebuildBlocked();
+    sfx('back');
+    saveGame(fullSave(Game.stage));
+    showToast(`移除了${it.name}～`);
+  }
+  Game.placement.target = null;
 }
 
 /* ══════════ 角色自定義 UI ══════════ */

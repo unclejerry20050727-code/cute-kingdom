@@ -345,3 +345,34 @@
 
 ## 📦 打包
 - [ ] 可選：加 PWA manifest
+
+## 9b 中斷原因分析與對策
+
+### 失敗（terminated）原因分析
+1. **單一 tool call 太大**：一次 edit 塞 8 個 block、heredoc 一次追加 200+ 行 → 單輪輸出 token 過大，易觸發超時/截斷。
+2. **oldText 憑記憶猜**：context 壓縮後摘要沒有逐字內容，edit 的 oldText 跟檔案對不上 → 整批原子性失敗 → 重試再燒 context。
+3. **128k context 有限**：整檔 read、大量截圖、失敗重試都在吃 context → 加速中斷。
+
+### 對策（9b 起執行）
+1. 小步快跑：一次 tool call 只一個小改動（≤60 行），改完立刻 `node -e "new Function(...)"` 語法檢查（輸出小）。
+2. 改前必 grep/sed 取「當下」精確文本；大區塊先存 /tmp 備份防壓縮。
+3. 輸出控制：不整檔 read，只取必要行段；截圖驗證最後一次做。
+4. 每個小單位完成即更新本檔「目前狀態」，必要時 commit。
+5. 單輪感覺太大就主動收尾短報告，下輪接續。
+
+### 9b ✅ 完成（本輪 commit）
+全部步驟已完成並回歸通過：
+1. ✅ game.js：BUILD_TABS 加 remove＋TINT 常數（TINT_NAMES/TINT_SWATCH）
+2. ✅ game.js：selectBuildTab 重寫（remove/renovate tint rows/wall/floor 卡；教學期只有床）
+3. ✅ game.js：startPlacement(itemId)/startWallPlacement/startRemoveMode/cancelPlacement（回 prevSub+重開面板）/placeItem(itemId,tx,ty)/removeItem/removeTargetFromMouse/canPlaceNow/fullSave/floorCard/wallCard/setTint
+4. ✅ index.html：build-tabs 加 🧹 移除 button
+5. ✅ css/style.css：.build-item.dis、.tint-row/.tint-label/.tint-chip(.sel)、.build-items max-height+overflow-y
+6. ✅ node test/flow.mjs：31 步 0 pageerror
+7. ✅ test/peek-build.mjs：15 項檢查全過（8 家具卡/放 3 件/換色/移除/床不可移除/Esc/reload 持久化）＋shots/b01-b10
+
+**本輪抓到的 bug（小步快跑 + 除錯腳本功勞）：**
+- **placeItem 用 item.id 但 BUILD_ITEMS 條目沒有 .id 欄位**（id 是 table key）→ 存的床 `{tx,ty}` 缺 id → 渲染被靜默跳過＋床教學分支不觸發。修法：placeItem 改收 itemId（key），push `{id: itemId}`。除錯腳本 test/peek-debug.mjs 一炮打中（furniture dump 出 `{"tx":6,"ty":3}` 無 id）。
+- **放完家具 sub 卡在 'placing'**（placement=null 但 sub 沒回）→ placeItem else 分支與 click wall 分支成功後補 `setSub(prevSub||'free'); openBuildPanel();`。
+- **floorCard 預覽 y 變換公式錯**：物品全畫到 128×84 卡片畫布下方（卡面空白）。修法：以「足跡中心 OY+96 − h/2」為視覺中心對齊卡片 (64,42)。
+
+**剩餘待辦**：9c 擺飾＋地飾（plant/vase/teddy/balloon/rug/doormat/decal/flower）、9d 牆飾入 WALL_ITEMS、9e 裝潢 UI 收尾、9f 全回歸＋文件。

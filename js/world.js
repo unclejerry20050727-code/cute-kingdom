@@ -154,13 +154,15 @@ function drawPolkaBg(ctx, w, h) {
 /* ── 房間 ── */
 function drawRoom(ctx) {
   const c = C_ROOM;
+  const floorA = roomFloorTint || c.floorA;
+  const floorB = roomFloorTint ? shade(roomFloorTint, -0.05) : c.floorB;
   /* 地板大菱形（帶柔和陰影） */
   const [ax, ay] = P(0, 0), [bx, by] = P(N, 0), [cx2, cy2] = P(N, N), [dx, dy] = P(0, N);
   ctx.save();
   ctx.shadowColor = 'rgba(90,62,43,0.35)';
   ctx.shadowBlur = 26;
   ctx.shadowOffsetY = 14;
-  ctx.fillStyle = c.floorB;
+  ctx.fillStyle = floorB;
   ctx.beginPath();
   ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2); ctx.lineTo(dx, dy);
   ctx.closePath();
@@ -171,7 +173,7 @@ function drawRoom(ctx) {
   for (let ty = 0; ty < N; ty++) {
     for (let tx = 0; tx < N; tx++) {
       const [x0, y0] = P(tx, ty), [x1, y1] = P(tx + 1, ty), [x2, y2] = P(tx + 1, ty + 1), [x3, y3] = P(tx, ty + 1);
-      ctx.fillStyle = (tx + ty) % 2 === 0 ? c.floorA : c.floorB;
+      ctx.fillStyle = (tx + ty) % 2 === 0 ? floorA : floorB;
       ctx.strokeStyle = c.floorLine;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -213,9 +215,10 @@ function drawWallEdgeShadow(ctx, tx0, tx1, ty0, ty1) {
 /* 右後牆（沿 ty=0，從 P(0,0) 到 P(N,0)）：窗戶在這面 */
 function drawWallA(ctx) {
   const c = C_ROOM;
+  const wallC = roomWallTint || c.wall;
   const [ax, ay] = P(0, 0), [bx, by] = P(N, 0);
   /* 牆面 */
-  ctx.fillStyle = c.wall;
+  ctx.fillStyle = wallC;
   ctx.beginPath();
   ctx.moveTo(ax, ay - WALL_H); ctx.lineTo(bx, by - WALL_H);
   ctx.lineTo(bx, by); ctx.lineTo(ax, ay);
@@ -287,8 +290,9 @@ function drawWallA(ctx) {
 /* 左後牆（沿 tx=0，從 P(0,0) 到 P(0,N)）：門在這面 */
 function drawWallB(ctx) {
   const c = C_ROOM;
+  const wallC = roomWallTint || c.wall;
   const [ax, ay] = P(0, 0), [bx, by] = P(0, N);
-  ctx.fillStyle = c.wall;
+  ctx.fillStyle = wallC;
   ctx.beginPath();
   ctx.moveTo(ax, ay - WALL_H); ctx.lineTo(bx, by - WALL_H);
   ctx.lineTo(bx, by); ctx.lineTo(ax, ay);
@@ -439,4 +443,351 @@ function bedTiles(tx, ty) {
     for (let dy = 0; dy < BED.d; dy++)
       out.push([Math.floor(tx) + dx, Math.floor(ty) + dy]);
   return out;
+}
+
+/* ══════════ 建造系統：目錄、放置、家具繪製 ══════════ */
+
+/* 房間換色（0＝原色） */
+const WALL_TINTS = [null, '#FCE4EC', '#DDEEF9', '#E5F2DF', '#FBF0CE'];
+const FLOOR_TINTS = [null, '#FBE3EA', '#E7F0F8', '#ECF3E3', '#F9EFD0'];
+let roomWallTint = null, roomFloorTint = null;
+function setRoomTints(w, f) {
+  roomWallTint = WALL_TINTS[w] || null;
+  roomFloorTint = FLOOR_TINTS[f] || null;
+}
+
+/* 等距箱子（顶面＋前右面＋前左面）：h0/h1 為離地高度 */
+function isoBox(ctx, tx, ty, w, d, h0, h1, opt = {}) {
+  const { top = '#FFF6E9', right = '#F0C08F', left = '#E2AE7C', stroke = INK, lw = 3 } = opt;
+  const A = P(tx, ty, -h1), B = P(tx + w, ty, -h1), C = P(tx + w, ty + d, -h1), D = P(tx, ty + d, -h1);
+  const A0 = P(tx, ty, -h0), B0 = P(tx + w, ty, -h0), C0 = P(tx + w, ty + d, -h0), D0 = P(tx, ty + d, -h0);
+  ctx.fillStyle = right;
+  poly(ctx, [B0[0], B0[1]], [C0[0], C0[1]], [C[0], C[1]], [B[0], B[1]]);
+  ctx.fillStyle = left;
+  poly(ctx, [C0[0], C0[1]], [D0[0], D0[1]], [D[0], D[1]], [C[0], C[1]]);
+  ctx.fillStyle = top;
+  poly(ctx, [A[0], A[1]], [B[0], B[1]], [C[0], C[1]], [D[0], D[1]]);
+  if (stroke) {
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round';
+    poly(ctx, [A[0], A[1]], [B[0], B[1]], [C[0], C[1]], [D[0], D[1]]);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(B0[0], B0[1]); ctx.lineTo(B[0], B[1]);
+    ctx.moveTo(C0[0], C0[1]); ctx.lineTo(C[0], C[1]);
+    ctx.moveTo(D0[0], D0[1]); ctx.lineTo(D[0], D[1]);
+    ctx.stroke();
+  }
+}
+
+/* 立面空間：which='tx' → +tx 面（朝前右）；'ty' → +ty 面（朝前左）。
+   進入後用 2D 座標繪製（x 沿牆向右、y 向下），自動帶上等距斜度 */
+function faceSpace(ctx, tx, ty, h, which) {
+  const [px, py] = P(which === 'tx' ? tx + 1 : tx, ty, -h);
+  const ux = which === 'tx' ? -0.8944 : 0.8944;
+  ctx.transform(ux, 0.4472, 0, 1, px, py);
+}
+
+/* 幽靈放置足跡提示 */
+function ghostFootprint(ctx, tx, ty, w, d, o) {
+  ctx.globalAlpha *= 0.25;
+  ctx.fillStyle = o.tint === 'bad' ? '#E05A6A' : '#58C27D';
+  const g0 = P(tx, ty), g1 = P(tx + w, ty), g2 = P(tx + w, ty + d), g3 = P(tx, ty + d);
+  poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
+}
+
+/* ── 家具：書桌 ── */
+function drawDesk(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  isoBox(ctx, tx + 0.12, ty + 0.18, 0.3, 0.64, 0, 21, { top: '#E2AE7C', right: '#D8A26F', left: '#C8905C' });
+  isoBox(ctx, tx + 1.58, ty + 0.18, 0.3, 0.64, 0, 21, { top: '#E2AE7C', right: '#D8A26F', left: '#C8905C' });
+  isoBox(ctx, tx, ty, 2, 1, 21, 26, { top: '#FBE3BC', right: '#E9C28F', left: '#DBB27E' });
+  if (!o.ghost) {
+    isoBox(ctx, tx + 0.32, ty + 0.22, 0.5, 0.5, 26, 29.5, { top: '#FF9FBE', right: '#F287A9', left: '#E27399', lw: 2 });
+    isoBox(ctx, tx + 1.28, ty + 0.28, 0.36, 0.36, 26, 33, { top: '#BFE3F2', right: '#A8D8EC', left: '#93CBDF', lw: 2 });
+    ctx.fillStyle = '#FF8FB2';
+    const [hx, hy] = P(tx + 1.46, ty + 0.46, -33.5);
+    drawHeartPath(ctx, hx, hy, 3.4);
+    ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 2, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：椅子 ── */
+function drawChair(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  /* 靠背（後側直板） */
+  const b1 = P(tx + 0.12, ty + 0.08, -42), b2 = P(tx + 0.88, ty + 0.08, -42);
+  const b3 = P(tx + 0.88, ty + 0.08, -17), b4 = P(tx + 0.12, ty + 0.08, -17);
+  ctx.fillStyle = o.tint === 'bad' ? '#DE8794' : '#FF9FBE';
+  poly(ctx, [b1[0], b1[1]], [b2[0], b2[1]], [b3[0], b3[1]], [b4[0], b4[1]]);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.6; ctx.lineJoin = 'round';
+  ctx.stroke();
+  /* 四腳 */
+  for (const [lx, lz] of [[0.12, 0.14], [0.74, 0.14], [0.12, 0.72], [0.74, 0.72]]) {
+    isoBox(ctx, tx + lx, ty + lz, 0.12, 0.12, 0, 15, { top: '#E2AE7C', right: '#D8A26F', left: '#C8905C', lw: 1.6 });
+  }
+  /* 坐墊 */
+  isoBox(ctx, tx + 0.06, ty + 0.1, 0.88, 0.84, 14, 18, { top: '#FFD3E0', right: '#F5A9C2', left: '#EA94B0' });
+  if (!o.ghost) {
+    ctx.fillStyle = '#FF8FB2';
+    const [hx, hy] = P(tx + 0.5, ty + 0.52, -18.5);
+    drawHeartPath(ctx, hx, hy, 3.2);
+    ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：沙發 ── */
+function drawSofa(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 底座 */
+  isoBox(ctx, tx, ty, 2, 1, 0, 13, { top: '#F5A9C3', right: bad ? '#DE8794' : '#E88FAC', left: bad ? '#D47A88' : '#D97B9A' });
+  /* 後背 */
+  isoBox(ctx, tx, ty, 2, 0.42, 0, 32, { top: '#F7B7CC', right: bad ? '#DE8794' : '#E88FAC', left: bad ? '#D47A88' : '#D97B9A' });
+  /* 坐墊 ×2 */
+  isoBox(ctx, tx + 0.1, ty + 0.42, 0.84, 0.52, 13, 19, { top: '#FFD3E0', right: '#F5A9C2', left: '#EA94B0', lw: 2 });
+  isoBox(ctx, tx + 1.06, ty + 0.42, 0.84, 0.52, 13, 19, { top: '#FFD3E0', right: '#F5A9C2', left: '#EA94B0', lw: 2 });
+  /* 扶手 ×2 */
+  isoBox(ctx, tx - 0.06, ty + 0.3, 0.3, 0.64, 13, 27, { top: '#FFD3E0', right: '#F5A9C2', left: '#EA94B0' });
+  isoBox(ctx, tx + 1.76, ty + 0.3, 0.3, 0.64, 13, 27, { top: '#FFD3E0', right: '#F5A9C2', left: '#EA94B0' });
+  if (!o.ghost) {
+    ctx.fillStyle = '#FF8FB2';
+    const [hx, hy] = P(tx + 0.52, ty + 0.68, -19.5);
+    drawHeartPath(ctx, hx, hy, 3.4);
+    ctx.fill();
+    const [hx2, hy2] = P(tx + 1.48, ty + 0.68, -19.5);
+    drawHeartPath(ctx, hx2, hy2, 3.4);
+    ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 2, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：書架 ── */
+function drawShelf(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  isoBox(ctx, tx, ty, 1, 1, 0, 58, { top: '#F0C08F', right: '#E2AE7C', left: '#D8A26F' });
+  if (!o.ghost) {
+    /* 前右面：書格 ×2 + 小書本 */
+    ctx.save();
+    faceSpace(ctx, tx, ty, 58, 'tx');
+    const W = 35.78; /* 1 格 ≈ 35.8px */
+    ctx.fillStyle = '#FFF6E9';
+    ctx.fillRect(3, 8, W - 6, 20);
+    ctx.fillRect(3, 32, W - 6, 20);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.strokeRect(3, 8, W - 6, 20);
+    ctx.strokeRect(3, 32, W - 6, 20);
+    const books = ['#FF8FB2', '#7EC8E3', '#FFD98A', '#9F8FEF', '#7BC8A4'];
+    for (let r = 0; r < 2; r++) {
+      const y0 = 8 + r * 24;
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = books[(i + r * 2) % books.length];
+        ctx.fillRect(6 + i * 7, y0 + 20 - 14 - ((i * 13 + r * 7) % 5), 5, 14 + ((i * 13 + r * 7) % 5));
+      }
+    }
+    ctx.restore();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：五斗櫃 ── */
+function drawDresser(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  isoBox(ctx, tx, ty, 1, 1, 0, 44, { top: '#FBE3BC', right: bad ? '#DE8794' : '#EFC99A', left: bad ? '#D47A88' : '#E2B483' });
+  if (!o.ghost) {
+    ctx.save();
+    faceSpace(ctx, tx, ty, 44, 'ty');
+    const W = 35.78;
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    for (let r = 0; r < 3; r++) {
+      ctx.strokeRect(4, 5 + r * 13, W - 8, 10);
+      ctx.fillStyle = '#B98A5C';
+      ctx.beginPath();
+      ctx.arc(W / 2, 10 + r * 13, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    /* 頂上小盆栽 */
+    isoBox(ctx, tx + 0.32, ty + 0.24, 0.3, 0.3, 44, 48, { top: '#D98E6A', right: '#C97E5B', left: '#B96E4C', lw: 1.6 });
+    ctx.fillStyle = '#7BC8A4';
+    const [cx, cy] = P(tx + 0.47, ty + 0.39, -48);
+    ellipse(ctx, cx, cy - 4, 5, 6);
+    ellipse(ctx, cx - 4, cy - 1, 3.4, 4);
+    ellipse(ctx, cx + 4, cy - 1, 3.4, 4);
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：落地燈 ── */
+function drawLamp(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const c = P(tx + 0.5, ty + 0.5);
+  /* 底座 */
+  ctx.fillStyle = '#D98E6A';
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.ellipse(c[0], c[1] - 2, 12, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  /* 燈杆 */
+  ctx.strokeStyle = INK; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(c[0], c[1] - 3); ctx.lineTo(c[0], c[1] - 58); ctx.stroke();
+  /* 光暈 */
+  ctx.fillStyle = 'rgba(255,217,138,0.30)';
+  ctx.beginPath(); ctx.ellipse(c[0], c[1] - 44, 22, 20, 0, 0, Math.PI * 2); ctx.fill();
+  /* 燈罩 */
+  ctx.fillStyle = o.tint === 'bad' ? '#DE8794' : '#FFD98A';
+  ctx.beginPath();
+  ctx.moveTo(c[0] - 17, c[1] - 56);
+  ctx.quadraticCurveTo(c[0], c[1] - 62, c[0] + 17, c[1] - 56);
+  ctx.lineTo(c[0] + 11, c[1] - 78);
+  ctx.quadraticCurveTo(c[0], c[1] - 83, c[0] - 11, c[1] - 78);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.6; ctx.lineJoin = 'round'; ctx.stroke();
+  /* 燈罩頂緣 */
+  ctx.fillStyle = '#FFF3D6';
+  ctx.beginPath(); ctx.ellipse(c[0], c[1] - 78, 11, 4.4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.stroke();
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 家具：直立式鋼琴 ── */
+function drawPiano(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 琴身 */
+  isoBox(ctx, tx, ty, 2, 1, 0, 52, { top: '#F7B7CC', right: bad ? '#DE8794' : '#EFA0BC', left: bad ? '#D47A88' : '#E28BA9' });
+  /* 琴鍵（前左面下緣） */
+  ctx.save();
+  faceSpace(ctx, tx, ty, 52, 'ty');
+  const W = 71.56;
+  ctx.fillStyle = '#2E2018';
+  ctx.fillRect(6, 34, W - 12, 11);
+  ctx.fillStyle = '#FFF8EC';
+  for (let i = 0; i < 9; i++) ctx.fillRect(8 + i * 7, 36, 4.6, 8);
+  ctx.restore();
+  /* 琴頂蓋板 */
+  isoBox(ctx, tx - 0.05, ty - 0.04, 2.1, 1.08, 52, 56, { top: '#FFF0F6', right: '#F5A9C2', left: '#EA94B0' });
+  if (!o.ghost) {
+    ctx.fillStyle = '#FF8FB2';
+    const [hx, hy] = P(tx + 1, ty + 0.5, -40);
+    drawHeartPath(ctx, hx, hy, 5);
+    ctx.fill();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 2, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路） ── */
+const BUILD_ITEMS = {
+  bed:     { name: '床',     tab: 'furniture', w: 2, d: 1, h: 30, max: 1, block: true,  draw: drawBed },
+  desk:    { name: '書桌',   tab: 'furniture', w: 2, d: 1, h: 34, max: 2, block: true,  draw: drawDesk },
+  chair:   { name: '椅子',   tab: 'furniture', w: 1, d: 1, h: 42, max: 4, block: true,  draw: drawChair },
+  sofa:    { name: '沙發',   tab: 'furniture', w: 2, d: 1, h: 32, max: 2, block: true,  draw: drawSofa },
+  shelf:   { name: '書架',   tab: 'furniture', w: 1, d: 1, h: 58, max: 3, block: true,  draw: drawShelf },
+  dresser: { name: '五斗櫃', tab: 'furniture', w: 1, d: 1, h: 48, max: 2, block: true,  draw: drawDresser },
+  lamp:    { name: '落地燈', tab: 'furniture', w: 1, d: 1, h: 83, max: 3, block: true,  draw: drawLamp },
+  piano:   { name: '鋼琴',   tab: 'furniture', w: 2, d: 1, h: 56, max: 1, block: true,  draw: drawPiano },
+};
+
+/* 品項佔用格 */
+function itemTiles(id, tx, ty) {
+  const it = BUILD_ITEMS[id];
+  if (!it) return [];
+  const out = [];
+  for (let dx = 0; dx < it.w; dx++)
+    for (let dy = 0; dy < it.d; dy++)
+      out.push([tx + dx, ty + dy]);
+  return out;
+}
+
+/* 地板品項可否放在 (tx,ty) */
+function floorValid(id, tx, ty) {
+  const it = BUILD_ITEMS[id];
+  if (!it) return false;
+  if (tx < 0 || ty < 0 || tx + it.w > N || ty + it.d > N) return false;
+  for (const [x, y] of itemTiles(id, tx, ty)) {
+    if (x < 0 || y < 0 || x >= N || y >= N) return false;
+    if (Game.blocked.has(x + ',' + y)) return false;
+    if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
+    if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
+  }
+  return true;
+}
+
+function countItem(id) {
+  return Game.furniture.filter(f => f.id === id).length;
+}
+
+/* ── 牆飾：空目錄（第九輪d 填入）＋槽位規則 ──
+   牆 A：ty=0 右後牆（窗戶 2.7~5.7、心形框 7.6）
+   牆 B：tx=0 左後牆（門 6.2~8.2） */
+const WALL_ITEMS = {};   // id → { name, tab:'wall', max, span, hMid, draw(ctx, wall, pos, o) }
+const WALL_FORBID = { A: [2, 3, 4, 5, 7], B: [6, 7, 8] };
+
+function wallSlotValid(id, wall, pos) {
+  const it = WALL_ITEMS[id];
+  if (!it) return false;
+  const span = it.span || 1;
+  if (pos < 0 || pos + span > N) return false;
+  for (let p = pos; p < pos + span; p++) {
+    if (WALL_FORBID[wall].includes(p)) return false;
+    if (Game.wallItems.some(w => w.wall === wall && w.pos === p)) return false;
+  }
+  return true;
+}
+
+function countWallItem(id) {
+  return Game.wallItems.filter(w => w.id === id).length;
+}
+
+/* 滑鼠世界座標 → 牆槽（游標在地板線以上才算在牆上） */
+function wallSlotFromMouse() {
+  const mx = Game.mouse.wx, my = Game.mouse.wy;
+  const [ax, ay] = P(0, 0);
+  const [bx, by] = P(N, 0);
+  const [cx, cy] = P(0, N);
+  if (mx >= ax && mx <= bx && my < ay + (mx - ax) * 0.5 + 8) {
+    const t = ((mx - ax) * (bx - ax) + (my - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2);
+    return { wall: 'A', pos: clamp(Math.round(t * N - 0.5), 0, N - 1) };
+  }
+  if (mx >= cx && mx <= ax && my < ay + (ax - mx) * 0.5 + 8) {
+    const t = ((mx - ax) * (cx - ax) + (my - ay) * (cy - ay)) / ((cx - ax) ** 2 + (cy - ay) ** 2);
+    return { wall: 'B', pos: clamp(Math.round(t * N - 0.5), 0, N - 1) };
+  }
+  return null;
+}
+
+/* 牆面 2D 繪製空間：local x 沿牆向右（px）、y 向下；原點 = (pos, 離地 hBase) */
+function wallSpace(ctx, wall, pos, hBase) {
+  const [px, py] = P(wall === 'A' ? pos : 0, wall === 'A' ? 0 : pos, -hBase);
+  const ux = wall === 'A' ? 0.8944 : -0.8944;
+  ctx.save();
+  ctx.transform(ux, 0.4472, 0, 1, px, py);
+}
+function wallSpaceEnd(ctx) { ctx.restore(); }
+
+/* 牆飾點選命中 */
+function wallItemHit(w, mx, my) {
+  const it = WALL_ITEMS[w.id];
+  const hMid = it ? (it.hMid ?? 110) : 110;
+  const [cx, cy] = P(w.wall === 'A' ? w.pos + 0.5 : 0, w.wall === 'A' ? 0 : w.pos + 0.5, -hMid);
+  const ux = w.wall === 'A' ? 0.8944 : -0.8944;
+  const relx = mx - cx, rely = my - cy;
+  const along = relx * ux + rely * 0.4472;
+  const vert = rely - along * 0.4472;
+  const hw = it ? (it.hitW ?? 30) : 30;
+  return Math.abs(along) <= hw && Math.abs(vert) <= 48;
 }
