@@ -14,7 +14,7 @@ const Dialogue = {
   typeTimer: 0,
   current: null,
   onAdvance: null,
-  speed: 0.032,   /* 每字秒數 */
+  speed: 0.07,    /* 每字秒數（第十輪：放慢，看得出逐字出現；點一下可加速完成） */
   t: 0,
   blink: makeBlinkState(),
 

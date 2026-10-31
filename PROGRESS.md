@@ -447,3 +447,24 @@
    - peek-character.mjs：角色造型對照截圖
 2. ✅ 新增 README.md：快速開始／玩法／操作／建造品項表／音訊說明／專案結構／測試表
 3. ✅ 第九輪全部完成（9a 髮型對話徽章 → 9b 建造核心 → 9c 擺飾地飾 → 9d 牆飾 → 9e 裝潢收尾 → 9f 回歸文件），無剩餘待辦
+
+## 第十輪（Jerry 回饋 8 點）
+
+**Plan（切小步、逐 commit）**：
+- **10a** 對話與視覺：① 睜眼後新增 `wakeup` 子狀態（小島躺棉被、點一下才起來→meet）② 小宥改帥氣男版（短髮+呆毛/白長袖/深咖長褲/深棕背包，參考 art/小宥.png）③ 對話名字框收進框內留間距 ④ 打字 0.032→0.07s/字（點一下補完既有）→ ✅ 完成（含 flow 更新重跑、舊截圖清掉）
+- **10b** 提示與教學狀態：⑤⑦ `homeFromMap` 漏 `hideHint()`（地圖紅圈帶進房間；麥當勞會清是因為 openShop 有 hide）＋ setSub 一律先 hideHint 防殘留；⑥⑧ `placeItem` 放床只存檔 stage='bed'、**runtime Game.stage 沒推進**→inTutorial 整場卡 true（其他 tab 鎖住、床卡又有紅圈）→ 補 `Game.stage='bed'`；牆飾 tab 漏 inTutorial 過濾（漏洞）→ 補鎖
+- **10c** 家具轉向：`P()` 加 ROT_FN 等距 90° 仿射 override（u'=(TW/TH)v, v'=-(TH/TW)u 繞中心）、itemTiles/floorValid 吃 rot、放置中 R 旋轉、存檔帶 rot（舊檔預設 0）
+- **10d** 全回歸六套件＋文件更新＋清舊截圖
+
+### 10a ✅ 對話與視覺（本輪 commit）
+1. ✅ wakeup 子狀態：talk 結尾→小島躺棉被＋「👆 點擊起來」，點一下（或空白鍵，但同一次按鍵剛結束對話不觸發）才進 meet 坐起
+2. ✅ XIAOYOU_CFG 男版：gender male／hairStyle short（蓬蓬短髮+呆毛）／top whiteL／bottom coffeeLong／pack brown
+3. ✅ .dlg-name 收進對話框內（top/left 2px、dlg-main padding-top 40px），不再黏邊線
+4. ✅ Dialogue.speed 0.032→0.07（看得出逐字；點擊補完維持）
+5. ✅ flow.mjs 加 wakeup 檢查＋點擊、新增 check()/fails 計數；flow 32 步 0 pageerror；舊編號截圖已清
+
+### 10b ✅ 提示與教學狀態（本輪 commit）
+1. ✅ ⑤⑦ 修「回家後教學紅圈不消失」：`homeFromMap` 補 `hideHint()`＋`setSub` 一律先清提示＋`showHint` 加「目標不可見就不顯示」守衛（防延遲 setTimeout 殘留）
+2. ✅ ⑥⑧ 修「放床後還卡放床教學」真凶：`placeItem` 放床只把 stage='bed' 寫進存檔、runtime `Game.stage` 沒推進→`inTutorial` 整場卡 true（其他 tab 鎖住、床卡又有紅圈、重載才恢復）→ 補 `Game.stage='bed'`
+3. ✅ ⑥ 修牆飾漏洞：wall tab 補 `inTutorial` 鎖（舊版教學中可掛牆飾跳過教學）
+4. ✅ flow.mjs 加 4 項 10b 檢查（教學中牆飾鎖住／放床後家具全開／放床後牆飾解鎖／地圖有回家圈／回房間圈消失）→ flow 32 步 7 項 ✅ 0 pageerror

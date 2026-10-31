@@ -41,6 +41,11 @@ page.on('pageerror', e => console.log('  ⚠️ pageerror:', e.message));
 page.on('console', m => { if (m.type() === 'error') console.log('  ⚠️ console:', m.text()); });
 
 let step = 0;
+let fails = 0;
+function check(label, ok) {
+  console.log(`  ${ok ? '✅' : '❌'} ${label}`);
+  if (!ok) fails++;
+}
 async function shot(name, note = '') {
   step++;
   const f = path.join(SHOTS, `${String(step).padStart(2, '0')}-${name}.png`);
@@ -127,8 +132,12 @@ await waitMs(700);
 console.log('6️⃣ 「這是哪裡？」');
 await shot('dialogue-where', `sub=${await sub()}`);
 
-console.log('7️⃣ 推進對話 → 小宥登場');
+console.log('7️⃣ 推進對話 → 小島躺著等點擊，點一下才起來');
 await dlgClick();
+await waitMs(500);
+check('wakeup 子狀態（點擊起來前）', String(await sub()).startsWith('wakeup'));
+await shot('wakeup-wait', `sub=${await sub()}`);
+await page.mouse.click(640, 400);
 await waitMs(1200);
 await shot('meet-pop', `sub=${await sub()}`);
 await waitMs(1200);
@@ -145,6 +154,9 @@ await waitMs(900);
 
 console.log('9️⃣ 建造教學：面板+提示');
 await shot('tut-build-panel', `sub=${await sub()}`);
+await page.click('.btab[data-tab="wall"]');
+await waitMs(400);
+check('教學中牆飾 tab 鎖住（第十輪修漏洞）', (await page.locator('#build-items .build-empty').count()) === 1 && (await page.locator('#build-items .build-empty').first().textContent()).includes('先完成放床教學'));
 
 console.log('🔟 點家具 tab → 選床');
 await page.click('.btab[data-tab="furniture"]');
@@ -172,6 +184,14 @@ await waitMs(900);
 
 console.log('1️⃣3️⃣ 出門按鈕 + 提示（此處先存檔續玩測試）');
 await shot('goout-hint', `sub=${await sub()}`);
+await page.click('#build-btn');
+await waitMs(500);
+check('放床後家具 tab 全開（runtime stage 已推進）', (await page.locator('#build-items .build-item').count()) >= 5);
+await page.click('.btab[data-tab="wall"]');
+await waitMs(400);
+check('放床後牆飾 tab 解鎖', (await page.locator('#build-items .build-item').count()) >= 6);
+await page.click('#build-btn');
+await waitMs(300);
 
 console.log('1️⃣3️⃣½ 重新整理 → 續玩應回到 goOut 提示');
 await page.reload();
@@ -192,6 +212,7 @@ await waitMs(600);
 
 console.log('1️⃣5️⃣ 地圖（直直往下＋麥當勞）');
 await shot('map');
+check('地圖上有「回家」提示圈', await page.evaluate(() => !document.getElementById('hint').classList.contains('hidden')));
 
 console.log('1️⃣5️⃣½ 點道路走路');
 const roadPt = await worldPt(490, 560);
@@ -233,6 +254,7 @@ console.log('1️⃣8️⃣ 點「回家」→ 房間');
 await page.click('#map-home');
 await waitMs(500);
 await shot('home', `sub=${await sub()}`);
+check('回房間後提示圈消失（第十輪修殘留）', await page.evaluate(() => document.getElementById('hint').classList.contains('hidden')));
 
 console.log('1️⃣6️⃣ 自由移動（WASD + 點地板）');
 await shot('free', `sub=${await sub()}`);
@@ -255,7 +277,7 @@ await page.click('#build-items .build-item');
 await waitMs(600);
 await shot('toast-already-bed');
 
-console.log('✅ 流程測試完成');
+console.log(fails === 0 ? '✅ 流程測試完成' : `❌ 流程測試完成（${fails} 項失敗）`);
 await browser.close();
 server.close();
-process.exit(0);
+process.exit(fails === 0 ? 0 : 1);

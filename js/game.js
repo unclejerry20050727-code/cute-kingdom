@@ -198,7 +198,8 @@ function beginGame(save, skipIntro) {
 
 function setSub(sub) {
   Game.sub = sub;
-  if (sub !== 'fp') $('#click-next').classList.add('hidden');
+  hideHint(); /* 第十輪：任何子狀態切換先清舊提示，避免紅圓框殘留（如地圖「回家」圈帶進房間） */
+  if (sub !== 'fp' && sub !== 'wakeup') $('#click-next').classList.add('hidden');
   const roomSub = ['meet', 'tutBuild', 'placing', 'praise', 'goOut', 'free'].includes(sub);
   $('#out-btn').classList.toggle('hidden', !roomSub);
   $('#build-btn').classList.toggle('hidden', !roomSub);
@@ -234,8 +235,10 @@ function updateGame(dt) {
             { who: 'player', name: '小島', text: '這是哪裡？' },
           ], () => {
             Game.fp.on = false; /* 之後小宥說話 → 第三人稱 */
-            setSub('meet');
-            Game.meetT = 0;
+            Game.player.getup = 0;
+            setSub('wakeup'); /* 第十輪：先停在小島躺在棉被裡，點一下再起來 */
+            $('#click-next').textContent = '👆 點擊起來';
+            $('#click-next').classList.remove('hidden');
           });
         }
       }
@@ -244,6 +247,10 @@ function updateGame(dt) {
     case 'talk': {
       /* 第一人稱緩慢晃動（小宥還沒出場的對話） */
       Game.fp.camX = fpCamIdle(Game.t);
+      break;
+    }
+    case 'wakeup': {
+      /* 等待玩家點擊才起來（小島仍躺在棉被裡） */
       break;
     }
     case 'meet': {
@@ -413,6 +420,7 @@ function setLoadingQuote() {
 
 /* ══════════ 回家 / 麥當勞商店 ══════════ */
 function homeFromMap() {
+  hideHint(); /* 第十輪：回房間先清地圖「回家」紅圈 */
   $('#screen-shop').classList.add('hidden');
   Game.mapTarget = null;
   Game.player.x = 1.5; Game.player.y = 7.2; Game.player.facing = 'down';
@@ -758,6 +766,7 @@ function frame(ts) {
 /* ══════════ 輸入 ══════════ */
 function setupInput() {
   window.addEventListener('keydown', (e) => {
+    const dialogueWasActive = Dialogue.active; /* 同一次按鍵若剛推進完對話，不觸發 wakeup 點擊（避免「對話結尾=自動起來」） */
     const keyMap = {
       ArrowUp: 'up', w: 'up', W: 'up',
       ArrowDown: 'down', s: 'down', S: 'down',
@@ -776,7 +785,11 @@ function setupInput() {
       Dialogue.advance();
       e.preventDefault();
     }
-    if ((e.key === ' ' || e.key === 'Enter') && Game.sub === 'fp' && !Dialogue.active) {
+    if ((e.key === ' ' || e.key === 'Enter') && Game.sub === 'fp' && !Dialogue.active && !dialogueWasActive) {
+      Game.canvas.dispatchEvent(new MouseEvent('click', { clientX: innerWidth / 2, clientY: innerHeight / 2 }));
+      e.preventDefault();
+    }
+    if ((e.key === ' ' || e.key === 'Enter') && Game.sub === 'wakeup' && !Dialogue.active && !dialogueWasActive) {
       Game.canvas.dispatchEvent(new MouseEvent('click', { clientX: innerWidth / 2, clientY: innerHeight / 2 }));
       e.preventDefault();
     }
@@ -818,6 +831,13 @@ function setupInput() {
           /* 加速看完 */
           Game.fp.t = FP_PAN_DUR;
         }
+        break;
+      case 'wakeup':
+        Game.player.getup = 0;
+        Game.meetT = 0;
+        setSub('meet');
+        $('#click-next').classList.add('hidden');
+        sfx('wake');
         break;
       case 'free': {
         if (tx > 0.2 && ty > 0.2 && tx < N - 0.2 && ty < N - 0.2) {
@@ -886,6 +906,7 @@ function setupInput() {
 /* ══════════ 教學提示（箭頭+圈圈） ══════════ */
 let hintTarget = null;
 function showHint(el, label) {
+  if (!el || el.offsetParent === null) return; /* 第十輪：目標不可見（面板已關）就不顯示，避免延遲 setTimeout 造成殘留紅圈 */
   hintTarget = el;
   $('#hint-label').textContent = label;
   const h = $('#hint');
@@ -1017,9 +1038,10 @@ function selectBuildTab(tab, force) {
   }
 
   if (tab === 'wall') {
+    if (inTutorial) { emptyMsg('🌟 先完成放床教學，就能掛牆飾囉～ 🌟'); return; } /* 第十輪：補上教學鎖（舊版牆飾可跳過教學直接掛） */
     const list = Object.entries(WALL_ITEMS);
     if (!list.length) {
-      emptyMsg(inTutorial ? '🌟 先完成放床教學，就能掛牆飾囉～ 🌟' : `🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
+      emptyMsg(`🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
       return;
     }
     for (const [id, it] of list) box.appendChild(wallCard(id, it));
@@ -1185,6 +1207,7 @@ function placeItem(itemId, tx, ty) {
   $('#hint-bar').classList.add('hidden');
   sfx('place');
   if (itemId === 'bed' && Game.stage === 'created') {
+    Game.stage = 'bed'; /* 第十輪：runtime 同步推進（舊版只寫進存檔，同場 session inTutorial 一直卡 true） */
     saveGame(fullSave('bed'));
     setSub('praise');
     Dialogue.start([

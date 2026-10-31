@@ -1108,10 +1108,10 @@ function drawPortrait(ctx, cfg, size, o = {}) {
   drawFace(ctx, c, x, y, R, o.gaze ?? 0, closed, t);
 }
 
-/* ══════════ NPC：小宥（參考 art/小宥.png） ══════════ */
+/* ══════════ NPC：小宥（參考 art/小宥.png：帥氣男生——可可蓬蓬短髮+呆毛、白長袖、深咖長褲、深棕背包） ══════════ */
 const XIAOYOU_CFG = {
-  gender: 'female',
+  gender: 'male',
   skin: 'milk', hair: 'cocoa', eye: 'cocoaEye', nose: 'n1', mouth: 'm1',
-  hairStyle: 'long', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
-  top: 'whiteS', bottom: 'shortDenim', pack: 'beige',
+  hairStyle: 'short', eyeShape: 'round', noseShape: 'dot', mouthShape: 'smile',
+  top: 'whiteL', bottom: 'coffeeLong', pack: 'brown',
 };
