@@ -264,6 +264,9 @@ body {
   overflow: hidden;
   animation: pop-in .25s cubic-bezier(.34,1.56,.64,1);
 }
+@media (min-width: 900px) {
+  .build-panel { right: 170px; } /* 寬螢幕左移，避開右側「出門」鈕（舊版會蓋住第 5 色色塊） */
+}
 .build-tabs { display: flex; gap: 4px; padding: 8px 8px 4px; flex-wrap: wrap; }
 .btab {
   font-family: var(--font);

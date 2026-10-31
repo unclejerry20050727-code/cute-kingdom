@@ -996,7 +996,7 @@ function selectBuildTab(tab, force) {
       row.className = 'tint-row';
       const lab = document.createElement('div');
       lab.className = 'tint-label';
-      lab.textContent = kind === 'wall' ? '牆面色' : '地板色';
+      lab.textContent = (kind === 'wall' ? '牆面色' : '地板色') + '：' + TINT_NAMES[kind][Game.tints[kind]];
       row.appendChild(lab);
       TINT_SWATCH[kind].forEach((sw, i) => {
         const chip = document.createElement('button');
@@ -1008,6 +1008,11 @@ function selectBuildTab(tab, force) {
       });
       box.appendChild(row);
     }
+    const tip = document.createElement('div');
+    tip.className = 'build-empty';
+    tip.style.fontSize = '15px';
+    tip.textContent = '點色塊即換色，牆面、地板可自由混搭～';
+    box.appendChild(tip);
     return;
   }
 
@@ -1166,7 +1171,9 @@ function setTint(kind, i) {
   sfx('click');
   saveGame(fullSave(Game.stage));
   selectBuildTab('renovate', true);
-  showToast(kind === 'wall' ? '牆面換色囉～' : '地板換色囉～');
+  showToast(i === 0
+    ? (kind === 'wall' ? '牆面換回原色囉～' : '地板換回原色囉～')
+    : (kind === 'wall' ? '牆面' : '地板') + '換成「' + TINT_NAMES[kind][i] + '」囉～');
 }
 
 function placeItem(itemId, tx, ty) {

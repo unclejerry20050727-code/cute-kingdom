@@ -171,15 +171,23 @@ check('Esc 取消放置', (await G(() => Game.placement)) === null);
 
 /* ── 8. 裝潢換色 ── */
 await page.click('.btab[data-tab="renovate"]'); await ms(300);
+check('標籤顯示目前色（原色）', (await G(() => document.querySelector('.tint-label').textContent)) === '牆面色：原色');
 await shot('tab-renovate');
 await page.locator('.tint-row').nth(0).locator('.tint-chip').nth(1).click(); /* 牆→粉嫩 */
 await ms(300);
 await page.locator('.tint-row').nth(1).locator('.tint-chip').nth(2).click(); /* 地板→薄荷 */
 await ms(400);
 check('tints = {wall:1, floor:2}', (await G(() => JSON.stringify(Game.tints))) === '{"wall":1,"floor":2}');
+/* 第 5 色（檸檬）要可點——舊布局被「出門」鈕蓋住 */
+await page.locator('.tint-row').nth(0).locator('.tint-chip').nth(4).click(); /* 牆→檸檬 */
+await ms(300);
+check('牆面換成檸檬（第 5 格可點）', (await G(() => Game.tints.wall)) === 4);
+check('標籤跟隨目前色', (await G(() => document.querySelector('.tint-label').textContent)) === '牆面色：檸檬');
+check('toast 帶色名', (await G(() => document.querySelector('#toast').textContent)) === '牆面換成「檸檬」囉～');
+check('混搭提示在', (await G(() => document.querySelector('#build-items .build-empty').textContent)) === '點色塊即換色，牆面、地板可自由混搭～');
 await G(() => closeBuildPanel());
 await ms(300);
-await shot('tinted-room', '牆粉嫩+地板薄荷');
+await shot('tinted-room', '牆檸檬+地板薄荷');
 
 /* ── 9. 移除模式 ── */
 await page.click('#build-btn'); await ms(400);
@@ -224,7 +232,7 @@ await page.click('#cover-enter'); await ms(500);
 await page.click('#btn-start'); await ms(1200);
 check('reload 後 7 件家具', (await G(() => Game.furniture.length)) === 7);
 check('reload 後牆飾 4 件', (await G(() => Game.wallItems.length)) === 4);
-check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":1,"floor":2}');
+check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":4,"floor":2}');
 await shot('after-reload', '換色+家具+牆飾保留');
 
 console.log(fails === 0 ? '\n✅ 建造系統測試全過' : `\n❌ ${fails} 項失敗`);
