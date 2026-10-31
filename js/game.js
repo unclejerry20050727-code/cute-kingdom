@@ -124,11 +124,24 @@ function beginGame(save, skipIntro) {
   if (!Game.playerCfg.pack) {
     Game.playerCfg.pack = Game.playerCfg.gender === 'male' ? 'brown' : 'beige';
   }
-  Game.furniture = save.furniture || [];
+  /* 存檔消毒：九b前舊存檔無 id（當床處理）；床最多保留一張 */
+  const cleanFurn = [];
+  let beds = 0;
+  for (const f of (save.furniture || [])) {
+    if (!f || f.tx === undefined || f.ty === undefined) continue;
+    const id = f.id || 'bed';
+    if (id === 'bed' && ++beds > 1) continue;
+    cleanFurn.push({ id, tx: f.tx, ty: f.ty });
+  }
+  Game.furniture = cleanFurn;
   Game.wallItems = save.wallItems || [];
   Game.tints = save.tints || { wall: 0, floor: 0 };
   setRoomTints(Game.tints.wall, Game.tints.floor);
   Game.stage = save.stage || 'created';
+  /* 階段↔床一致性：created 已有床→進 goOut；bed 卻沒床→回教學（避免卡死） */
+  const hasBed = Game.furniture.some(f => f.id === 'bed');
+  if (Game.stage === 'created' && hasBed) Game.stage = 'bed';
+  else if (Game.stage === 'bed' && !hasBed) Game.stage = 'created';
   rebuildBlocked();
   /* 金錢 / 打工裝備（舊存檔補預設值） */
   Game.money = save.money ?? 100;
@@ -240,6 +253,16 @@ function updateGame(dt) {
       if (t >= 0.35 && !Game.npc.visible) { Game.npc.visible = true; Game.npc.popT = 0; }
       if (Game.npc.visible) Game.npc.popT = clamp(Game.npc.popT + dt / 0.5, 0, 1);
       if (t >= 0.85) runXiaoyouIntro();
+      break;
+    }
+    case 'tutBuild': {
+      /* 自愈：已有床（異常存檔）→ 直接進 goOut，避免「教學要求放床卻已有床」死路 */
+      if (countItem('bed') >= 1) {
+        saveGame(fullSave('bed'));
+        setSub('goOut');
+        showOutBtn();
+        setTimeout(() => showHint($('#out-btn'), '點『出門』'), 700);
+      }
       break;
     }
     case 'free': {

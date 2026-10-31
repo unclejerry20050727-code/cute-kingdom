@@ -394,3 +394,11 @@
 - 同層重疊規則只限「同層」：地毯不能疊地毯，但盆栽可以站在地毯上（不同層）。
 
 **剩餘待辦**：9d 牆飾入 WALL_ITEMS（心形框/星星框/彩旗/時鐘/海報/牆架）、9e 裝潢 UI 收尾、9f 全回歸＋文件。
+
+### 9-fix ✅ 放床教學卡死自愈（本輪 commit）
+**症狀**（Jerry 回報）：建造一直卡在放床教學——房間已有床，點床卡提示「已經有 1 個床囉～」，remove/renovate 又被「先完成放床教學」鎖住 → 整個卡死。
+**根因**：異常存檔狀態 `stage:'created'`＋furniture 已有 bed（9b 修復前舊版本產出的存檔；當時 bed 缺 id 或 stage 未推進）。載入時 skipIntro 走 else 分支進 `tutBuild`，但床卡已 disabled → 死路。
+**修法（雙重防線）**：
+1. `beginGame` 載入時存檔消毒＋一致性：furniture 無 id 者補為 bed（舊格式）、床最多留一張；`stage:'created'` 已有床→升 `'bed'`（進 goOut）；`stage:'bed'` 無床→降 `'created'`（重播教學）。
+2. `updateGame` 加 `tutBuild` case 運行時自愈：若 `countItem('bed')>=1` → 直接 `setSub('goOut')`＋出門提示（異常 session 也能自救）。
+**驗證**：`test/peek-recover.mjs` 三種異常存檔（created+有床／舊格式無 id／bed 無床）全數自愈、0 pageerror；`flow.mjs` 31 步回歸全過（正常教學不受影響）。
