@@ -490,3 +490,48 @@
 2. ✅ README.md：操作加入 R 旋轉、建造規則加旋轉說明、測試表 48→57
 3. ✅ 舊截圖清理：flow 32 張重產、peek-build 17 張重產（b15-rot-ghost/b16-rot-placed 新增、舊 b15-after-reload 改 b17）
 4. ✅ **第十輪 8 點回饋全部完成**（10a 對話視覺 → 10b 提示教學 → 10c 轉向 → 10d 回歸文件）
+
+## 第十一輪（Jerry 回饋 4 點）
+
+**Plan（切小步、逐 commit）**：
+- **11a** 對話名字框與框線間距再縮短一半：`.dlg-name` top 2→-8px（單行 23→13px≈一半）；flow 加像素量測檢查（getBoundingClientRect 量 dialogue 外框頂 → 名字框頂，目標 15~19px 含 4px 邊框）
+- **11b** 擺飾可放在家具上（有高度觀念）：
+  - `floorValid`：`tab==='decor'` 跳過 `Game.blocked` 檢查（可放家具格；player/NPC/同層重疊檢查維持）
+  - world.js 加 `surfaceHAt(tx,ty)`（該格上方最高家具 h）＋`drawLifted(lift, fn)`（OY 暫時上移）＋`itemDepth(f)`（擺飾站在家具上 → depth 取支撐家具 depth+0.1，確保畫在家具之後）
+  - renderGame：深度排序/移除紅框/ghost 三處對 decor 加 lift（lift=surfaceHAt）
+  - 高度**動態計算**（不存檔）：家具移除→擺飾落地；後放家具→擺飾站上去
+  - peek-build 加：盆栽放書桌格 valid=true、surfaceHAt=書桌h、移除OK、截圖
+- **11c** 牆飾高度可調（範圍 50~262px）：
+  - `wallItems` 加 `h` 欄（舊檔無→預設 hMid）；6 個牆飾 draw 改 `wallSpace(ctx, wall, pos, o.h ?? 預設)`；`wallItemHit` 用 `w.h ?? it.hMid`
+  - 放置中（mode wall）：pl.h 預設 hMid，↑/↓/W/S/滾輪 調整（±10/±6），ghost 傳 o.h，存檔帶 h
+  - 已掛好再調：free 狀態**點牆飾**→ mode 'wallAdj'（暫時從 wallItems 拿出→ghost 跟隨高度→點確認/Esc 還原）
+  - cancelPlacement 特判 wallAdj 要還原品項
+- **11d** 手勢支援（觸控）：新增 `#place-actions` 列（放置中才顯示）：🔄旋轉（floor 且非正方形才顯示，等同 R）、▲▼（wall/wallAdj 顯示，等同 ↑/↓）、✖️取消（等同 Esc）；樣式仿 dpad
+- **11e** 全回歸六套件＋README/PROGRESS＋舊截圖清理＋commit＋報告
+
+### 11a ✅ 對話名字框間距（commit cc85171）
+- `.dlg-name` top 2px → -8px（間距再縮短一半）
+- flow.mjs 加像素量測檢查（14~20px 含 4px 邊框）`✅ 對話名字框與框線間距≈縮半（11a）`
+
+### 11b ✅ 擺飾上家具＋高度觀念（commit 4064817）
+- `floorValid`：decor 跳過 blocked 檢查；重疊改三類（floor=2 / decor=1 / furniture=0），只禁同類重疊
+- world.js：`surfaceHAt(tx,ty)`（該格上方最高家具頂面高，動態計算不存檔）＋`drawLifted(lift,fn)`（OY 暫移）＋`itemDepthAt/itemDepth`（擺飾 depth＝支撐家具+0.1）
+- renderGame：實物/ghost/移除紅框三處跟隨家具高度
+- peek-build 9¾ 段 7 項（盆栽上書桌：valid/surfaceHAt=34/放置/標記/移除），57→64 項全過
+
+### 11c ✅ 牆飾高度可調（commit 1f74e4a）
+- `wallItems[].h` 存檔（舊檔預設 hMid）；6 個牆飾 draw 改 `o.h ?? hMid`；`wallItemHit` 用 `w.h`
+- 放置：初始 h=hMid，↑↓/WS/滾輪 ±6px（clamp 50~262px）
+- 已掛：free 狀態點牆飾→`wallAdj`（實物隱藏、ghost 跟新高度）→再點確認存檔；Esc 取消不彈面板
+- peek-build 9⅞ 段：11 項放置/調整＋2 項 reload h 保留，64→77 項全過
+
+### 11d ✅ 觸控操作鈕（commit a6eaada）
+- `#place-actions` 列（左下、與 dpad 同位、僅放置中顯示）：🔄＝R（僅非正方形家具）、▲▼＝↑↓（僅牆飾/wallAdj）、✖️＝Esc
+- `nudgeWallH(delta)` 鍵盤/滾輪/觸控共用；`updatePlaceActions()` 在 setSub＋三個 start* 結尾同步
+- dpad 改只在 free/map 顯示（放置中原本殘留且與操作鈕重疊）
+- peek-build 9⅞d 段 10 項（顯隱/🔄rot=1/✖️取消/▲▲h=177），77→84 項全過；b23-touch-actions.png 視覺 QA
+
+### 11e ✅ 全回歸＋文件（本輪 commit）
+- 六套件全過：flow（32 步 0 pageerror）/ peek-build（84 項）/ peek-recover（3 種異常存檔）/ peek-bgm-filefix（8 項）/ peek-map / peek-character
+- README：操作段加牆飾高度（↑↓/WS/滾輪＋已掛點一下再調）與觸控 🔄▲▼✖️；擺飾行「可放家具上」、牆飾行「高度可調」；加 3 條規則 bullet；測試表 57→84 項
+- 舊截圖清理：對照實際 shot() 列表刪 3 張舊 after-reload（b17/b19/b23）
