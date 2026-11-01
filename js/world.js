@@ -125,9 +125,24 @@ function initWorldOrigin() {
 }
 initWorldOrigin();
 
-/* 格座標 → 世界座標（oy 為往上偏移的像素） */
+/* 格座標 → 世界座標（oy 為往上偏移的像素）
+   第十輪：ROT_FN 非空時先把 tile 座標重新映射（繪製旋轉 90° 的地板品項用） */
+let ROT_FN = null;
 function P(tx, ty, oy = 0) {
+  if (ROT_FN) { const r = ROT_FN(tx, ty); tx = r[0]; ty = r[1]; }
   return [OX + (tx - ty) * TW / 2, OY + (tx + ty) * TH / 2 + oy];
+}
+/* 第十輪：90° 旋轉座標映射——原足跡 (tx,ty) w×d 的繪製座標 → 旋轉後足跡 (tx,ty) d×w
+   做法：以「原足跡中心」為中心在 tile 空間轉 90°，再平移到「旋轉後足跡中心」，兩個長方形正好重疊 */
+function rot90Fn(tx, ty, w, d) {
+  const cx = tx + w / 2, cy = ty + d / 2;
+  const nx = tx + d / 2, ny = ty + w / 2;
+  return (x, y) => [nx - (y - cy), ny + (x - cx)];
+}
+/* 以 90° 旋轉方式執行 drawFn()（只用於 floor 品項、w≠d） */
+function drawRot90(tx, ty, it, drawFn) {
+  ROT_FN = rot90Fn(tx, ty, it.w, it.d);
+  try { drawFn(); } finally { ROT_FN = null; }
 }
 /* 世界座標 → 格座標 */
 function screenToTile(wx, wy) {
@@ -483,8 +498,12 @@ function isoBox(ctx, tx, ty, w, d, h0, h1, opt = {}) {
    進入後用 2D 座標繪製（x 沿牆向右、y 向下），自動帶上等距斜度 */
 function faceSpace(ctx, tx, ty, h, which) {
   const [px, py] = P(which === 'tx' ? tx + 1 : tx, ty, -h);
-  const ux = which === 'tx' ? -0.8944 : 0.8944;
-  ctx.transform(ux, 0.4472, 0, 1, px, py);
+  let ux = which === 'tx' ? -0.8944 : 0.8944, uy = 0.4472;
+  if (ROT_FN) { /* 第十輪：旋轉時側面方向隨 tile 軸轉（(0,1)→(−1,0)、(1,0)→(0,1)） */
+    ux = -0.8944;
+    uy = which === 'tx' ? -0.4472 : 0.4472;
+  }
+  ctx.transform(ux, uy, 0, 1, px, py);
 }
 
 /* 幽靈放置足跡提示 */
@@ -961,34 +980,36 @@ const BUILD_ITEMS = {
 };
 
 /* 品項佔用格 */
-function itemTiles(id, tx, ty) {
+function itemTiles(id, tx, ty, rot = 0) {
   const it = BUILD_ITEMS[id];
   if (!it) return [];
+  const w = rot ? it.d : it.w, d = rot ? it.w : it.d; /* 第十輪：rot=1 時 w/d 互換 */
   const out = [];
-  for (let dx = 0; dx < it.w; dx++)
-    for (let dy = 0; dy < it.d; dy++)
+  for (let dx = 0; dx < w; dx++)
+    for (let dy = 0; dy < d; dy++)
       out.push([tx + dx, ty + dy]);
   return out;
 }
 
-/* 地板品項可否放在 (tx,ty) */
-function floorValid(id, tx, ty) {
+/* 地板品項可否放在 (tx,ty)（rot=1 時用旋轉後的 w/d） */
+function floorValid(id, tx, ty, rot = 0) {
   const it = BUILD_ITEMS[id];
   if (!it) return false;
-  if (tx < 0 || ty < 0 || tx + it.w > N || ty + it.d > N) return false;
-  for (const [x, y] of itemTiles(id, tx, ty)) {
+  const w = rot ? it.d : it.w, d = rot ? it.w : it.d;
+  if (tx < 0 || ty < 0 || tx + w > N || ty + d > N) return false;
+  for (const [x, y] of itemTiles(id, tx, ty, rot)) {
     if (x < 0 || y < 0 || x >= N || y >= N) return false;
     if (Game.blocked.has(x + ',' + y)) return false;
     if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
     if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
   }
   /* 同層品項不可重疊（地飾互不重疊、擺飾互不重疊；地飾可與擺飾/家具共存） */
-  const mine = new Set(itemTiles(id, tx, ty).map(([x, y]) => x + ',' + y));
+  const mine = new Set(itemTiles(id, tx, ty, rot).map(([x, y]) => x + ',' + y));
   const myL = it.layer === 'floor' ? 1 : 0;
   for (const f of Game.furniture) {
     const oit = BUILD_ITEMS[f.id];
     if (!oit || (oit.layer === 'floor' ? 1 : 0) !== myL) continue;
-    for (const [x, y] of itemTiles(f.id, f.tx, f.ty)) if (mine.has(x + ',' + y)) return false;
+    for (const [x, y] of itemTiles(f.id, f.tx, f.ty, f.rot)) if (mine.has(x + ',' + y)) return false;
   }
   return true;
 }

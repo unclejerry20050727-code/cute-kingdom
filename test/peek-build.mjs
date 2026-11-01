@@ -226,11 +226,35 @@ await shot('remove-wall');
 await page.keyboard.press('Escape'); await ms(400);
 check('Esc 離開移除模式', (await G(() => Game.sub)) === 'free');
 
+/* ── 9½. 家具轉向（第十輪c）── */
+/* （面板已因 Esc 取消移除而自動重開，不需再按 #build-btn） */
+await page.click('.btab[data-tab="furniture"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("書桌")'); await ms(400);
+check('放置提示含 R 旋轉', (await G(() => document.querySelector('#hint-bar').textContent)).includes('R 旋轉'));
+await page.keyboard.press('r'); await ms(200);
+check('按 R → rot=1（1×2）', (await G(() => Game.placement.rot)) === 1);
+const rotDeskPt = await tilePt(2.5, 7.5);
+await page.mouse.move(rotDeskPt.x, rotDeskPt.y); await ms(400);
+check('旋轉書桌 ghost 有效（1×2 空格）', (await G(() => Game.placement.valid)) === true);
+await shot('rot-ghost', '旋轉 1×2 書桌 ghost');
+await page.mouse.click(rotDeskPt.x, rotDeskPt.y); await ms(500);
+check('旋轉書桌放下 (rot=1)', (await G(() => Game.furniture.some(f => f.id === 'desk' && f.rot === 1))) === true);
+check('blocked 跟隨旋轉後 1×2 足跡', await G(() => Game.blocked.has('2,7') && Game.blocked.has('2,8') && !Game.blocked.has('3,7')));
+await page.click('#build-items .build-item:has-text("鋼琴")'); await ms(400);
+await page.keyboard.press('r'); await ms(150);
+await page.keyboard.press('r'); await ms(150);
+check('再按 R×2 → 回 rot=0（2×1）', (await G(() => Game.placement.rot)) === 0);
+await page.keyboard.press('Escape'); await ms(300);
+await G(() => closeBuildPanel()); await ms(300);
+await shot('rot-placed', '旋轉書桌 1×2 入駐');
+
 /* ── 10. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
 await page.click('#cover-enter'); await ms(500);
 await page.click('#btn-start'); await ms(1200);
-check('reload 後 7 件家具', (await G(() => Game.furniture.length)) === 7);
+check('reload 後 8 件家具（含旋轉書桌）', (await G(() => Game.furniture.length)) === 8);
+check('reload 後旋轉狀態保留 (rot=1)', (await G(() => Game.furniture.some(f => f.id === 'desk' && f.rot === 1))) === true);
+check('reload 後旋轉足跡 blocked 正確', await G(() => Game.blocked.has('2,7') && Game.blocked.has('2,8') && !Game.blocked.has('3,7')));
 check('reload 後牆飾 4 件', (await G(() => Game.wallItems.length)) === 4);
 check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":4,"floor":2}');
 await shot('after-reload', '換色+家具+牆飾保留');

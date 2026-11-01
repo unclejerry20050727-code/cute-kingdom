@@ -131,7 +131,7 @@ function beginGame(save, skipIntro) {
     if (!f || f.tx === undefined || f.ty === undefined) continue;
     const id = f.id || 'bed';
     if (id === 'bed' && ++beds > 1) continue;
-    cleanFurn.push({ id, tx: f.tx, ty: f.ty });
+    cleanFurn.push({ id, tx: f.tx, ty: f.ty, rot: f.rot ? 1 : 0 }); /* 第十輪：保留旋轉（舊存檔無 rot 預設 0） */
   }
   Game.furniture = cleanFurn;
   Game.wallItems = save.wallItems || [];
@@ -315,9 +315,10 @@ function updateGame(dt) {
       if (!pl) break;
       if (pl.mode === 'floor') {
         const it = BUILD_ITEMS[pl.item];
-        pl.tx = clamp(Math.floor(Game.mouse.tx), 0, N - it.w);
-        pl.ty = clamp(Math.floor(Game.mouse.ty), 0, N - it.d);
-        pl.valid = floorValid(pl.item, pl.tx, pl.ty);
+        const w = pl.rot ? it.d : it.w, d = pl.rot ? it.w : it.d; /* 第十輪：rot=1 時 w/d 互換 */
+        pl.tx = clamp(Math.floor(Game.mouse.tx), 0, N - w);
+        pl.ty = clamp(Math.floor(Game.mouse.ty), 0, N - d);
+        pl.valid = floorValid(pl.item, pl.tx, pl.ty, pl.rot);
       } else if (pl.mode === 'wall') {
         const s = wallSlotFromMouse();
         if (s) { pl.wall = s.wall; pl.pos = s.pos; }
@@ -600,7 +601,7 @@ function rebuildBlocked() {
   for (const f of Game.furniture) {
     const it = BUILD_ITEMS[f.id];
     if (!it || !it.block) continue;
-    for (const [tx, ty] of itemTiles(f.id, f.tx, f.ty)) Game.blocked.add(tx + ',' + ty);
+    for (const [tx, ty] of itemTiles(f.id, f.tx, f.ty, f.rot)) Game.blocked.add(tx + ',' + ty);
   }
 }
 
@@ -651,18 +652,23 @@ function renderGame() {
   Game.furniture.forEach((f, i) => {
     const it = BUILD_ITEMS[f.id];
     if (!it || it.layer !== 'floor') return;
-    it.draw(ctx, f.tx, f.ty);
+    if (f.rot) drawRot90(f.tx, f.ty, it, () => it.draw(ctx, f.tx, f.ty));
+    else it.draw(ctx, f.tx, f.ty);
     if (rmTarget0 && rmTarget0.type === 'floor' && rmTarget0.idx === i) {
       ctx.globalAlpha = 0.4;
       ctx.fillStyle = '#E05A6A';
-      const g0 = P(f.tx, f.ty), g1 = P(f.tx + it.w, f.ty), g2 = P(f.tx + it.w, f.ty + it.d), g3 = P(f.tx, f.ty + it.d);
+      const w = f.rot ? it.d : it.w, d = f.rot ? it.w : it.d;
+      const g0 = P(f.tx, f.ty), g1 = P(f.tx + w, f.ty), g2 = P(f.tx + w, f.ty + d), g3 = P(f.tx, f.ty + d);
       poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
       ctx.globalAlpha = 1;
     }
   });
   if (Game.placement && Game.placement.mode === 'floor') {
     const pl = Game.placement, it = BUILD_ITEMS[pl.item];
-    if (it && it.layer === 'floor') it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+    if (it && it.layer === 'floor') {
+      if (pl.rot) drawRot90(pl.tx, pl.ty, it, () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }));
+      else it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+    }
   }
 
   /* 可繪項目（深度排序） */
@@ -675,11 +681,13 @@ function renderGame() {
     items.push({
       depth: f.tx + f.ty + it.w + it.d - 1,
       draw: () => {
-        it.draw(ctx, f.tx, f.ty);
+        if (f.rot) drawRot90(f.tx, f.ty, it, () => it.draw(ctx, f.tx, f.ty));
+        else it.draw(ctx, f.tx, f.ty);
         if (isRm) {
           ctx.globalAlpha = 0.4;
           ctx.fillStyle = '#E05A6A';
-          const g0 = P(f.tx, f.ty), g1 = P(f.tx + it.w, f.ty), g2 = P(f.tx + it.w, f.ty + it.d), g3 = P(f.tx, f.ty + it.d);
+          const w = f.rot ? it.d : it.w, d = f.rot ? it.w : it.d;
+          const g0 = P(f.tx, f.ty), g1 = P(f.tx + w, f.ty), g2 = P(f.tx + w, f.ty + d), g3 = P(f.tx, f.ty + d);
           poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
           ctx.globalAlpha = 1;
         }
@@ -711,7 +719,10 @@ function renderGame() {
     if (it && it.layer !== 'floor') {
       items.push({
         depth: pl.tx + pl.ty + it.w + it.d - 1,
-        draw: () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }),
+        draw: () => {
+          if (pl.rot) drawRot90(pl.tx, pl.ty, it, () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }));
+          else it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+        },
       });
     }
   }
@@ -793,6 +804,12 @@ function setupInput() {
       Game.canvas.dispatchEvent(new MouseEvent('click', { clientX: innerWidth / 2, clientY: innerHeight / 2 }));
       e.preventDefault();
     }
+    /* 第十輪：放置中按 R 旋轉 90°（只對非正方形品項有意義） */
+    if ((e.key === 'r' || e.key === 'R') && Game.sub === 'placing' && Game.placement && Game.placement.mode === 'floor') {
+      const it = BUILD_ITEMS[Game.placement.item];
+      if (it && it.w !== it.d) { Game.placement.rot = Game.placement.rot ? 0 : 1; sfx('click'); }
+      e.preventDefault();
+    }
     if (e.key === 'Escape') {
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
@@ -849,7 +866,7 @@ function setupInput() {
         const pl = Game.placement;
         if (!pl) break;
         if (pl.mode === 'floor') {
-          if (pl.valid) placeItem(pl.item, pl.tx, pl.ty);
+          if (pl.valid) placeItem(pl.item, pl.tx, pl.ty, pl.rot);
           else showToast('這裡放不了喔，換個位置試試～');
         } else if (pl.mode === 'wall') {
           if (pl.valid) {
@@ -1134,9 +1151,9 @@ function startPlacement(itemId) {
   closeBuildPanel();
   hideHint();
   setSub('placing');
-  Game.placement = { mode: 'floor', item: itemId, prevSub, tx: 0, ty: 0, valid: false };
+  Game.placement = { mode: 'floor', item: itemId, prevSub, rot: 0, tx: 0, ty: 0, valid: false };
   const bar = $('#hint-bar');
-  bar.textContent = `🛏️ 滑鼠移到喜歡的位置，點擊放下${item.name}！（Esc 取消）`;
+  bar.textContent = `🛏️ 滑鼠移到喜歡的位置，點擊放下${item.name}！` + (item.w !== item.d ? '（R 旋轉 90°）' : '') + '（Esc 取消）';
   bar.classList.remove('hidden');
 }
 
@@ -1198,10 +1215,10 @@ function setTint(kind, i) {
     : (kind === 'wall' ? '牆面' : '地板') + '換成「' + TINT_NAMES[kind][i] + '」囉～');
 }
 
-function placeItem(itemId, tx, ty) {
+function placeItem(itemId, tx, ty, rot = 0) {
   const item = BUILD_ITEMS[itemId];
   const prevSub = Game.placement ? Game.placement.prevSub : null;
-  Game.furniture.push({ id: itemId, tx, ty });
+  Game.furniture.push({ id: itemId, tx, ty, rot: rot ? 1 : 0 }); /* 第十輪：存旋轉狀態（舊存檔無 rot 預設 0） */
   rebuildBlocked();
   Game.placement = null;
   $('#hint-bar').classList.add('hidden');
@@ -1234,7 +1251,7 @@ function removeTargetFromMouse() {
     const f = Game.furniture[i];
     const it = BUILD_ITEMS[f.id];
     if (!it) continue;
-    if (itemTiles(f.id, f.tx, f.ty).some(([x, y]) => x === mtx && y === mty)) return { type: 'floor', idx: i };
+    if (itemTiles(f.id, f.tx, f.ty, f.rot).some(([x, y]) => x === mtx && y === mty)) return { type: 'floor', idx: i };
   }
   return null;
 }
