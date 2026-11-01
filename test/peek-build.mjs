@@ -248,6 +248,29 @@ await page.keyboard.press('Escape'); await ms(300);
 await G(() => closeBuildPanel()); await ms(300);
 await shot('rot-placed', '旋轉書桌 1×2 入駐');
 
+/* ── 9¾. 擺飾放家具上（第十一輪b：高度觀念）── */
+/* 書桌在 (6,6) 2×1 → 盆栽放 (6,6) 格：舊版會因 blocked 拒絕，新版允許且抬高到桌面 */
+await page.click('#build-btn'); await ms(400);
+await page.click('.btab[data-tab="decor"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("盆栽")'); await ms(400);
+const deskTilePt = await tilePt(6.5, 6.5);
+await page.mouse.move(deskTilePt.x, deskTilePt.y); await ms(400);
+check('盆栽可放書桌格（11b 擺飾上家具）', (await G(() => Game.placement?.valid)) === true);
+check('surfaceHAt 書桌格 = 書桌 h(34)', (await G(() => surfaceHAt(6, 6))) === 34);
+await shot('decor-on-furniture-ghost', '盆栽 ghost 站在書桌上');
+await page.mouse.click(deskTilePt.x, deskTilePt.y); await ms(500);
+check('盆栽放上書桌 → 9 件', (await G(() => Game.furniture.length)) === 9);
+check('盆栽確實落在 (6,6)', (await G(() => Game.furniture.some(f => f.id === 'plant' && f.tx === 6 && f.ty === 6))) === true);
+/* 移除：家具上的擺飾也能點到並移除 */
+await page.click('.btab[data-tab="remove"]'); await ms(300);
+await page.click('#build-items .build-item'); await ms(400);
+await page.mouse.move(deskTilePt.x, deskTilePt.y); await ms(400);
+check('書桌上的盆栽被標記', (await G(() => Game.placement.target))?.type === 'floor');
+await shot('decor-on-furniture-remove', '家具上擺飾的移除標記');
+await page.mouse.click(deskTilePt.x, deskTilePt.y); await ms(500);
+check('移除書桌上的盆栽 → 8 件', (await G(() => Game.furniture.length)) === 8);
+await page.keyboard.press('Escape'); await ms(300);
+
 /* ── 10. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
 await page.click('#cover-enter'); await ms(500);

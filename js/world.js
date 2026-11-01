@@ -999,20 +999,59 @@ function floorValid(id, tx, ty, rot = 0) {
   if (tx < 0 || ty < 0 || tx + w > N || ty + d > N) return false;
   for (const [x, y] of itemTiles(id, tx, ty, rot)) {
     if (x < 0 || y < 0 || x >= N || y >= N) return false;
-    if (Game.blocked.has(x + ',' + y)) return false;
+    if (Game.blocked.has(x + ',' + y) && it.tab !== 'decor') return false; /* 第十一輪b：擺飾可放家具上（高度由 surfaceHAt 處理） */
     if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
     if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
   }
-  /* 同層品項不可重疊（地飾互不重疊、擺飾互不重疊；地飾可與擺飾/家具共存） */
+  /* 同類品項不可重疊（第十一輪b：三類 floor/decor/furniture；擺飾可與家具同格＝站上去） */
+  const cls = x => (x.layer === 'floor' ? 2 : (x.tab === 'decor' ? 1 : 0));
+  const myL = cls(it);
   const mine = new Set(itemTiles(id, tx, ty, rot).map(([x, y]) => x + ',' + y));
-  const myL = it.layer === 'floor' ? 1 : 0;
   for (const f of Game.furniture) {
     const oit = BUILD_ITEMS[f.id];
-    if (!oit || (oit.layer === 'floor' ? 1 : 0) !== myL) continue;
+    if (!oit || cls(oit) !== myL) continue;
     for (const [x, y] of itemTiles(f.id, f.tx, f.ty, f.rot)) if (mine.has(x + ',' + y)) return false;
   }
   return true;
 }
+
+/* 第十一輪b：該格上方最高家具的頂面高度（擺飾放家具上用；地層/擺飾不算支撐） */
+function surfaceHAt(tx, ty) {
+  let h = 0;
+  for (const f of Game.furniture) {
+    const it = BUILD_ITEMS[f.id];
+    if (!it || it.layer === 'floor' || it.tab === 'decor') continue;
+    const w = f.rot ? it.d : it.w, d = f.rot ? it.w : it.d;
+    if (tx >= f.tx && tx < f.tx + w && ty >= f.ty && ty < f.ty + d) h = Math.max(h, it.h);
+  }
+  return h;
+}
+
+/* 第十一輪b：整體上移 lift px 繪製（OY 暫時平移，finally 還原） */
+function drawLifted(lift, drawFn) {
+  if (!lift) { drawFn(); return; }
+  const saved = OY;
+  OY -= lift;
+  try { drawFn(); } finally { OY = saved; }
+}
+
+/* 第十一輪b：深度（含「站在家具上」——取支撐家具 depth+0.1，確保畫在家具之後） */
+function itemDepthAt(id, tx, ty, rot = 0) {
+  const it = BUILD_ITEMS[id];
+  if (!it) return tx + ty;
+  let depth = tx + ty + (rot ? it.d : it.w) + (rot ? it.w : it.d) - 1;
+  if (it.tab === 'decor') {
+    for (const g of Game.furniture) {
+      const git = BUILD_ITEMS[g.id];
+      if (!git || git.layer === 'floor' || git.tab === 'decor') continue;
+      const gw = g.rot ? git.d : git.w, gd = g.rot ? git.w : git.d;
+      if (tx >= g.tx && tx < g.tx + gw && ty >= g.ty && ty < g.ty + gd && git.h > 0)
+        depth = Math.max(depth, g.tx + g.ty + gw + gd - 1 + 0.1);
+    }
+  }
+  return depth;
+}
+function itemDepth(f) { return itemDepthAt(f.id, f.tx, f.ty, f.rot); }
 
 function countItem(id) {
   return Game.furniture.filter(f => f.id === id).length;

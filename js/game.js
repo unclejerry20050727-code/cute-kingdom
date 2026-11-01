@@ -678,16 +678,17 @@ function renderGame() {
     const it = BUILD_ITEMS[f.id];
     if (!it || it.layer === 'floor') return;
     const isRm = rmTarget && rmTarget.type === 'floor' && rmTarget.idx === i;
+    const lift = it.tab === 'decor' ? surfaceHAt(f.tx, f.ty) : 0; /* 第十一輪b：擺飾抬到家具頂面 */
     items.push({
-      depth: f.tx + f.ty + it.w + it.d - 1,
+      depth: itemDepth(f), /* 第十一輪b：站在家具上的擺飾畫在家具之後 */
       draw: () => {
-        if (f.rot) drawRot90(f.tx, f.ty, it, () => it.draw(ctx, f.tx, f.ty));
-        else it.draw(ctx, f.tx, f.ty);
+        const doDraw = () => { if (f.rot) drawRot90(f.tx, f.ty, it, () => it.draw(ctx, f.tx, f.ty)); else it.draw(ctx, f.tx, f.ty); };
+        if (lift) drawLifted(lift, doDraw); else doDraw();
         if (isRm) {
           ctx.globalAlpha = 0.4;
           ctx.fillStyle = '#E05A6A';
           const w = f.rot ? it.d : it.w, d = f.rot ? it.w : it.d;
-          const g0 = P(f.tx, f.ty), g1 = P(f.tx + w, f.ty), g2 = P(f.tx + w, f.ty + d), g3 = P(f.tx, f.ty + d);
+          const g0 = P(f.tx, f.ty, -lift), g1 = P(f.tx + w, f.ty, -lift), g2 = P(f.tx + w, f.ty + d, -lift), g3 = P(f.tx, f.ty + d, -lift);
           poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
           ctx.globalAlpha = 1;
         }
@@ -717,11 +718,15 @@ function renderGame() {
   if (Game.placement && Game.placement.mode === 'floor') {
     const pl = Game.placement, it = BUILD_ITEMS[pl.item];
     if (it && it.layer !== 'floor') {
+      const gLift = it.tab === 'decor' ? surfaceHAt(pl.tx, pl.ty) : 0; /* 第十一輪b：ghost 跟隨家具頂面高度 */
       items.push({
-        depth: pl.tx + pl.ty + it.w + it.d - 1,
+        depth: itemDepthAt(pl.item, pl.tx, pl.ty, pl.rot), /* 第十一輪b：ghost 在家具上時也要畫在家具之後 */
         draw: () => {
-          if (pl.rot) drawRot90(pl.tx, pl.ty, it, () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }));
-          else it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+          const doDraw = () => {
+            if (pl.rot) drawRot90(pl.tx, pl.ty, it, () => it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' }));
+            else it.draw(ctx, pl.tx, pl.ty, { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+          };
+          if (gLift) drawLifted(gLift, doDraw); else doDraw();
         },
       });
     }
