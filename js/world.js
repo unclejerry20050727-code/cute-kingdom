@@ -1076,7 +1076,7 @@ function starPath(ctx, x, y, r) {
 function drawWallHeartFrame(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 170);
+  wallSpace(ctx, wall, pos, o.h ?? 170); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   ctx.fillStyle = bad ? '#DE8794' : '#FFF6FA';
   ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
@@ -1093,7 +1093,7 @@ function drawWallHeartFrame(ctx, wall, pos, o = {}) {
 function drawWallStarFrame(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 165);
+  wallSpace(ctx, wall, pos, o.h ?? 165); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   ctx.fillStyle = bad ? '#DE8794' : '#FFFDF4';
   ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
@@ -1109,7 +1109,7 @@ function drawWallStarFrame(ctx, wall, pos, o = {}) {
 function drawWallClock(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 185);
+  wallSpace(ctx, wall, pos, o.h ?? 185); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   ctx.fillStyle = bad ? '#DE8794' : '#FFF8E7';
   ctx.strokeStyle = INK; ctx.lineWidth = 2.6;
@@ -1134,7 +1134,7 @@ function drawWallClock(ctx, wall, pos, o = {}) {
 function drawWallPoster(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 150);
+  wallSpace(ctx, wall, pos, o.h ?? 150); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   ctx.save();
   ctx.rotate(-0.05);
@@ -1159,7 +1159,7 @@ function drawWallPoster(ctx, wall, pos, o = {}) {
 function drawWallShelf(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 105);
+  wallSpace(ctx, wall, pos, o.h ?? 105); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
   ctx.fillStyle = bad ? '#DE8794' : '#FF9FBE';
@@ -1187,7 +1187,7 @@ function drawWallShelf(ctx, wall, pos, o = {}) {
 function drawWallGarland(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
-  wallSpace(ctx, wall, pos, 232);
+  wallSpace(ctx, wall, pos, o.h ?? 232); /* 第十一輪c：高度可調 */
   const bad = o.tint === 'bad';
   const P0 = [-36, -10], P1 = [0, 12], P2 = [36, -10];
   ctx.strokeStyle = bad ? '#C96A7A' : INK;
@@ -1218,6 +1218,10 @@ function drawWallGarland(ctx, wall, pos, o = {}) {
   wallSpaceEnd(ctx);
   ctx.globalAlpha = saved;
 }
+
+/* 第十一輪c：牆飾高度可調範圍（離地 px） */
+const WALL_H_MIN = 50, WALL_H_MAX = 262;
+function clampWallH(h) { return Math.max(WALL_H_MIN, Math.min(WALL_H_MAX, h)); }
 
 /* id → { name, tab:'wall', max, span, hMid, hitW, draw(ctx, wall, pos, o) } */
 const WALL_ITEMS = {
@@ -1277,7 +1281,7 @@ function wallSpaceEnd(ctx) { ctx.restore(); }
 /* 牆飾點選命中 */
 function wallItemHit(w, mx, my) {
   const it = WALL_ITEMS[w.id];
-  const hMid = it ? (it.hMid ?? 110) : 110;
+  const hMid = w.h != null ? w.h : (it ? (it.hMid ?? 110) : 110); /* 第十一輪c：用已存高度 */
   const span = it ? (it.span || 1) : 1;
   const [cx, cy] = P(w.wall === 'A' ? w.pos + 0.5 * span : 0, w.wall === 'A' ? 0 : w.pos + 0.5 * span, -hMid);
   const ux = w.wall === 'A' ? 0.8944 : -0.8944;

@@ -146,10 +146,10 @@ await page.keyboard.press('Escape'); await ms(300);
 await page.click('.btab[data-tab="wall"]'); await ms(400);
 await placeWallByName('心形框', 'A', 1, 170);
 check('牆 A 槽 1 掛心形框', (await G(() => Game.wallItems.length)) === 1);
-check('心形框確在 A 槽 1', (await G(() => JSON.stringify(Game.wallItems[0]))) === '{"id":"heartFrame","wall":"A","pos":1}');
+check('心形框確在 A 槽 1', (await G(() => JSON.stringify(Game.wallItems[0]))) === '{"id":"heartFrame","wall":"A","pos":1,"h":170}');
 await placeWallByName('時鐘', 'B', 2, 185);
 check('牆 B 槽 2 掛時鐘', (await G(() => Game.wallItems.length)) === 2);
-check('時鐘確在 B 槽 2', (await G(() => JSON.stringify(Game.wallItems[1]))) === '{"id":"clock","wall":"B","pos":2}');
+check('時鐘確在 B 槽 2', (await G(() => JSON.stringify(Game.wallItems[1]))) === '{"id":"clock","wall":"B","pos":2,"h":185}');
 await placeWallByName('海報', 'A', 8, 150);
 check('牆 A 槽 8 掛海報', (await G(() => Game.wallItems.length)) === 3);
 await placeWallByName('牆架', 'A', 6, 105);
@@ -271,6 +271,36 @@ await page.mouse.click(deskTilePt.x, deskTilePt.y); await ms(500);
 check('移除書桌上的盆栽 → 8 件', (await G(() => Game.furniture.length)) === 8);
 await page.keyboard.press('Escape'); await ms(300);
 
+/* ── 9⅞. 牆飾高度（第十一輪c）── */
+/* 放置：心形框掛牆 A 槽 9（A8 已被海報佔），先 ↑↑ 調高再掛（hMid 170 → 182） */
+await page.click('.btab[data-tab="wall"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("心形框")'); await ms(400);
+check('牆飾放置初始 h = hMid(170)', (await G(() => Game.placement.h)) === 170);
+await page.keyboard.press('ArrowUp'); await ms(150);
+await page.keyboard.press('ArrowUp'); await ms(150);
+check('↑↑ → h=182', (await G(() => Game.placement.h)) === 182);
+const wallHPt = await wallPt('A', 9, 182);
+await page.mouse.move(wallHPt.x, wallHPt.y); await ms(400);
+check('牆 A 槽 9 有效', (await G(() => Game.placement.valid)) === true);
+await shot('wall-h-ghost', '心形框 ghost 調高位置');
+await page.mouse.click(wallHPt.x, wallHPt.y); await ms(500);
+check('心形框掛 A9 → 5 件牆飾', (await G(() => Game.wallItems.length)) === 5);
+check('心形框帶 h=182', (await G(() => Game.wallItems.find(w => w.id === 'heartFrame' && w.wall === 'A' && w.pos === 9)?.h)) === 182);
+check('掛完 sub 回 free', (await G(() => Game.sub)) === 'free');
+await shot('wall-h-placed', '心形框掛在調過的高度');
+/* 調整：點時鐘（B2，hMid 185）→ wallAdj → ↓ 一步 → 點確認 */
+const clockPt = await wallPt('B', 2, 185);
+await page.mouse.click(clockPt.x, clockPt.y); await ms(400);
+check('點時鐘 → wallAdj', (await G(() => Game.placement?.mode)) === 'wallAdj');
+check('wallAdj 初始 h=185', (await G(() => Game.placement?.h)) === 185);
+await page.keyboard.press('ArrowDown'); await ms(200);
+check('↓ → h=179', (await G(() => Game.placement?.h)) === 179);
+await shot('wall-h-adj-ghost', '時鐘 ghost 下移');
+await page.mouse.click(clockPt.x, clockPt.y); await ms(500);
+check('點確認 → 時鐘 h=179', (await G(() => Game.wallItems.find(w => w.id === 'clock')?.h)) === 179);
+check('調完 sub 回 free', (await G(() => Game.sub)) === 'free');
+await shot('wall-h-adjusted', '時鐘下移後的房間');
+
 /* ── 10. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
 await page.click('#cover-enter'); await ms(500);
@@ -278,7 +308,12 @@ await page.click('#btn-start'); await ms(1200);
 check('reload 後 8 件家具（含旋轉書桌）', (await G(() => Game.furniture.length)) === 8);
 check('reload 後旋轉狀態保留 (rot=1)', (await G(() => Game.furniture.some(f => f.id === 'desk' && f.rot === 1))) === true);
 check('reload 後旋轉足跡 blocked 正確', await G(() => Game.blocked.has('2,7') && Game.blocked.has('2,8') && !Game.blocked.has('3,7')));
-check('reload 後牆飾 4 件', (await G(() => Game.wallItems.length)) === 4);
+check('reload 後牆飾 5 件', (await G(() => Game.wallItems.length)) === 5);
+check('reload 後牆飾 h 保留（時鐘 179 / 心形框 182）', (await G(() => {
+  const c = Game.wallItems.find(w => w.id === 'clock');
+  const hf = Game.wallItems.find(w => w.id === 'heartFrame');
+  return c?.h === 179 && hf?.h === 182;
+})) === true);
 check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":4,"floor":2}');
 await shot('after-reload', '換色+家具+牆飾保留');
 

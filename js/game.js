@@ -134,7 +134,7 @@ function beginGame(save, skipIntro) {
     cleanFurn.push({ id, tx: f.tx, ty: f.ty, rot: f.rot ? 1 : 0 }); /* 第十輪：保留旋轉（舊存檔無 rot 預設 0） */
   }
   Game.furniture = cleanFurn;
-  Game.wallItems = save.wallItems || [];
+  Game.wallItems = (save.wallItems || []).map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h != null ? w.h : (WALL_ITEMS[w.id] ? WALL_ITEMS[w.id].hMid : 110) })); /* 第十一輪c：舊存檔補預設高度 */
   Game.tints = save.tints || { wall: 0, floor: 0 };
   setRoomTints(Game.tints.wall, Game.tints.floor);
   Game.stage = save.stage || 'created';
@@ -635,17 +635,24 @@ function renderGame() {
   ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
   drawRoom(ctx);
 
-  /* 牆飾（移除模式下標紅） */
+  /* 牆飾（移除模式標紅；第十一輪c：每件有獨立高度 h） */
   const rmTarget0 = Game.placement && Game.placement.mode === 'remove' ? Game.placement.target : null;
+  const adjPl = Game.placement && Game.placement.mode === 'wallAdj' ? Game.placement : null;
   Game.wallItems.forEach((w, i) => {
     const it = WALL_ITEMS[w.id];
     if (!it) return;
-    const o = (rmTarget0 && rmTarget0.type === 'wall' && rmTarget0.idx === i) ? { highlight: true } : {};
+    if (adjPl && adjPl.idx === i) return; /* 調整中的品項用新高度 ghost 畫，實物先跳過 */
+    const o = { h: w.h };
+    if (rmTarget0 && rmTarget0.type === 'wall' && rmTarget0.idx === i) o.highlight = true;
     it.draw(ctx, w.wall, w.pos + 0.5 * (it.span || 1), o);
   });
   if (Game.placement && Game.placement.mode === 'wall') {
     const pl = Game.placement, it = WALL_ITEMS[pl.item];
-    if (it) it.draw(ctx, pl.wall, pl.pos + 0.5 * (it.span || 1), { ghost: true, tint: pl.valid ? 'ok' : 'bad' });
+    if (it) it.draw(ctx, pl.wall, pl.pos + 0.5 * (it.span || 1), { ghost: true, tint: pl.valid ? 'ok' : 'bad', h: pl.h });
+  }
+  if (adjPl) {
+    const it = WALL_ITEMS[adjPl.item];
+    if (it) it.draw(ctx, adjPl.wall, adjPl.pos + 0.5 * (it.span || 1), { ghost: true, tint: 'ok', h: adjPl.h });
   }
 
   /* 地飾（地層：貼地板，先於家具與角色繪製；移除模式標紅） */
@@ -815,6 +822,16 @@ function setupInput() {
       if (it && it.w !== it.d) { Game.placement.rot = Game.placement.rot ? 0 : 1; sfx('click'); }
       e.preventDefault();
     }
+    /* 第十一輪c：牆飾放置/調整中，↑↓/WS 微調高度 */
+    if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
+      const up = e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W';
+      const down = e.key === 'ArrowDown' || e.key === 's' || e.key === 'S';
+      if (up || down) {
+        Game.placement.h = clampWallH(Game.placement.h + (up ? 6 : -6));
+        sfx('click');
+        e.preventDefault();
+      }
+    }
     if (e.key === 'Escape') {
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
@@ -832,6 +849,13 @@ function setupInput() {
     const [tx, ty] = screenToTile(wx, wy);
     Game.mouse.tx = tx; Game.mouse.ty = ty;
   });
+  Game.canvas.addEventListener('wheel', (e) => {
+    /* 第十一輪c：牆飾放置/調整中用滾輪調高度（上滾＝調高） */
+    if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
+      Game.placement.h = clampWallH(Game.placement.h + (e.deltaY > 0 ? -6 : 6));
+      e.preventDefault();
+    }
+  }, { passive: false });
 
   Game.canvas.addEventListener('click', (e) => {
     if (Dialogue.active) { Dialogue.advance(); return; }
@@ -862,6 +886,21 @@ function setupInput() {
         sfx('wake');
         break;
       case 'free': {
+        /* 第十一輪c：點已掛的牆飾 → 進高度調整模式 */
+        let adjHit = null;
+        for (let i = 0; i < Game.wallItems.length; i++) {
+          const w = Game.wallItems[i], it = WALL_ITEMS[w.id];
+          if (it && wallItemHit(w, wx, wy)) { adjHit = { i, w, it }; break; }
+        }
+        if (adjHit) {
+          Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free' };
+          setSub('placing');
+          const bar = $('#hint-bar');
+          bar.textContent = `🖼️ ${adjHit.it.name}：按 ↑/↓ 或滾輪調高度，再點一次確認！（Esc 取消）`;
+          bar.classList.remove('hidden');
+          sfx('click');
+          break;
+        }
         if (tx > 0.2 && ty > 0.2 && tx < N - 0.2 && ty < N - 0.2) {
           Game.moveTarget = { x: clamp(tx, 0.4, N - 0.4), y: clamp(ty, 0.4, N - 0.4) };
         }
@@ -876,7 +915,7 @@ function setupInput() {
         } else if (pl.mode === 'wall') {
           if (pl.valid) {
             const prevSub = pl.prevSub;
-            Game.wallItems.push({ id: pl.item, wall: pl.wall, pos: pl.pos });
+            Game.wallItems.push({ id: pl.item, wall: pl.wall, pos: pl.pos, h: pl.h }); /* 第十一輪c：帶高度 */
             Game.placement = null;
             $('#hint-bar').classList.add('hidden');
             sfx('place');
@@ -885,6 +924,15 @@ function setupInput() {
             setSub(prevSub || 'free');
             openBuildPanel();
           } else showToast('這裡掛不了喔，換個位置試試～');
+        } else if (pl.mode === 'wallAdj') {
+          /* 第十一輪c：再點一次 → 確認新高度 */
+          Game.wallItems[pl.idx].h = pl.h;
+          Game.placement = null;
+          $('#hint-bar').classList.add('hidden');
+          sfx('place');
+          saveGame(fullSave(Game.stage));
+          showToast('牆飾高度調好啦～');
+          setSub(pl.prevSub || 'free');
         } else if (pl.mode === 'remove') {
           if (pl.target) removeItem(pl.target);
           else showToast('點家具或牆飾把它移走');
@@ -1170,9 +1218,9 @@ function startWallPlacement(id) {
   hideHint();
   setSub('placing');
   const s = wallSlotFromMouse() || { wall: 'A', pos: 3 };
-  Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false };
+  Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false, h: item.hMid }; /* 第十一輪c：初始高度 = hMid */
   const bar = $('#hint-bar');
-  bar.textContent = `🖼️ 把滑鼠移到牆上，點擊掛上${item.name}！（Esc 取消）`;
+  bar.textContent = `🖼️ 把滑鼠移到牆上，點擊掛上${item.name}！（↑↓/滾輪 調高度、Esc 取消）`;
   bar.classList.remove('hidden');
 }
 
@@ -1189,11 +1237,12 @@ function startRemoveMode() {
 
 function cancelPlacement() {
   const prev = Game.placement ? Game.placement.prevSub : null;
+  const wasAdj = Game.placement && Game.placement.mode === 'wallAdj'; /* 第十一輪c */
   Game.placement = null;
   $('#hint-bar').classList.add('hidden');
   if (Game.sub === 'placing') {
     setSub(prev || (Game.stage === 'created' ? 'tutBuild' : 'free'));
-    openBuildPanel();
+    if (!wasAdj) openBuildPanel(); /* 調整模式是從 free 進的，取消時不彈建造面板 */
   }
 }
 
@@ -1201,7 +1250,7 @@ function fullSave(stage) {
   return {
     cfg: Game.playerCfg,
     furniture: Game.furniture,
-    wallItems: Game.wallItems,
+    wallItems: Game.wallItems.map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h })), /* 第十一輪c：存高度 */
     tints: Game.tints,
     stage,
     money: Game.money ?? 100,
