@@ -453,8 +453,8 @@
 **Plan（切小步、逐 commit）**：
 - **10a** 對話與視覺：① 睜眼後新增 `wakeup` 子狀態（小島躺棉被、點一下才起來→meet）② 小宥改帥氣男版（短髮+呆毛/白長袖/深咖長褲/深棕背包，參考 art/小宥.png）③ 對話名字框收進框內留間距 ④ 打字 0.032→0.07s/字（點一下補完既有）→ ✅ 完成（含 flow 更新重跑、舊截圖清掉）
 - **10b** 提示與教學狀態：⑤⑦ `homeFromMap` 漏 `hideHint()`（地圖紅圈帶進房間；麥當勞會清是因為 openShop 有 hide）＋ setSub 一律先 hideHint 防殘留；⑥⑧ `placeItem` 放床只存檔 stage='bed'、**runtime Game.stage 沒推進**→inTutorial 整場卡 true（其他 tab 鎖住、床卡又有紅圈）→ 補 `Game.stage='bed'`；牆飾 tab 漏 inTutorial 過濾（漏洞）→ 補鎖
-- **10c** 家具轉向：`P()` 加 ROT_FN 等距 90° 仿射 override（u'=(TW/TH)v, v'=-(TH/TW)u 繞中心）、itemTiles/floorValid 吃 rot、放置中 R 旋轉、存檔帶 rot（舊檔預設 0）
-- **10d** 全回歸六套件＋文件更新＋清舊截圖
+- **10c** 家具轉向：`P()` 加 ROT_FN 等距 90° 仿射 override（u'=(TW/TH)v, v'=-(TH/TW)u 繞中心）、itemTiles/floorValid 吃 rot、放置中 R 旋轉、存檔帶 rot（舊檔預設 0）→ ✅ 完成（peek-build 57 項＋視覺 QA）
+- **10d** 全回歸六套件＋文件更新＋清舊截圖 → ✅ 完成（六套件全過、README/PROGRESS 更新）
 
 ### 10a ✅ 對話與視覺（本輪 commit）
 1. ✅ wakeup 子狀態：talk 結尾→小島躺棉被＋「👆 點擊起來」，點一下（或空白鍵，但同一次按鍵剛結束對話不觸發）才進 meet 坐起
@@ -468,3 +468,25 @@
 2. ✅ ⑥⑧ 修「放床後還卡放床教學」真凶：`placeItem` 放床只把 stage='bed' 寫進存檔、runtime `Game.stage` 沒推進→`inTutorial` 整場卡 true（其他 tab 鎖住、床卡又有紅圈、重載才恢復）→ 補 `Game.stage='bed'`
 3. ✅ ⑥ 修牆飾漏洞：wall tab 補 `inTutorial` 鎖（舊版教學中可掛牆飾跳過教學）
 4. ✅ flow.mjs 加 4 項 10b 檢查（教學中牆飾鎖住／放床後家具全開／放床後牆飾解鎖／地圖有回家圈／回房間圈消失）→ flow 32 步 7 項 ✅ 0 pageerror
+
+### 10c ✅ 家具轉向 90°（本輪 commit）
+1. ✅ `world.js`：`P()` 加 `ROT_FN` 覆蓋＋`rot90Fn(tx,ty,w,d)`（tile 空間繞原足跡中心轉 90° 再平移到旋轉後足跡中心）＋`drawRot90()` 包裝器（try/finally 確保 ROT_FN 重置）
+2. ✅ `faceSpace` 旋轉時側面方向向量隨 tile 軸轉換（shelf/dresser/piano 三款有側面）
+3. ✅ `itemTiles`/`floorValid` 吃 `rot`（w/d 互換）、既有家具比對也用 `f.rot`
+4. ✅ `game.js`：`Game.placement.rot`、放置中 **R 鍵**旋轉（限非正方形品項）、clamping 與 valid 用有效尺寸、`rebuildBlocked`/`removeTargetFromMouse` 吃 rot、`placeItem` 存 `rot`、renderGame 四處（地飾/深度排序/兩個 ghost）用 `drawRot90` 繪製、移除標記紅框用有效尺寸
+5. ✅ `beginGame` 消毒保留 `rot`（舊存檔無 rot 預設 0）
+6. ✅ 放置提示：非正方形品項多顯示「（R 旋轉 90°）」
+7. ✅ peek-build.mjs 加 9 項旋轉檢查（R 切換/ghost 有效/blocked 跟隨 1×2 足跡/R×2 復原/reload 後 rot 保留）→ 57 項全過
+8. ✅ 視覺 QA：旋轉書桌 1×2 入駐（b16）與 ghost（b15）繪製正確、與未旋轉書桌垂直
+
+### 10d ✅ 全回歸＋文件（本輪 commit）
+1. ✅ 六套件全回歸全過：
+   - flow.mjs：32 步 7 項功能檢查 0 pageerror
+   - peek-build.mjs：57 項建造檢查（含 9 項旋轉）
+   - peek-recover.mjs：3 種異常存檔自愈 0 pageerror
+   - peek-bgm-filefix.mjs：BGM＋靜音 http/file:// 雙情境 8 項
+   - peek-map.mjs：地圖→商店→打工→走回家 0 error
+   - peek-character.mjs：角色造型對照 0 error
+2. ✅ README.md：操作加入 R 旋轉、建造規則加旋轉說明、測試表 48→57
+3. ✅ 舊截圖清理：flow 32 張重產、peek-build 17 張重產（b15-rot-ghost/b16-rot-placed 新增、舊 b15-after-reload 改 b17）
+4. ✅ **第十輪 8 點回饋全部完成**（10a 對話視覺 → 10b 提示教學 → 10c 轉向 → 10d 回歸文件）
