@@ -131,6 +131,12 @@ await page.waitForSelector('#dialogue:not(.hidden)', { timeout: 10000 });
 await waitMs(700);
 console.log('6️⃣ 「這是哪裡？」');
 await shot('dialogue-where', `sub=${await sub()}`);
+const dlgGap = await page.evaluate(() => {
+  const d = document.getElementById('dialogue').getBoundingClientRect();
+  const n = document.getElementById('dlg-name').getBoundingClientRect();
+  return Math.round((n.top - d.top) * 10) / 10; /* 含 4px 邊框（第十一輪：量名字框與框線距離） */
+});
+check('對話名字框與框線間距≈縮半（11a）', dlgGap >= 14 && dlgGap <= 20);
 
 console.log('7️⃣ 推進對話 → 小島躺著等點擊，點一下才起來');
 await dlgClick();

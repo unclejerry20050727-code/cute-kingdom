@@ -374,7 +374,7 @@ body {
 }
 .dlg-main { flex: 1; min-height: 84px; position: relative; padding-top: 40px; }
 .dlg-name {
-  position: absolute; top: 2px; left: 2px; /* 第十輪：收進框內，與對話框邊線留一點間距 */
+  position: absolute; top: -8px; left: 2px; /* 第十一輪：與對話框線間距再縮短一半（單行 23→13px） */
   background: var(--pink);
   color: #fff;
   font-size: 17px; font-weight: 700;
