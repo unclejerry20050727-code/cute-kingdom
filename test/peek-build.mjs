@@ -301,6 +301,29 @@ check('點確認 → 時鐘 h=179', (await G(() => Game.wallItems.find(w => w.id
 check('調完 sub 回 free', (await G(() => Game.sub)) === 'free');
 await shot('wall-h-adjusted', '時鐘下移後的房間');
 
+/* ── 9⅞d. 觸控按鈕（第十一輪d）── */
+await page.click('.btab[data-tab="furniture"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("鋼琴")'); await ms(400);
+check('放置中 #place-actions 顯示', (await G(() => !document.querySelector('#place-actions').classList.contains('hidden'))) === true);
+check('🔄 顯示（非正方形鋼琴）', (await G(() => !document.querySelector('#pa-rot').classList.contains('hidden'))) === true);
+check('▲▼ 隱藏（非牆飾）', (await G(() => document.querySelector('#pa-up').classList.contains('hidden'))) === true);
+await page.click('#pa-rot'); await ms(200);
+check('🔄 點一下 → rot=1', (await G(() => Game.placement.rot)) === 1);
+await page.click('#pa-cancel'); await ms(300);
+check('✖️ 點一下 → 取消（sub free）', (await G(() => Game.sub)) === 'free');
+check('取消後 #place-actions 隱藏', (await G(() => document.querySelector('#place-actions').classList.contains('hidden'))) === true);
+/* 牆飾：▲▼ 顯示、🔄 隱藏 */
+await page.click('.btab[data-tab="wall"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("星星框")'); await ms(400);
+check('牆飾放置：▲▼ 顯示', (await G(() => !document.querySelector('#pa-up').classList.contains('hidden') && !document.querySelector('#pa-down').classList.contains('hidden'))) === true);
+check('牆飾放置：🔄 隱藏', (await G(() => document.querySelector('#pa-rot').classList.contains('hidden'))) === true);
+await page.click('#pa-up'); await ms(150);
+await page.click('#pa-up'); await ms(150);
+check('▲▲ → h=177', (await G(() => Game.placement.h)) === 177);
+await shot('touch-actions', '牆飾放置中的觸控操作鈕');
+await page.click('#pa-cancel'); await ms(300);
+check('✖️ 取消牆飾放置', (await G(() => Game.sub)) === 'free');
+
 /* ── 10. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
 await page.click('#cover-enter'); await ms(500);

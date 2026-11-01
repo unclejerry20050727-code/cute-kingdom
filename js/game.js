@@ -204,9 +204,10 @@ function setSub(sub) {
   $('#out-btn').classList.toggle('hidden', !roomSub);
   $('#build-btn').classList.toggle('hidden', !roomSub);
   if (!roomSub) closeBuildPanel();
-  if (sub !== 'placing' && !roomSub) showDpad(false);
   if (sub === 'free' || sub === 'map') showDpad();
+  else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
+  updatePlaceActions(); /* 第十一輪d：放置操作鈕跟隨子狀態 */
   syncMoneyUI();
 }
 
@@ -391,6 +392,34 @@ function showOutBtn() {
 }
 function showDpad(on = true) {
   $('#dpad').classList.toggle('hidden', !on);
+}
+
+/* 第十一輪d：牆飾高度微調（鍵盤/觸控/滾輪共用） */
+function nudgeWallH(delta) {
+  const pl = Game.placement;
+  if (Game.sub === 'placing' && pl && (pl.mode === 'wall' || pl.mode === 'wallAdj')) {
+    pl.h = clampWallH(pl.h + delta);
+    sfx('click');
+  }
+}
+/* 第十一輪d：放置操作鈕顯示邏輯（🔄 僅 floor 非正方形；▲▼ 僅 wall/wallAdj；✖️ 常駐） */
+function updatePlaceActions() {
+  const bar = $('#place-actions');
+  if (!bar) return;
+  const pl = Game.placement;
+  const placing = Game.sub === 'placing' && !!pl;
+  bar.classList.toggle('hidden', !placing);
+  if (!placing) return;
+  let showRot = false, showH = false;
+  if (pl.mode === 'floor') {
+    const it = BUILD_ITEMS[pl.item];
+    showRot = !!(it && it.w !== it.d);
+  } else if (pl.mode === 'wall' || pl.mode === 'wallAdj') {
+    showH = true;
+  }
+  $('#pa-rot').classList.toggle('hidden', !showRot);
+  $('#pa-up').classList.toggle('hidden', !showH);
+  $('#pa-down').classList.toggle('hidden', !showH);
 }
 
 function goOutside() {
@@ -826,11 +855,7 @@ function setupInput() {
     if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
       const up = e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W';
       const down = e.key === 'ArrowDown' || e.key === 's' || e.key === 'S';
-      if (up || down) {
-        Game.placement.h = clampWallH(Game.placement.h + (up ? 6 : -6));
-        sfx('click');
-        e.preventDefault();
-      }
+      if (up || down) { nudgeWallH(up ? 6 : -6); e.preventDefault(); }
     }
     if (e.key === 'Escape') {
       if (Game.sub === 'placing') cancelPlacement();
@@ -971,6 +996,25 @@ function setupInput() {
     btn.addEventListener('pointerleave', off);
     btn.addEventListener('pointercancel', off);
   }
+
+  /* 第十一輪d：放置操作鈕（觸控：🔄＝R、▲▼＝↑↓、✖️＝Esc） */
+  const paBind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => { fn(); el.blur(); });
+  };
+  paBind('pa-rot', () => {
+    const pl = Game.placement;
+    if (Game.sub === 'placing' && pl && pl.mode === 'floor') {
+      const it = BUILD_ITEMS[pl.item];
+      if (it && it.w !== it.d) { pl.rot = pl.rot ? 0 : 1; sfx('click'); updatePlaceActions(); }
+    }
+  });
+  paBind('pa-up', () => nudgeWallH(6));
+  paBind('pa-down', () => nudgeWallH(-6));
+  paBind('pa-cancel', () => {
+    if (Game.sub === 'placing') cancelPlacement();
+    else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
+  });
 }
 
 /* ══════════ 教學提示（箭頭+圈圈） ══════════ */
@@ -1208,6 +1252,7 @@ function startPlacement(itemId) {
   const bar = $('#hint-bar');
   bar.textContent = `🛏️ 滑鼠移到喜歡的位置，點擊放下${item.name}！` + (item.w !== item.d ? '（R 旋轉 90°）' : '') + '（Esc 取消）';
   bar.classList.remove('hidden');
+  updatePlaceActions(); /* 第十一輪d：setSub 在 placement 指派前跑過，補一次 */
 }
 
 function startWallPlacement(id) {
@@ -1222,6 +1267,7 @@ function startWallPlacement(id) {
   const bar = $('#hint-bar');
   bar.textContent = `🖼️ 把滑鼠移到牆上，點擊掛上${item.name}！（↑↓/滾輪 調高度、Esc 取消）`;
   bar.classList.remove('hidden');
+  updatePlaceActions(); /* 第十一輪d */
 }
 
 function startRemoveMode() {
@@ -1233,6 +1279,7 @@ function startRemoveMode() {
   const bar = $('#hint-bar');
   bar.textContent = '🧹 移除模式：點家具或牆飾把它移走！（Esc 取消）';
   bar.classList.remove('hidden');
+  updatePlaceActions(); /* 第十一輪d */
 }
 
 function cancelPlacement() {
