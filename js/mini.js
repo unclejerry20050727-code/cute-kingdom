@@ -19,13 +19,13 @@ const WORK_ITEMS = {
   double: { name: '雙層堡', recipe: ['bun', 'meat', 'cheese', 'meat', 'bun'], price: 30 },
   special: { name: '特製套餐', recipe: ['bun', 'meat', 'cheese', 'tomato', 'lettuce', 'bun'], price: 40 },
 };
-/* 每關：queue=排隊人數、patience=耐心秒數、payMul=工資倍率、rush=尖峰客機率 */
+/* 每關：queue=排隊人數、patience=耐心秒數、payMul=工資倍率、rush=尖峰客機率、goals=[★1,★2,★3 完成數門檻]（第十三輪d） */
 const WORK_LEVELS = [
-  { id: 1, name: '新人上工', queue: 1, patience: 20, time: 60, payMul: 1.0, rush: 0, menu: ['toast', 'burger'] },
-  { id: 2, name: '熟手班', queue: 2, patience: 16, time: 60, payMul: 1.2, rush: 0, menu: ['toast', 'burger', 'veggie'] },
-  { id: 3, name: '忙碌時段', queue: 3, patience: 13, time: 60, payMul: 1.5, rush: 0, menu: ['burger', 'veggie', 'double'] },
-  { id: 4, name: '午休尖峰', queue: 4, patience: 10, time: 60, payMul: 1.8, rush: 0.25, menu: ['veggie', 'double', 'special'] },
-  { id: 5, name: '全店總動員', queue: 5, patience: 8, time: 60, payMul: 2.0, rush: 0.35, menu: ['double', 'special', 'burger'] },
+  { id: 1, name: '新人上工', queue: 1, patience: 20, time: 60, payMul: 1.0, rush: 0, menu: ['toast', 'burger'], goals: [4, 8, 12] },
+  { id: 2, name: '熟手班', queue: 2, patience: 16, time: 60, payMul: 1.2, rush: 0, menu: ['toast', 'burger', 'veggie'], goals: [4, 8, 12] },
+  { id: 3, name: '忙碌時段', queue: 3, patience: 13, time: 60, payMul: 1.5, rush: 0, menu: ['burger', 'veggie', 'double'], goals: [4, 8, 11] },
+  { id: 4, name: '午休尖峰', queue: 4, patience: 10, time: 60, payMul: 1.8, rush: 0.25, menu: ['veggie', 'double', 'special'], goals: [5, 8, 11] },
+  { id: 5, name: '全店總動員', queue: 5, patience: 8, time: 60, payMul: 2.0, rush: 0.35, menu: ['double', 'special', 'burger'], goals: [5, 9, 12] },
 ];
 const WORK_CARDS = WORK_INGREDIENTS.map((ing, i) => ({ ...ing, x: 110 + i * 190, y: 505 }));
 const CARD_W = 150, CARD_H = 118;
@@ -46,6 +46,7 @@ function startWork(lv = 1) {
     customer: null, /* = queue 裡第一個 state 'queue' 的（服務中） */
     count: 0,
     misses: 0, /* 第十三輪c：氣走人數 */
+    combo: 0, /* 第十三輪d：連續完成數（每 3 個 → +10 小費） */
     floaters: [],
   };
   while (Work.queue.length < level.queue) spawnCustomer(); /* 第十三輪c：一次補滿排隊 */
@@ -86,14 +87,26 @@ function exitWork() {
 }
 
 function endWork() {
-  const n = Work ? Work.count : 0;
+  const w = Work;
+  const n = w ? w.count : 0;
+  const stars = w ? calcStars(w) : 0;
+  let extra = '';
+  /* 第十三輪d：存最佳星數＋解鎖下一關 */
+  if (w && stars >= 1) {
+    Game.work.best[w.level.id] = Math.max(Game.work.best[w.level.id] || 0, stars);
+    const before = Game.work.unlocked;
+    if (w.level.id < WORK_LEVELS.length) Game.work.unlocked = Math.max(before, w.level.id + 1);
+    if (Game.work.unlocked > before) extra = `、解鎖了「${WORK_LEVELS[Game.work.unlocked - 1].name}」`;
+  }
   $('#screen-work').classList.add('hidden');
   Work = null;
   setSub('map');
   $('#screen-shop').classList.remove('hidden');
   fillShopUI();
   saveGameEndShift();
-  showToast(`下工囉！這趟做了 ${n} 個品項 🍔`);
+  showToast(stars >= 1
+    ? `下工囉！${n} 個品項・${'★'.repeat(stars)}${extra}`
+    : (n > 0 ? `下工囉！做了 ${n} 個品項，再快點就能拿 ★ 了` : '下工囉！下次加油 🍔'));
 }
 
 /* 第十三輪b：下工存檔用 fullSave（舊版漏存牆飾/換色），並存入關卡進度 */
@@ -143,6 +156,7 @@ function workClick(i) {
     }
   } else {
     w.shake = 0.35;
+    w.combo = 0; /* 第十三輪d：點錯中斷連擊 */
     sfx('buzz');
   }
 }
@@ -172,6 +186,12 @@ function updateWork(dt) {
         w.count += 1;
         Game.money += pay;
         w.floaters.push({ x: 700, y: 330, t: 0, txt: `+${pay}` });
+        /* 第十三輪d：連擊小費（每 3 個連環完成 +10） */
+        w.combo += 1;
+        if (w.combo % 3 === 0) {
+          Game.money += 10;
+          w.floaters.push({ x: 300, y: 392, t: 0, txt: '🔥 連擊小費 +10' });
+        }
         sfx('coin');
         syncMoneyUI();
       }
@@ -200,6 +220,7 @@ function updateWork(dt) {
       if (act.patience <= 0) {
         act.patience = 0; act.state = 'angry'; act.animT = 0;
         w.misses += 1;
+        w.combo = 0; /* 第十三輪d：連擊中斷 */
         if (w.flying) w.flying = null; /* 在半空的餐點作廢 */
         w.stack = []; /* 已疊的料報廢 */
         w.floaters.push({ x: act.x, y: act.y - 120, t: 0, txt: '💢 走了！' });
@@ -216,7 +237,7 @@ function updateWork(dt) {
   }
   if (w.phase === 'end') {
     w.t += dt;
-    if (w.t >= 1.2) endWork();
+    if (w.t >= 4.2) endWork(); /* 第十三輪d：結算畫面停 4.2s */
   }
 }
 
@@ -274,6 +295,13 @@ function renderWork(ctx, t) {
   ctx.font = '700 30px RHR';
   ctx.textAlign = 'left';
   ctx.fillText(`做了 ${w.count} 個`, 60, 72);
+  /* 第十三輪d：連擊顯示 */
+  if (w.combo >= 2) {
+    ctx.fillStyle = '#B9473F';
+    ctx.font = '800 22px RHR';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🔥 連擊 x${w.combo}`, 60, 106);
+  }
 
   /* 第十三輪c：排隊客人（由後往前畫＝遠的在後、近的前）＋訂單氣泡＋耐心條 */
   for (let i = w.queue.length - 1; i >= 0; i--) {
@@ -358,13 +386,57 @@ function renderWork(ctx, t) {
     ctx.fillText(String(n), 0, 0);
     ctx.restore();
   }
+  /* 第十三輪d：下工結算（星星評價＋新紀錄，取代舊版單句「時間到」） */
   if (w.phase === 'end') {
-    ctx.fillStyle = 'rgba(90,62,43,0.35)';
+    const p = Math.min(1, w.t / 0.4);
+    ctx.fillStyle = `rgba(90,62,43,${0.45 * p})`;
     ctx.fillRect(0, 0, VW, VH);
-    ctx.fillStyle = '#FFF8EC';
-    ctx.font = '900 84px RHR';
+    ctx.save();
+    ctx.globalAlpha = p;
+    const px = 490, py = 300;
+    handShape(ctx, [[px - 215, py - 135], [px + 215, py - 135], [px + 215, py + 135], [px - 215, py + 135]],
+      { fill: '#FFF8EC', seed: 93, amp: 3 });
+    const stars = calcStars(w);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⏰ 時間到！', 490, 300);
+    ctx.fillStyle = '#B9473F';
+    ctx.font = '900 40px RHR';
+    ctx.fillText('⏰ 下工時間到！', px, py - 84);
+    ctx.fillStyle = '#5A4632';
+    ctx.font = '700 26px RHR';
+    ctx.fillText(`做了 ${w.count} 個品項`, px, py - 32);
+    if (w.misses > 0) {
+      ctx.fillStyle = '#8A6E52';
+      ctx.font = '600 20px RHR';
+      ctx.fillText(`氣走 ${w.misses} 人`, px, py);
+    }
+    for (let i = 0; i < 3; i++) {
+      const st = w.t - 0.8 - i * 0.3;
+      const pop = st < 0 ? 0.55 : 1 + 0.35 * Math.sin(Math.min(1, st / 0.3) * Math.PI / 2);
+      ctx.save();
+      ctx.translate(px + (i - 1) * 66, py + 56);
+      ctx.scale(pop, pop);
+      ctx.globalAlpha = p * (st < 0 ? 0.35 : 1);
+      ctx.font = '900 56px RHR';
+      ctx.fillStyle = i < stars ? '#F5B84C' : 'rgba(90,62,43,.22)';
+      ctx.fillText('★', 0, 0);
+      ctx.restore();
+    }
+    const prevBest = (Game.work.best[w.level.id]) || 0;
+    ctx.globalAlpha = p;
+    if (stars > prevBest && stars >= 1) {
+      ctx.fillStyle = '#B9473F';
+      ctx.font = '800 24px RHR';
+      ctx.fillText('✨ 新紀錄！', px, py + 106);
+    } else if (stars >= 1) {
+      ctx.fillStyle = '#8A6E52';
+      ctx.font = '600 20px RHR';
+      ctx.fillText('回商店看進度', px, py + 106);
+    } else {
+      ctx.fillStyle = '#8A6E52';
+      ctx.font = '600 20px RHR';
+      ctx.fillText(`做滿 ${w.level.goals[0]} 個就能拿 ★ 了！`, px, py + 106);
+    }
+    ctx.restore();
   }
 
   /* 浮字 +20 */
@@ -378,7 +450,14 @@ function renderWork(ctx, t) {
   }
 }
 
+/* 第十三輪d：依完成數算星星 */
+function calcStars(w) {
+  const g = w.level.goals;
+  return w.count >= g[2] ? 3 : w.count >= g[1] ? 2 : w.count >= g[0] ? 1 : 0;
+}
+
 /* ── 圖形小零件 ── */
+
 function drawBurger(ctx, x, y, s) {
   ctx.save();
   ctx.translate(x, y);
