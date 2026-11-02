@@ -554,3 +554,32 @@
 - 六套件全過：flow（32 步 0 pageerror）/ peek-build（98 項）/ peek-recover / peek-bgm-filefix / peek-map / peek-character
 - README：移除行加優先序、「觸控按鈕」註真實觸控已驗證、新增「移除優先序」bullet、測試表 84→98 項
 - 舊截圖：對照 shot() 列表刪 b24-after-reload（b24 讓位給 remove-top-decor）
+
+## 第十三輪（Jerry 回饋 2 點）
+
+### 13a 🔄 字體統一（出發）
+- Jerry：「出門後的字體混亂，又醜，換個可愛活潑一點的」
+- 根因：地圖/打工 canvas 用 Google CDN 的 Long Cang（細手寫體，離線 fallback cursive 就亂；與全域圓體 RHR 混著用＝混亂）；shop-title/loading-quote 也用 CDN 字
+- 方案：全部換成本地 **RHR**（資源圓體、變體字 200-900、可離線），大字用 900 加粗更可愛活潑；移除 Google Fonts link（preconnect/link/.font-hand inline style）
+- 位置：mapscene.js ×2（我的家/麥當勞招牌）、mini.js ×10、style.css ×3（loading-text/loading-quote/shop-title）
+- 子集字需重跑：/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf（venv 重建完成）
+
+### 13b 📋 打工資料層＋關卡選擇
+- INGREDIENTS 5 種（現 4 種＋起司 cheese，drawIngredient 加 cheese）
+- MENU：各關卡品項（經典漢堡 5 步/起司吐司 3 步/蔬菜堡 5 步/雙層堡 5 步/特製套餐 6 步…），每品項 recipe+price+icon
+- WORK_LEVELS 5 關：queue 1→5（後面的人越遠越小）、patience 20s→8s、menu 由簡到繁、payMul 1→2
+- Game.work = { unlocked: 1, best: {} }，存檔載入補預設；商店「開始打工」→關卡選擇卡片（名稱/難度/最佳星星/🔒鎖定）
+
+### 13c 📋 排隊＋耐心＋訂單
+- 排隊：N 位客人依序畫在櫃台右側，第一人最大最前，後面每人 scale×0.85、往上（遠）偏移
+- 訂單氣泡：顯示該品項 icon＋名稱（不再固定「幫我做這個！」）
+- 耐心條：客人頭上 patience 條，歸零→💢 走人、下一位上前
+- 報酬＝品項 price × 關卡 payMul；L4+ 25% 急件客人（⚡ patience×0.6、pay×1.5）
+
+### 13d 📋 結算星星＋小費＋測試
+- 3 連對（中間無錯）→ 第 3 筆 +10 小費；結束畫面顯示 served/目標/星星
+- 1-3 星（served≥目標 1/2/3 倍），過 1 星解鎖下一關，best 存檔
+- 新 test/peek-work.mjs：關卡選擇（鎖定/解鎖）、L1 實玩（正確順序上菜+錢+連擊）、耐心走人、星星解鎖、reload 持久化
+
+### 13e 📋 全回歸＋文件＋報告
+- 六套件＋新 peek-work；README 打工章節全面更新；PROGRESS 收尾；向 Jerry 報告玩法設計

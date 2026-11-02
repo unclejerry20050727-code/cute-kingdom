@@ -499,14 +499,15 @@ body {
 @keyframes dot-bounce { 0%,100% { transform: translateY(0); } 30% { transform: translateY(-18px); } }
 .loading-text {
   margin-top: 22px;
-  font-family: 'Caveat', cursive;
-  font-size: 48px; font-weight: 700;
+  font-family: var(--font);
+  font-size: 48px; font-weight: 800;
   letter-spacing: 4px;
   color: #5A3E2B;
 }
 .loading-quote {
   margin-top: 6px;
-  font-family: 'Long Cang', cursive;
+  font-family: var(--font);
+  font-weight: 500;
   font-size: 26px;
   color: #8A6E52;
   min-height: 38px;
@@ -563,7 +564,8 @@ body {
   position: relative;
 }
 .shop-title {
-  font-family: 'Long Cang', cursive;
+  font-family: var(--font);
+  font-weight: 900;
   font-size: 44px; color: var(--ink);
   text-align: center; line-height: 1.05;
 }

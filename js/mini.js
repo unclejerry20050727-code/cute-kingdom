@@ -136,7 +136,7 @@ function renderWork(ctx, t) {
   handLineLong(ctx, 0, 130, VW, 130, { stroke: '#E4CDA8', seed: 72, amp: 1.5, lw: 8 });
   handShape(ctx, [[360, 170], [620, 170], [620, 232], [360, 232]], { fill: '#F7EBD3', seed: 73 });
   ctx.fillStyle = '#B9473F';
-  ctx.font = '40px "Long Cang", cursive';
+  ctx.font = '900 42px RHR'; /* 第十三輪a：RHR 圓體加粗 */
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('打工時間！', 490, 204);
 
@@ -155,20 +155,20 @@ function renderWork(ctx, t) {
   ctx.arc(490, 92, 42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
   ctx.stroke();
   ctx.fillStyle = w.left < 10 ? '#D94F4F' : '#5A3E2B';
-  ctx.font = '34px "Long Cang", cursive';
+  ctx.font = '700 34px RHR';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(Math.ceil(w.left), 490, 94);
 
   /* 金額（右上） */
   handEllipse(ctx, 852, 70, 17, 17, { fill: '#FFD98A', lw: 3, seed: 75 });
   ctx.fillStyle = '#5A3E2B';
-  ctx.font = '30px "Long Cang", cursive';
+  ctx.font = '700 30px RHR';
   ctx.textAlign = 'left';
   ctx.fillText(String(Game.money), 878, 72);
 
   /* 完成數（左上） */
   ctx.fillStyle = '#5A3E2B';
-  ctx.font = '30px "Long Cang", cursive';
+  ctx.font = '700 30px RHR';
   ctx.textAlign = 'left';
   ctx.fillText(`做了 ${w.count} 個`, 60, 72);
 
@@ -179,7 +179,7 @@ function renderWork(ctx, t) {
     { fill: '#FFF8EC', seed: 76, amp: 2 });
   handShape(ctx, [[bx + 18, by + 40], [bx + 44, by + 40], [bx + 30, by + 62]], { fill: '#FFF8EC', seed: 77, amp: 1 });
   ctx.fillStyle = '#5A3E2B';
-  ctx.font = '26px "Long Cang", cursive';
+  ctx.font = '700 26px RHR';
   ctx.textAlign = 'center';
   ctx.fillText('幫我做這個！', bx, by - 20);
   drawBurger(ctx, bx, by + 16, 0.55);
@@ -206,7 +206,7 @@ function renderWork(ctx, t) {
       { fill: i % 2 ? '#FFF3DC' : '#FFFBF2', seed: 80 + i, amp: 2 });
     drawIngredient(ctx, c.id, c.x + sh, y0 + 44, 0.9);
     ctx.fillStyle = '#5A3E2B';
-    ctx.font = '24px "Long Cang", cursive';
+    ctx.font = '600 24px RHR';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(c.name, c.x + sh, y0 + CARD_H - 24);
   }
@@ -222,7 +222,7 @@ function renderWork(ctx, t) {
     ctx.translate(490, 300);
     ctx.scale(sc, sc);
     ctx.fillStyle = '#FFF8EC';
-    ctx.font = '900 130px "Long Cang", cursive';
+    ctx.font = '900 130px RHR';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(n), 0, 0);
     ctx.restore();
@@ -231,7 +231,7 @@ function renderWork(ctx, t) {
     ctx.fillStyle = 'rgba(90,62,43,0.35)';
     ctx.fillRect(0, 0, VW, VH);
     ctx.fillStyle = '#FFF8EC';
-    ctx.font = '900 84px "Long Cang", cursive';
+    ctx.font = '900 84px RHR';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('⏰ 時間到！', 490, 300);
   }
@@ -240,7 +240,7 @@ function renderWork(ctx, t) {
   for (const f of w.floaters) {
     ctx.globalAlpha = 1 - f.t / 1.1;
     ctx.fillStyle = '#B9793F';
-    ctx.font = '36px "Long Cang", cursive';
+    ctx.font = '700 36px RHR';
     ctx.textAlign = 'center';
     ctx.fillText(f.txt, f.x, f.y);
     ctx.globalAlpha = 1;

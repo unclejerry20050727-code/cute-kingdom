@@ -70,7 +70,7 @@ function ensureMap() {
   handLine(ctx, 352, 182, 352, 214, { stroke: '#B98A5F', lw: 5, seed: 35 });
   handShape(ctx, [[316, 158], [388, 158], [388, 188], [316, 188]], { fill: '#E9CDA9', seed: 36 });
   ctx.fillStyle = '#5A3E2B';
-  ctx.font = '22px "Long Cang", cursive';
+  ctx.font = '700 24px RHR'; /* 第十三輪a：Long Cang(CDN) → 本地 RHR 圓體 */
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('我的家', 352, 175);
 
@@ -191,7 +191,7 @@ function renderMap(ctx, t, player) {
   handShape(ctx, [[MC.x - 13, 376 + bob], [MC.x + 13, 376 + bob], [MC.x, 394 + bob]],
     { fill: '#FFF8EC', seed: 64, amp: 1 });
   ctx.fillStyle = '#5A3E2B';
-  ctx.font = '36px "Long Cang", cursive';
+  ctx.font = '900 40px RHR'; /* 第十三輪a：招牌加粗更活潑 */
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('麥當勞', MC.x, 352 + bob);
 
