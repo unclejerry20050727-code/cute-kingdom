@@ -98,11 +98,25 @@ await page.waitForTimeout(150);
 console.log('shake after wrong:', await page.evaluate(() => Work && Work.shake > 0));
 await page.screenshot({ path: 'shots/peek-map-6-work.png' });
 
+/* 第十三輪c：排隊數（L1 = 1 人）＋耐心值氣走→補新客 */
+console.log('queue L1:', await page.evaluate(() => Work.queue.filter(c => c.state === 'queue').length));
+await page.evaluate(() => { Work.customer.patience = 0.4; });
+await page.waitForTimeout(700);
+await page.screenshot({ path: 'shots/peek-map-7-angry.png' });
+await page.waitForTimeout(1200);
+const missInfo = await page.evaluate(() => ({
+  misses: Work.misses,
+  qlen: Work.queue.filter(c => c.state === 'queue').length,
+  newCust: !!(Work.customer && Work.customer.patience > 15),
+}));
+console.log((missInfo.misses === 1 && missInfo.qlen === 1 && missInfo.newCust ? '✅' : '❌'), 'patience-out → 氣走/補新客:', JSON.stringify(missInfo));
+await page.screenshot({ path: 'shots/peek-map-8-newcust.png' });
+
 /* work-x 回地圖 */
 await page.click('#work-x');
 await page.waitForTimeout(400);
 console.log('back on map:', await page.evaluate(() => Game.sub), 'work hidden:', await page.evaluate(() => document.getElementById('screen-work').classList.contains('hidden')));
-await page.screenshot({ path: 'shots/peek-map-7-backmap.png' });
+await page.screenshot({ path: 'shots/peek-map-9-backmap.png' });
 
 /* 點地面走路 */
 const walk = await toScreen(490, 560);
@@ -114,7 +128,7 @@ console.log('walked to y≈', await page.evaluate(() => Math.round(Game.mapP.y))
 await page.click('#map-home');
 await page.waitForTimeout(500);
 console.log('home sub:', await page.evaluate(() => Game.sub));
-await page.screenshot({ path: 'shots/peek-map-8-home.png' });
+await page.screenshot({ path: 'shots/peek-map-10-home.png' });
 
 await browser.close();
 server.close();

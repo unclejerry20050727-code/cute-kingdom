@@ -42,11 +42,13 @@ function startWork(lv = 1) {
     stack: [],
     flying: null,
     shake: 0,
-    customer: null,
+    queue: [], /* 第十三輪c：排隊客人（[0] = 服務中） */
+    customer: null, /* = queue 裡第一個 state 'queue' 的（服務中） */
     count: 0,
+    misses: 0, /* 第十三輪c：氣走人數 */
     floaters: [],
   };
-  spawnCustomer();
+  while (Work.queue.length < level.queue) spawnCustomer(); /* 第十三輪c：一次補滿排隊 */
   $('#screen-shop').classList.add('hidden');
   $('#screen-work').classList.remove('hidden');
   setSub('work');
@@ -101,24 +103,36 @@ function saveGameEndShift() {
   saveGame(s);
 }
 
+/* 第十三輪c：排隊位置（[0] 在櫃台前；越往後越遠＝越小越高） */
+function queueSlot(i) {
+  return [700 - i * 95, 430 - i * 14, Math.max(0.48, 1 - i * 0.13)];
+}
+
 function spawnCustomer() {
   const hairs = ['#5A3E2B', '#3B2A1F', '#8A5A3B', '#2F2A26', '#7A4A3A'];
   const skins = ['#FFE9D4', '#F8D9B8', '#EFC39A', '#D9A87C'];
   const rnd = Math.random;
-  const L = Work.level;
+  const w = Work, L = w.level;
   const item = WORK_ITEMS[L.menu[Math.floor(rnd() * L.menu.length)]]; /* 第十三輪b：隨機點單品項 */
-  Work.customer = {
+  const rush = rnd() < L.rush; /* 第十三輪c：尖峰客（耐心×0.6、工資×1.5） */
+  const pat = Math.round(L.patience * (rush ? 0.6 : 1));
+  const [sx, sy, ss] = queueSlot(w.queue.filter(c => c.state === 'queue').length);
+  w.queue.push({
     item, /* { name, recipe, price } */
+    rush, patience: pat, patienceMax: pat,
     hair: hairs[Math.floor(rnd() * hairs.length)],
     skin: skins[Math.floor(rnd() * skins.length)],
     bob: rnd() * 10,
-  };
+    x: sx, y: sy, scale: 0, tx: sx, ty: sy, tScale: ss,
+    state: 'queue', /* queue → served / angry */
+    animT: 0,
+  });
 }
 
 /* 點擊食材卡（game.js 轉調） */
 function workClick(i) {
   const w = Work;
-  if (!w || w.phase !== 'play' || w.flying) return;
+  if (!w || w.phase !== 'play' || w.flying || !w.customer) return;
   const need = w.customer.item.recipe[w.stack.length]; /* 第十三輪b：依當前訂單食譜 */
   if (WORK_CARDS[i].id === need) {
     w.stack.push(need);
@@ -142,6 +156,7 @@ function updateWork(dt) {
 
   if (w.phase === 'count') {
     w.t += dt;
+    for (const c of w.queue) c.scale += (c.tScale - c.scale) * Math.min(1, dt * 4); /* 第十三輪c：倒數時排隊客長大入場 */
     if (w.t >= 3) w.phase = 'play';
     return;
   }
@@ -150,14 +165,45 @@ function updateWork(dt) {
       w.flying.t += dt / 0.55;
       if (w.flying.t >= 1) {
         w.flying = null;
-        const pay = Math.round(w.customer.item.price * w.level.payMul); /* 第十三輪b：品項價格 × 關卡倍率 */
+        const c = w.customer;
+        const pay = Math.round(c.item.price * w.level.payMul * (c.rush ? 1.5 : 1)); /* 第十三輪c：尖峰客 +50% */
+        c.state = 'served'; c.animT = 0; /* 第十三輪c：滿意走人 */
         w.stack = [];
         w.count += 1;
         Game.money += pay;
         w.floaters.push({ x: 700, y: 330, t: 0, txt: `+${pay}` });
         sfx('coin');
         syncMoneyUI();
-        spawnCustomer();
+      }
+    }
+    /* 第十三輪c：排隊動畫＋耐心值＋補客 */
+    for (const c of w.queue)
+      if (c.state !== 'queue') c.animT += dt;
+    w.queue = w.queue.filter(c => !(c.state !== 'queue' && c.animT >= 0.9));
+    w.customer = w.queue.find(c => c.state === 'queue') || null;
+    let qi = 0;
+    for (const c of w.queue) {
+      if (c.state !== 'queue') {
+        c.x += (c.state === 'served' ? 240 : -240) * dt; /* 滿意→右、氣走→左 */
+        c.scale = Math.max(0, c.scale - dt * 0.8);
+        continue;
+      }
+      const [qx, qy, qs] = queueSlot(qi++);
+      c.tx = qx; c.ty = qy; c.tScale = qs;
+      const k = Math.min(1, dt * 5);
+      c.x += (c.tx - c.x) * k; c.y += (c.ty - c.y) * k; c.scale += (c.tScale - c.scale) * k;
+    }
+    while (w.queue.filter(c => c.state === 'queue').length < w.level.queue) spawnCustomer();
+    const act = w.customer;
+    if (act) {
+      act.patience -= dt;
+      if (act.patience <= 0) {
+        act.patience = 0; act.state = 'angry'; act.animT = 0;
+        w.misses += 1;
+        if (w.flying) w.flying = null; /* 在半空的餐點作廢 */
+        w.stack = []; /* 已疊的料報廢 */
+        w.floaters.push({ x: act.x, y: act.y - 120, t: 0, txt: '💢 走了！' });
+        sfx('buzz');
       }
     }
     w.left -= dt;
@@ -229,17 +275,45 @@ function renderWork(ctx, t) {
   ctx.textAlign = 'left';
   ctx.fillText(`做了 ${w.count} 個`, 60, 72);
 
-  /* 客人 + 訂單氣泡 */
-  if (w.customer) drawCustomer(ctx, 700, 428, w.customer, t);
-  const bx = 700, by = 168;
-  handShape(ctx, [[bx - 78, by - 46], [bx + 78, by - 46], [bx + 78, by + 40], [bx - 78, by + 40]],
-    { fill: '#FFF8EC', seed: 76, amp: 2 });
-  handShape(ctx, [[bx + 18, by + 40], [bx + 44, by + 40], [bx + 30, by + 62]], { fill: '#FFF8EC', seed: 77, amp: 1 });
-  ctx.fillStyle = '#5A3E2B';
-  ctx.font = '700 26px RHR';
-  ctx.textAlign = 'center';
-  ctx.fillText(w.customer.item.name, bx, by - 20); /* 第十三輪b：顯示品項名 */
-  drawMenuItem(ctx, w.customer.item, bx, by + 14, 0.5);
+  /* 第十三輪c：排隊客人（由後往前畫＝遠的在後、近的前）＋訂單氣泡＋耐心條 */
+  for (let i = w.queue.length - 1; i >= 0; i--) {
+    const c = w.queue[i];
+    const leaving = c.state !== 'queue';
+    ctx.globalAlpha = leaving ? Math.max(0, 1 - c.animT / 0.9) : 1;
+    drawCustomer(ctx, c.x, c.y, c, t);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (c.state === 'queue' && c.rush) {
+      ctx.font = '700 24px RHR';
+      ctx.fillText('⚡', c.x + 36 * c.scale, c.y - 84 * c.scale);
+    }
+    if (c.state === 'served') { ctx.font = '700 28px RHR'; ctx.fillText('💖', c.x, c.y - 96); }
+    if (c.state === 'angry') { ctx.font = '700 30px RHR'; ctx.fillText('💢', c.x, c.y - 96); }
+    if (c.state === 'queue' && c !== w.customer)
+      drawMenuItem(ctx, c.item, c.x, c.y - 104 * c.scale, 0.2); /* 排隊中的訂單小圖示 */
+    ctx.globalAlpha = 1;
+  }
+  if (w.customer) {
+    const c = w.customer;
+    const bx = 700, by = 168;
+    handShape(ctx, [[bx - 78, by - 46], [bx + 78, by - 46], [bx + 78, by + 40], [bx - 78, by + 40]],
+      { fill: '#FFF8EC', seed: 76, amp: 2 });
+    handShape(ctx, [[bx + 18, by + 40], [bx + 44, by + 40], [bx + 30, by + 62]], { fill: '#FFF8EC', seed: 77, amp: 1 });
+    ctx.fillStyle = '#5A3E2B';
+    ctx.font = '700 26px RHR';
+    ctx.textAlign = 'center';
+    ctx.fillText(c.item.name, bx, by - 20); /* 第十三輪b：顯示品項名 */
+    drawMenuItem(ctx, c.item, bx, by + 14, 0.5);
+    /* 第十三輪c：耐心條（服務中客人頭上） */
+    const pf = c.patience / c.patienceMax, pw = 74;
+    ctx.fillStyle = 'rgba(90,62,43,.18)';
+    roundRectPath(ctx, 700 - pw / 2, 328, pw, 9, 4.5);
+    ctx.fill();
+    if (pf > 0) {
+      ctx.fillStyle = pf > 0.5 ? '#7A9E5E' : pf > 0.25 ? '#E8A13C' : '#D94F4F';
+      roundRectPath(ctx, 700 - pw / 2, 328, Math.max(6, pw * pf), 9, 4.5);
+      ctx.fill();
+    }
+  }
 
   /* 盤子 + 疊起的料 */
   handEllipse(ctx, 300, 452, 62, 16, { fill: '#FFFFFF', lw: 3, seed: 78 });
@@ -407,6 +481,7 @@ function drawIngredient(ctx, id, x, y, s) {
 function drawCustomer(ctx, x, y, c, t) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(c.scale || 1, c.scale || 1); /* 第十三輪c：排隊深度縮放 */
   const bob = Math.sin(t * 2 + c.bob) * 2;
   /* 身體 */
   ctx.fillStyle = '#7FA8C9';
