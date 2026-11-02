@@ -557,29 +557,37 @@
 
 ## 第十三輪（Jerry 回饋 2 點）
 
-### 13a 🔄 字體統一（出發）
+### 13a ✅ 字體統一（commit 346a332）
 - Jerry：「出門後的字體混亂，又醜，換個可愛活潑一點的」
 - 根因：地圖/打工 canvas 用 Google CDN 的 Long Cang（細手寫體，離線 fallback cursive 就亂；與全域圓體 RHR 混著用＝混亂）；shop-title/loading-quote 也用 CDN 字
-- 方案：全部換成本地 **RHR**（資源圓體、變體字 200-900、可離線），大字用 900 加粗更可愛活潑；移除 Google Fonts link（preconnect/link/.font-hand inline style）
-- 位置：mapscene.js ×2（我的家/麥當勞招牌）、mini.js ×10、style.css ×3（loading-text/loading-quote/shop-title）
-- 子集字需重跑：/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf（venv 重建完成）
+- 全部換成本地 **RHR**（資源圓體、變體字 200-900、可離線），大字用 900 加粗更可愛活潑；移除 Google Fonts link（preconnect/link/.font-hand inline style）
+- 位置：mapscene.js ×2（我的家 700 24px / 麥當勞 900 40px）、mini.js ×10（900~600 重量）、style.css ×3（loading-text 48px/800、loading-quote 500、shop-title 900）
+- 子集字重跑：/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf
+- 驗證：招牌放大截圖無豆腐字、canvas 全換圓體、flow+peek-map 回歸通過
 
-### 13b 📋 打工資料層＋關卡選擇
-- INGREDIENTS 5 種（現 4 種＋起司 cheese，drawIngredient 加 cheese）
-- MENU：各關卡品項（經典漢堡 5 步/起司吐司 3 步/蔬菜堡 5 步/雙層堡 5 步/特製套餐 6 步…），每品項 recipe+price+icon
-- WORK_LEVELS 5 關：queue 1→5（後面的人越遠越小）、patience 20s→8s、menu 由簡到繁、payMul 1→2
-- Game.work = { unlocked: 1, best: {} }，存檔載入補預設；商店「開始打工」→關卡選擇卡片（名稱/難度/最佳星星/🔒鎖定）
+### 13b ✅ 打工資料層＋關卡選擇（commit 1973dd9）
+- WORK_INGREDIENTS 5 種（+起司 cheese、drawIngredient 加 case）
+- WORK_ITEMS 5 品項：經典漢堡 5 步$20／起司吐司 3 步$15／蔬菜堡 5 步$25／雙層堡 5 步$30／特製套餐 6 步$40（各自 recipe）
+- WORK_LEVELS 5 關：新人上工/熟手班/忙碌時段/午休尖峰/全店總動員；queue 1→5、patience 20s→8s、payMul 1.0→2.0、L4+25%／L5+35% 尖峰客、menu 由簡到繁
+- 商店「開始打工」鈕 → 5 張關卡卡（🔒鎖定/★最佳/點卡開工）；訂單氣泡顯示品項名＋drawMenuItem 堆疊小圖示
+- 存檔加 work 進度；下工存檔改 fullSave（補上舊版漏存的牆飾/換色）
+- 修：舊 #btn-start-work 綁定死引用移除；flow/peek-map 改 .level-card 點卡＋食譜驅動點卡（L1 訂單改隨機）
 
-### 13c 📋 排隊＋耐心＋訂單
-- 排隊：N 位客人依序畫在櫃台右側，第一人最大最前，後面每人 scale×0.85、往上（遠）偏移
-- 訂單氣泡：顯示該品項 icon＋名稱（不再固定「幫我做這個！」）
-- 耐心條：客人頭上 patience 條，歸零→💢 走人、下一位上前
-- 報酬＝品項 price × 關卡 payMul；L4+ 25% 急件客人（⚡ patience×0.6、pay×1.5）
+### 13c ✅ 排隊＋耐心＋尖峰客（commit 2a1f506）
+- Work.queue[] 陣列取代單一 customer（customer = 第一個 state 'queue' 的 alias，舊程式碼/測試相容）
+- queueSlot：x=700-i*95、y=430-i*14、scale 1→0.48（i*0.13）——越後越小越遠的透視深度；所有人 lerp 移動（服務/氣走時後排自動上前）
+- 耐心：服務中客人頭上 patience 條（綠→橘→紅），歸零→💢 氣走左離場（misses++、報廢已疊料＋取消在半空的餐點）、served💖右離場、0.9s 淡出後移除
+- 補客：queue 不足 level.queue 就從 0 長大補新客；3-2-1 倒數期間也要長大（否則倒數 3 秒客戶隱形）
+- 尖峰客⚡：patience×0.6、pay×1.5、畫⚡；排隊中客人頭上有小訂單圖示
+- peek-map 加 patience 測試（強制 0.4s→氣走 miss=1＋補新客）；L5 五人大縮小截圖目視通過
 
-### 13d 📋 結算星星＋小費＋測試
-- 3 連對（中間無錯）→ 第 3 筆 +10 小費；結束畫面顯示 served/目標/星星
-- 1-3 星（served≥目標 1/2/3 倍），過 1 星解鎖下一關，best 存檔
-- 新 test/peek-work.mjs：關卡選擇（鎖定/解鎖）、L1 實玩（正確順序上菜+錢+連擊）、耐心走人、星星解鎖、reload 持久化
+### 13d ✅ 連擊小費＋星星結算＋解鎖（commit 57b11cc）
+- 連擊：每 3 連完成 +10 小費（左上 🔥 連擊 xN 顯示）；點錯/氣走中斷
+- 結算畫面：下工停 4.2s 顯示星星評價（依 goals 彈出★、新紀錄✨、氣走人數、未達★提示），取代舊版單句「時間到」
+- 星星：goals=[★1,★2,★3 完成數門檻] 每關不同（L1 [4,8,12] … L5 [5,9,12]）；★1 起解鎖下一關、Game.work.best 存最佳
+- 新 test/peek-work.mjs 18 項：5 卡/鎖定、L1 排隊、3 連小費 money 精算、氣走補客、L5 五人深度遞減、L5 goals、4 單結算★1＋解鎖第 2 關、商店卡列★☆☆、reload 存檔持久、0 pageerror
 
-### 13e 📋 全回歸＋文件＋報告
-- 六套件＋新 peek-work；README 打工章節全面更新；PROGRESS 收尾；向 Jerry 報告玩法設計
+### 13e ✅ 全回歸＋文件（本輪 commit）
+- 七套件全過：flow（32 步）/ peek-build（98 項）/ peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work（18 項）
+- README：打工章節全面更新（五關/排隊/耐心/連擊/星星）、測試表加 peek-work
+- 字型子集 914→947 字（含新文案：連擊小費/新紀錄/氣走等）
