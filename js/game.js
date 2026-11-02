@@ -1348,13 +1348,19 @@ function removeTargetFromMouse() {
     if (wallItemHit(Game.wallItems[i], Game.mouse.wx, Game.mouse.wy)) return { type: 'wall', idx: i };
   }
   const mtx = Math.floor(Game.mouse.tx), mty = Math.floor(Game.mouse.ty);
+  /* 第十二輪：同一格有多件（擺飾站在家具上）時，先取最上面的——
+     得分 = 高度(lift)優先，其次擺飾（畫在平鋪層上），再次非平鋪層 */
+  let best = null;
   for (let i = 0; i < Game.furniture.length; i++) {
     const f = Game.furniture[i];
     const it = BUILD_ITEMS[f.id];
     if (!it) continue;
-    if (itemTiles(f.id, f.tx, f.ty, f.rot).some(([x, y]) => x === mtx && y === mty)) return { type: 'floor', idx: i };
+    if (!itemTiles(f.id, f.tx, f.ty, f.rot).some(([x, y]) => x === mtx && y === mty)) continue;
+    const lift = it.tab === 'decor' ? surfaceHAt(f.tx, f.ty) : 0;
+    const score = lift * 100 + (it.tab === 'decor' ? 2 : 0) + (it.layer === 'floor' ? 0 : 1);
+    if (!best || score > best.score) best = { idx: i, score };
   }
-  return null;
+  return best ? { type: 'floor', idx: best.idx } : null;
 }
 
 function removeItem(target) {

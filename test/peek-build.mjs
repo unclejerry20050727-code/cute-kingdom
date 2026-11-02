@@ -265,10 +265,11 @@ check('盆栽確實落在 (6,6)', (await G(() => Game.furniture.some(f => f.id =
 await page.click('.btab[data-tab="remove"]'); await ms(300);
 await page.click('#build-items .build-item'); await ms(400);
 await page.mouse.move(deskTilePt.x, deskTilePt.y); await ms(400);
-check('書桌上的盆栽被標記', (await G(() => Game.placement.target))?.type === 'floor');
+check('書桌上的盆栽被標記（不是書桌）', (await G(() => Game.placement.target ? Game.furniture[Game.placement.target.idx]?.id : null)) === 'plant');
 await shot('decor-on-furniture-remove', '家具上擺飾的移除標記');
 await page.mouse.click(deskTilePt.x, deskTilePt.y); await ms(500);
 check('移除書桌上的盆栽 → 8 件', (await G(() => Game.furniture.length)) === 8);
+check('書桌仍在（只拆了擺飾）', (await G(() => Game.furniture.some(f => f.id === 'desk' && f.tx === 6 && f.ty === 6))) === true);
 await page.keyboard.press('Escape'); await ms(300);
 
 /* ── 9⅞. 牆飾高度（第十一輪c）── */
@@ -323,6 +324,32 @@ check('▲▲ → h=177', (await G(() => Game.placement.h)) === 177);
 await shot('touch-actions', '牆飾放置中的觸控操作鈕');
 await page.click('#pa-cancel'); await ms(300);
 check('✖️ 取消牆飾放置', (await G(() => Game.sub)) === 'free');
+
+/* ── 9⁞. 移除優先序：家具上的擺飾先拆（第十二輪）── */
+/* 盆栽放床上（床不可移除）→ 驗證上面的擺飾可先拆、床之後受保護 */
+await page.click('.btab[data-tab="decor"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("盆栽")'); await ms(400);
+const bedTopPt = await tilePt(6.5, 3.5);
+await page.mouse.move(bedTopPt.x, bedTopPt.y); await ms(400);
+check('盆栽可放床格', (await G(() => Game.placement?.valid)) === true);
+await page.mouse.click(bedTopPt.x, bedTopPt.y); await ms(500);
+check('盆栽放上床 → 9 件', (await G(() => Game.furniture.length)) === 9);
+check('盆栽確在床上 (6,3)', (await G(() => Game.furniture.some(f => f.id === 'plant' && f.tx === 6 && f.ty === 3))) === true);
+/* 移除模式：床格上應標最上面的盆栽（舊 bug：床先被標→盆栽永遠拆不到） */
+await page.click('.btab[data-tab="remove"]'); await ms(300);
+await page.click('#build-items .build-item'); await ms(400);
+await page.mouse.move(bedTopPt.x, bedTopPt.y); await ms(400);
+check('床格標記上面的盆栽（非床）', (await G(() => Game.placement.target ? Game.furniture[Game.placement.target.idx]?.id : null)) === 'plant');
+await shot('remove-top-decor', '移除模式：床上的盆栽被標記');
+await page.mouse.click(bedTopPt.x, bedTopPt.y); await ms(500);
+check('移除床上的盆栽 → 8 件', (await G(() => Game.furniture.length)) === 8);
+check('床仍在', (await G(() => Game.furniture.some(f => f.id === 'bed'))) === true);
+/* 再 hover → 這次標床；點 → 床拆不掉 */
+await page.mouse.move(bedTopPt.x, bedTopPt.y); await ms(400);
+check('再 hover 標到床', (await G(() => Game.placement.target ? Game.furniture[Game.placement.target.idx]?.id : null)) === 'bed');
+await page.mouse.click(bedTopPt.x, bedTopPt.y); await ms(400);
+check('床拆不掉（仍 8 件）', (await G(() => Game.furniture.length)) === 8);
+await page.keyboard.press('Escape'); await ms(300);
 
 /* ── 10. 重新載入 → 持久化 ── */
 await page.reload(); await ms(800);
