@@ -535,3 +535,22 @@
 - 六套件全過：flow（32 步 0 pageerror）/ peek-build（84 項）/ peek-recover（3 種異常存檔）/ peek-bgm-filefix（8 項）/ peek-map / peek-character
 - README：操作段加牆飾高度（↑↓/WS/滾輪＋已掛點一下再調）與觸控 🔄▲▼✖️；擺飾行「可放家具上」、牆飾行「高度可調」；加 3 條規則 bullet；測試表 57→84 項
 - 舊截圖清理：對照實際 shot() 列表刪 3 張舊 after-reload（b17/b19/b23）
+
+## 第十二輪（Jerry 回饋 2 點）
+
+### 12a ✅ 移除優先取最上方（commit 8d7f484）
+- Jerry 發現：移除模式只能先拆家具、擺飾落地後才能拆；**床不可移除→床上的擺飾永遠拆不到**
+- 根因：`removeTargetFromMouse` 按插入順序回傳第一個匹配（床最早放→永遠先被標）
+- 修：收集所有匹配，得分 = `lift*100 + decor?2:0 + 非floor層?1:0`，取最高分（站在家具上的擺飾 lift>0 必贏；平鋪層墊底）
+- 意外發現：9¾ 舊檢查只驗 `target.type==='floor'`，之前「移除書桌上的盆栽」其實拆的是書桌（盆栽留在地上）都沒發現——已加強為驗 `id==='plant'`＋拆完書桌仍在
+- 新增 9⁞ 段 8 項：盆栽上床（床格 valid/9 件/確在(6,3)）→移除模式床格標盆栽（非床）→拆盆栽 8 件→床仍在→再 hover 標床→點床拆不掉；84→93 項全過
+
+### 12b ✅ 觸控 R/Esc 驗證＋提示可發現性（commit d191340）
+- 觸控鈕在 11d（a6eaada）已實作；本輪用 `hasTouch: true`＋`page.touchscreen.tap`（真實觸控事件、非滑鼠模擬）驗證 🔄/▼/✖️ 全有效
+- 四處提示列加入手勢說明：放置「R／🔄 旋轉 90°」「Esc／✖️ 取消」、牆飾「↑↓/滾輪/▲▼ 調高度」、wallAdj/移除模式「Esc／✖️ 取消」；文字改「滑鼠移到…點擊」→「移到…點一下」（觸控中性）
+- 9⅞e 段 4 項真實觸控檢查（🔄rot 1↔0/✖️取消/▼h=159/✖️取消牆飾）；93→98 項全過
+
+### 12c ✅ 全回歸＋文件（本輪 commit）
+- 六套件全過：flow（32 步 0 pageerror）/ peek-build（98 項）/ peek-recover / peek-bgm-filefix / peek-map / peek-character
+- README：移除行加優先序、「觸控按鈕」註真實觸控已驗證、新增「移除優先序」bullet、測試表 84→98 項
+- 舊截圖：對照 shot() 列表刪 b24-after-reload（b24 讓位給 remove-top-decor）
