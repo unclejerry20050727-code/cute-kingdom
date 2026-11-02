@@ -921,7 +921,7 @@ function setupInput() {
           Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free' };
           setSub('placing');
           const bar = $('#hint-bar');
-          bar.textContent = `🖼️ ${adjHit.it.name}：按 ↑/↓ 或滾輪調高度，再點一次確認！（Esc 取消）`;
+          bar.textContent = `🖼️ ${adjHit.it.name}：按 ↑/↓ 或滾輪調高度，再點一次確認！（Esc／✖️ 取消）`;
           bar.classList.remove('hidden');
           sfx('click');
           break;
@@ -1250,7 +1250,7 @@ function startPlacement(itemId) {
   setSub('placing');
   Game.placement = { mode: 'floor', item: itemId, prevSub, rot: 0, tx: 0, ty: 0, valid: false };
   const bar = $('#hint-bar');
-  bar.textContent = `🛏️ 滑鼠移到喜歡的位置，點擊放下${item.name}！` + (item.w !== item.d ? '（R 旋轉 90°）' : '') + '（Esc 取消）';
+  bar.textContent = `🛏️ 移到喜歡的位置，點一下放下${item.name}！` + (item.w !== item.d ? '（R／🔄 旋轉 90°）' : '') + '（Esc／✖️ 取消）'; /* 第十二輪b：提示加入觸控鈕 */
   bar.classList.remove('hidden');
   updatePlaceActions(); /* 第十一輪d：setSub 在 placement 指派前跑過，補一次 */
 }
@@ -1265,7 +1265,7 @@ function startWallPlacement(id) {
   const s = wallSlotFromMouse() || { wall: 'A', pos: 3 };
   Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false, h: item.hMid }; /* 第十一輪c：初始高度 = hMid */
   const bar = $('#hint-bar');
-  bar.textContent = `🖼️ 把滑鼠移到牆上，點擊掛上${item.name}！（↑↓/滾輪 調高度、Esc 取消）`;
+  bar.textContent = `🖼️ 移到牆上，點一下掛上${item.name}！（↑↓/滾輪/▲▼ 調高度、Esc／✖️ 取消）`;
   bar.classList.remove('hidden');
   updatePlaceActions(); /* 第十一輪d */
 }
@@ -1277,7 +1277,7 @@ function startRemoveMode() {
   setSub('placing');
   Game.placement = { mode: 'remove', prevSub, target: null };
   const bar = $('#hint-bar');
-  bar.textContent = '🧹 移除模式：點家具或牆飾把它移走！（Esc 取消）';
+  bar.textContent = '🧹 移除模式：點家具或牆飾把它移走！（Esc／✖️ 取消）';
   bar.classList.remove('hidden');
   updatePlaceActions(); /* 第十一輪d */
 }

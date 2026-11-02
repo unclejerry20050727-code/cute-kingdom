@@ -25,7 +25,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const PORT = server.address().port;
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium' });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, hasTouch: true }); /* 第十二輪b：hasTouch 才能用 touchscreen.tap 驗真實觸控 */
 page.on('pageerror', e => console.log('  ⚠️ pageerror:', e.message));
 page.on('console', m => { if (m.type() === 'error') console.log('  ⚠️ console:', m.text()); });
 const ms = (m) => page.waitForTimeout(m);
@@ -230,7 +230,7 @@ check('Esc 離開移除模式', (await G(() => Game.sub)) === 'free');
 /* （面板已因 Esc 取消移除而自動重開，不需再按 #build-btn） */
 await page.click('.btab[data-tab="furniture"]'); await ms(300);
 await page.click('#build-items .build-item:has-text("書桌")'); await ms(400);
-check('放置提示含 R 旋轉', (await G(() => document.querySelector('#hint-bar').textContent)).includes('R 旋轉'));
+check('放置提示含 R／🔄 旋轉', (await G(() => document.querySelector('#hint-bar').textContent)).includes('🔄 旋轉'));
 await page.keyboard.press('r'); await ms(200);
 check('按 R → rot=1（1×2）', (await G(() => Game.placement.rot)) === 1);
 const rotDeskPt = await tilePt(2.5, 7.5);
@@ -324,6 +324,23 @@ check('▲▲ → h=177', (await G(() => Game.placement.h)) === 177);
 await shot('touch-actions', '牆飾放置中的觸控操作鈕');
 await page.click('#pa-cancel'); await ms(300);
 check('✖️ 取消牆飾放置', (await G(() => Game.sub)) === 'free');
+
+/* ── 9⅞e. 真實觸控事件（第十二輪b：不是模擬滑鼠 click，是 touchscreen.tap）── */
+const tap = async (sel) => { const b = await page.locator(sel).boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); };
+await page.click('.btab[data-tab="furniture"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("鋼琴")'); await ms(400);
+await tap('#pa-rot'); await ms(200);
+check('觸控 🔄 → rot=1', (await G(() => Game.placement.rot)) === 1);
+await tap('#pa-rot'); await ms(200);
+check('觸控 🔄 再一下 → rot=0', (await G(() => Game.placement.rot)) === 0);
+await tap('#pa-cancel'); await ms(300);
+check('觸控 ✖️ → 取消（sub free）', (await G(() => Game.sub)) === 'free');
+await page.click('.btab[data-tab="wall"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("星星框")'); await ms(400);
+await tap('#pa-down'); await ms(200);
+check('觸控 ▼ → h=159', (await G(() => Game.placement.h)) === 159);
+await tap('#pa-cancel'); await ms(300);
+check('觸控 ✖️ 取消牆飾放置', (await G(() => Game.sub)) === 'free');
 
 /* ── 9⁞. 移除優先序：家具上的擺飾先拆（第十二輪）── */
 /* 盆栽放床上（床不可移除）→ 驗證上面的擺飾可先拆、床之後受保護 */
