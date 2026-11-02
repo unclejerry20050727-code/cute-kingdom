@@ -1,26 +1,44 @@
-/* ══════════ 麥當勞打工：固定順序組漢堡給客人 ══════════
+/* ══════════ 麥當勞打工：依訂單食譜組餐點給客人 ══════════
  * 主畫布渲染（sub = 'work'），DOM 只剩左上角 X。
- * 固定食譜：麵包胚 → 肉片 → 番茄 → 生菜 → 麵包胚。
+ * 第十三輪b：資料驅動——每關有不同菜單/排隊人數/耐心/工資倍率。
  */
 'use strict';
 
-const WORK_RECIPE = ['bun', 'meat', 'tomato', 'lettuce', 'bun'];
-const WORK_DUR = 60;
-const WORK_CARDS = [
-  { id: 'bun', name: '麵包胚', x: 130, y: 505 },
-  { id: 'meat', name: '肉片', x: 315, y: 505 },
-  { id: 'tomato', name: '番茄', x: 500, y: 505 },
-  { id: 'lettuce', name: '生菜', x: 685, y: 505 },
+/* 第十三輪b：食材（+起司）/ 品項（食譜+價格）/ 五個關卡 */
+const WORK_INGREDIENTS = [
+  { id: 'bun', name: '麵包胚' },
+  { id: 'meat', name: '肉片' },
+  { id: 'tomato', name: '番茄' },
+  { id: 'lettuce', name: '生菜' },
+  { id: 'cheese', name: '起司' },
 ];
+const WORK_ITEMS = {
+  burger: { name: '經典漢堡', recipe: ['bun', 'meat', 'tomato', 'lettuce', 'bun'], price: 20 },
+  toast: { name: '起司吐司', recipe: ['bun', 'cheese', 'bun'], price: 15 },
+  veggie: { name: '蔬菜堡', recipe: ['bun', 'lettuce', 'tomato', 'cheese', 'bun'], price: 25 },
+  double: { name: '雙層堡', recipe: ['bun', 'meat', 'cheese', 'meat', 'bun'], price: 30 },
+  special: { name: '特製套餐', recipe: ['bun', 'meat', 'cheese', 'tomato', 'lettuce', 'bun'], price: 40 },
+};
+/* 每關：queue=排隊人數、patience=耐心秒數、payMul=工資倍率、rush=尖峰客機率 */
+const WORK_LEVELS = [
+  { id: 1, name: '新人上工', queue: 1, patience: 20, time: 60, payMul: 1.0, rush: 0, menu: ['toast', 'burger'] },
+  { id: 2, name: '熟手班', queue: 2, patience: 16, time: 60, payMul: 1.2, rush: 0, menu: ['toast', 'burger', 'veggie'] },
+  { id: 3, name: '忙碌時段', queue: 3, patience: 13, time: 60, payMul: 1.5, rush: 0, menu: ['burger', 'veggie', 'double'] },
+  { id: 4, name: '午休尖峰', queue: 4, patience: 10, time: 60, payMul: 1.8, rush: 0.25, menu: ['veggie', 'double', 'special'] },
+  { id: 5, name: '全店總動員', queue: 5, patience: 8, time: 60, payMul: 2.0, rush: 0.35, menu: ['double', 'special', 'burger'] },
+];
+const WORK_CARDS = WORK_INGREDIENTS.map((ing, i) => ({ ...ing, x: 110 + i * 190, y: 505 }));
 const CARD_W = 150, CARD_H = 118;
 
 let Work = null;
 
-function startWork() {
+function startWork(lv = 1) {
   sfx('confirm');
+  const level = WORK_LEVELS.find(l => l.id === lv) || WORK_LEVELS[0];
   Work = {
     phase: 'count', t: 0,
-    left: WORK_DUR,
+    left: level.time,
+    level, /* 第十三輪b：關卡資料 */
     stack: [],
     flying: null,
     shake: 0,
@@ -33,6 +51,30 @@ function startWork() {
   $('#screen-work').classList.remove('hidden');
   setSub('work');
   syncMoneyUI();
+}
+
+/* 第十三輪b：商店關卡選擇列 */
+function renderLevelList(ready) {
+  const list = document.getElementById('level-list');
+  list.innerHTML = '';
+  const unlocked = (Game.work && Game.work.unlocked) || 1;
+  for (const L of WORK_LEVELS) {
+    const best = (Game.work && Game.work.best[L.id]) || 0;
+    const locked = !ready || L.id > unlocked;
+    const d = document.createElement('div');
+    d.className = 'level-card' + (locked ? ' locked' : '');
+    d.dataset.lv = L.id;
+    d.innerHTML =
+      `<div class="level-name">${ready && locked ? '🔒 ' : ''}${L.name}</div>` +
+      `<div class="level-info">👤${L.queue} · ${L.menu.length}種 · ${L.time}s</div>` +
+      `<div class="level-stars">${'★'.repeat(best)}${'☆'.repeat(3 - best)}</div>`;
+    if (!locked) d.onclick = () => startWork(L.id);
+    else d.onclick = () => {
+      sfx('buzz');
+      showToast(ready ? '先拿前一關的 ★1 就能解鎖！' : '先買制服＋帽子才能打工喔');
+    };
+    list.appendChild(d);
+  }
 }
 
 function exitWork() {
@@ -48,15 +90,25 @@ function endWork() {
   setSub('map');
   $('#screen-shop').classList.remove('hidden');
   fillShopUI();
-  saveGame({ cfg: Game.playerCfg, furniture: Game.furniture, stage: 'done', money: Game.money, gear: Game.gear });
-  showToast(`下工囉！這趟做了 ${n} 個漢堡 🍔`);
+  saveGameEndShift();
+  showToast(`下工囉！這趟做了 ${n} 個品項 🍔`);
+}
+
+/* 第十三輪b：下工存檔用 fullSave（舊版漏存牆飾/換色），並存入關卡進度 */
+function saveGameEndShift() {
+  const s = fullSave('done');
+  s.work = Game.work;
+  saveGame(s);
 }
 
 function spawnCustomer() {
   const hairs = ['#5A3E2B', '#3B2A1F', '#8A5A3B', '#2F2A26', '#7A4A3A'];
   const skins = ['#FFE9D4', '#F8D9B8', '#EFC39A', '#D9A87C'];
   const rnd = Math.random;
+  const L = Work.level;
+  const item = WORK_ITEMS[L.menu[Math.floor(rnd() * L.menu.length)]]; /* 第十三輪b：隨機點單品項 */
   Work.customer = {
+    item, /* { name, recipe, price } */
     hair: hairs[Math.floor(rnd() * hairs.length)],
     skin: skins[Math.floor(rnd() * skins.length)],
     bob: rnd() * 10,
@@ -67,11 +119,11 @@ function spawnCustomer() {
 function workClick(i) {
   const w = Work;
   if (!w || w.phase !== 'play' || w.flying) return;
-  const need = WORK_RECIPE[w.stack.length];
+  const need = w.customer.item.recipe[w.stack.length]; /* 第十三輪b：依當前訂單食譜 */
   if (WORK_CARDS[i].id === need) {
     w.stack.push(need);
     sfx('place');
-    if (w.stack.length === WORK_RECIPE.length) {
+    if (w.stack.length === w.customer.item.recipe.length) {
       w.flying = { t: 0 };
       sfx('fly');
     }
@@ -98,10 +150,11 @@ function updateWork(dt) {
       w.flying.t += dt / 0.55;
       if (w.flying.t >= 1) {
         w.flying = null;
+        const pay = Math.round(w.customer.item.price * w.level.payMul); /* 第十三輪b：品項價格 × 關卡倍率 */
         w.stack = [];
         w.count += 1;
-        Game.money += 20;
-        w.floaters.push({ x: 700, y: 330, t: 0, txt: '+20' });
+        Game.money += pay;
+        w.floaters.push({ x: 700, y: 330, t: 0, txt: `+${pay}` });
         sfx('coin');
         syncMoneyUI();
         spawnCustomer();
@@ -146,7 +199,7 @@ function renderWork(ctx, t) {
   ctx.fillRect(70, 535, 840, 10);
 
   /* 計時圈 */
-  const frac = w.left / WORK_DUR;
+  const frac = w.left / w.level.time;
   ctx.strokeStyle = '#E8D9C2';
   ctx.lineWidth = 8;
   ctx.beginPath(); ctx.arc(490, 92, 42, 0, Math.PI * 2); ctx.stroke();
@@ -158,6 +211,10 @@ function renderWork(ctx, t) {
   ctx.font = '700 34px RHR';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(Math.ceil(w.left), 490, 94);
+  /* 第十三輪b：關卡名 */
+  ctx.fillStyle = '#8A6E52';
+  ctx.font = '700 22px RHR';
+  ctx.fillText(`${w.level.id} 關・${w.level.name}`, 490, 152);
 
   /* 金額（右上） */
   handEllipse(ctx, 852, 70, 17, 17, { fill: '#FFD98A', lw: 3, seed: 75 });
@@ -181,20 +238,20 @@ function renderWork(ctx, t) {
   ctx.fillStyle = '#5A3E2B';
   ctx.font = '700 26px RHR';
   ctx.textAlign = 'center';
-  ctx.fillText('幫我做這個！', bx, by - 20);
-  drawBurger(ctx, bx, by + 16, 0.55);
+  ctx.fillText(w.customer.item.name, bx, by - 20); /* 第十三輪b：顯示品項名 */
+  drawMenuItem(ctx, w.customer.item, bx, by + 14, 0.5);
 
   /* 盤子 + 疊起的料 */
   handEllipse(ctx, 300, 452, 62, 16, { fill: '#FFFFFF', lw: 3, seed: 78 });
   for (let i = 0; i < w.stack.length; i++)
     drawIngredient(ctx, w.stack[i], 300, 440 - i * 13, 1);
 
-  /* 飛向客人的漢堡 */
+  /* 飛向客人的餐點 */
   if (w.flying) {
     const ft = easeOutQuad(w.flying.t);
     const x = lerp(300, 700, ft);
     const y = lerp(420, 372, ft) - Math.sin(ft * Math.PI) * 70;
-    drawBurger(ctx, x, y, 0.9 + 0.1 * Math.sin(ft * Math.PI));
+    drawMenuItem(ctx, w.customer.item, x, y, 0.75 + 0.05 * Math.sin(ft * Math.PI));
   }
 
   /* 食材卡（放錯會整排抖一下） */
@@ -277,6 +334,17 @@ function drawBurger(ctx, x, y, s) {
   ctx.restore();
 }
 
+/* 第十三輪b：品項小圖示（依食譜疊出，每樣餐點長得不一樣） */
+function drawMenuItem(ctx, item, x, y, s) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  const r = item.recipe, gap = 13, y0 = (r.length - 1) * gap / 2;
+  for (let i = 0; i < r.length; i++)
+    drawIngredient(ctx, r[i], 0, y0 - i * gap, 0.55);
+  ctx.restore();
+}
+
 function drawIngredient(ctx, id, x, y, s) {
   ctx.save();
   ctx.translate(x, y);
@@ -320,6 +388,17 @@ function drawIngredient(ctx, id, x, y, s) {
         ctx.quadraticCurveTo(i - 8, 13, i - 16, 6);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
+      break;
+    case 'cheese': /* 第十三輪b：新食材 */
+      ctx.fillStyle = '#FFD966';
+      ctx.strokeStyle = '#E8B93C';
+      ctx.lineWidth = 2.5;
+      roundRectPath(ctx, -30, -12, 60, 24, 8);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#F0BE45';
+      for (const [sx, sy] of [[-16, -4], [2, 3], [18, -5]]) {
+        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill();
+      }
       break;
   }
   ctx.restore();

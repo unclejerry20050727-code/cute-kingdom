@@ -237,13 +237,14 @@ await page.click('#buy-hat');
 await waitMs(250);
 await shot('shop-gear');
 
-console.log('1️⃣7️⃣ 開始打工（3-2-1 → 固定食譜 → +20）');
-await page.click('#btn-start-work');
+console.log('1️⃣7️⃣ 開始打工（選第一關 → 3-2-1 → 依訂單食譜）');
+await page.click('.level-card[data-lv="1"]');
 await waitMs(600);
 await shot('work-count');
 await waitMs(2600);
 const cards = await page.evaluate(() => WORK_CARDS.map(c => ({ id: c.id, x: c.x, y: c.y + CARD_H / 2 })));
-for (const id of ['bun', 'meat', 'tomato', 'lettuce', 'bun']) {
+const recipe = await page.evaluate(() => Work.customer.item.recipe.slice());
+for (const id of recipe) {
   const c = cards.find(k => k.id === id);
   const p = await worldPt(c.x, c.y);
   await page.mouse.click(p.x, p.y);

@@ -50,6 +50,7 @@ let pt = await toScreen(490, 432);
 await page.mouse.click(pt.x, pt.y);
 await page.waitForTimeout(500);
 console.log('shop visible:', await page.evaluate(() => !document.getElementById('screen-shop').classList.contains('hidden')));
+console.log('level cards:', await page.evaluate(() => [...document.querySelectorAll('.level-card')].map(d => `${d.dataset.lv}:${d.classList.contains('locked') ? '🔒' : '✅'}`).join(' ')));
 await page.screenshot({ path: 'shots/peek-map-2-shop.png' });
 
 /* 買制服 50 + 帽子 30 */
@@ -58,20 +59,26 @@ await page.waitForTimeout(250);
 await page.click('#buy-hat');
 await page.waitForTimeout(250);
 console.log('money after buy:', await page.evaluate(() => Game.money), 'gear:', await page.evaluate(() => JSON.stringify(Game.gear)));
+console.log('level cards after gear:', await page.evaluate(() => [...document.querySelectorAll('.level-card')].map(d => `${d.dataset.lv}:${d.classList.contains('locked') ? '🔒' : '✅'}`).join(' ')));
 await page.screenshot({ path: 'shots/peek-map-3-gear.png' });
 
-/* 開始打工 */
-await page.click('#btn-start-work');
+/* 開始打工（第十三輪b：點第一關卡） */
+await page.click('.level-card[data-lv="1"]');
 await page.waitForTimeout(700);
+console.log('📸 countdown, level:', await page.evaluate(() => Work && `${Work.level.id} ${Work.level.name}`));
 await page.screenshot({ path: 'shots/peek-map-4-count.png' });
-console.log('📸 countdown');
 
 /* 等 3-2-1 結束 */
 await page.waitForTimeout(2600);
 
-/* 依食譜點卡：麵包胚 肉片 番茄 生菜 麵包胚 */
+/* 依當前訂單食譜點卡（第十三輪b：品項隨機，讀 recipe 逐張點） */
 const cards = await page.evaluate(() => WORK_CARDS.map(c => ({ id: c.id, x: c.x, y: c.y + CARD_H / 2 })));
-for (const id of ['bun', 'meat', 'tomato', 'lettuce', 'bun']) {
+const order = await page.evaluate(() => ({
+  recipe: Work.customer.item.recipe.slice(),
+  pay: Math.round(Work.customer.item.price * Work.level.payMul),
+}));
+console.log('order:', order.recipe.join(' > '), 'pay:', order.pay);
+for (const id of order.recipe) {
   const c = cards.find(k => k.id === id);
   const p = await toScreen(c.x, c.y);
   await page.mouse.click(p.x, p.y);
@@ -80,7 +87,8 @@ for (const id of ['bun', 'meat', 'tomato', 'lettuce', 'bun']) {
 console.log('stack after recipe:', await page.evaluate(() => (Work && Work.stack.length) ?? 'flying/done'));
 await page.screenshot({ path: 'shots/peek-map-5-delivered.png' });
 await page.waitForTimeout(700);
-console.log('money after burger:', await page.evaluate(() => Game.money), 'count:', await page.evaluate(() => (Work && Work.count)));
+const moneyAfter = await page.evaluate(() => Game.money);
+console.log((moneyAfter === 20 + order.pay ? '✅' : '❌'), 'money after item:', moneyAfter, '(expect', 20 + order.pay + ') count:', await page.evaluate(() => (Work && Work.count)));
 
 /* 點錯卡測試（此時 stack 已重開，第一張該是麵包；點番茄 → 抖） */
 const wrong = cards.find(k => k.id === 'tomato');

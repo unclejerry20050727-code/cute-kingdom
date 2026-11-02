@@ -29,6 +29,8 @@ const Game = {
   /* 金錢 / 打工裝備 */
   money: 100,
   gear: { uniform: false, hat: false },
+  /* 第十三輪b：打工關卡進度 */
+  work: { unlocked: 1, best: {} },
   /* 地圖 */
   mapP: { x: 490, y: 195, facing: 'down', walkT: 0, walking: false },
   mouse: { wx: 0, wy: 0, tx: 0, ty: 0 },
@@ -60,7 +62,6 @@ function init() {
   $('#work-x').onclick = () => { sfx('back'); exitWork(); };
   $('#buy-uniform').onclick = () => buyGear('uniform');
   $('#buy-hat').onclick = () => buyGear('hat');
-  $('#btn-start-work').onclick = () => startWork();
   $('#btn-mute').onclick = toggleMute;
   updateMuteBtn();
 
@@ -146,6 +147,11 @@ function beginGame(save, skipIntro) {
   /* 金錢 / 打工裝備（舊存檔補預設值） */
   Game.money = save.money ?? 100;
   Game.gear = save.gear ?? { uniform: false, hat: false };
+  /* 第十三輪b：打工關卡（舊存檔補預設值） */
+  Game.work = {
+    unlocked: Math.max(1, Math.min(WORK_LEVELS.length, (save.work && save.work.unlocked) || 1)),
+    best: (save.work && save.work.best) || {},
+  };
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -490,9 +496,8 @@ function fillShopUI() {
   bh.textContent = Game.gear.hat ? '✅ 已購買' : '購買 30';
   document.getElementById('shop-money').textContent = Game.money;
   const ready = Game.gear.uniform && Game.gear.hat;
-  const bs = document.getElementById('btn-start-work');
-  bs.disabled = !ready;
-  bs.textContent = ready ? '⏰ 開始打工' : '集齊制服＋帽子才能打工喔';
+  document.getElementById('shop-ready-msg').textContent = ready ? '' : '集齊制服＋帽子才能打工喔';
+  renderLevelList(ready); /* 第十三輪b：關卡選擇 */
 }
 
 function drawShopIcon(cv, kind) {
@@ -1302,6 +1307,7 @@ function fullSave(stage) {
     stage,
     money: Game.money ?? 100,
     gear: Game.gear ?? { uniform: false, hat: false },
+    work: Game.work, /* 第十三輪b：關卡進度 */
   };
 }
 
