@@ -879,6 +879,20 @@ function setupInput() {
     const [tx, ty] = screenToTile(wx, wy);
     Game.mouse.tx = tx; Game.mouse.ty = ty;
   });
+  /* 14a：手機觸控——tap 由瀏覽器原生 fire click（重用既有 click 邏輯）；拖曳只更新座標（移動放置 ghost） */
+  const updateTouchPos = (e) => {
+    const t = e.touches[0];
+    if (!t) return;
+    const wx = (t.clientX - Game.offX) / Game.ws;
+    const wy = (t.clientY - Game.offY) / Game.ws;
+    Game.mouse.wx = wx; Game.mouse.wy = wy;
+    const [tx, ty] = screenToTile(wx, wy);
+    Game.mouse.tx = tx; Game.mouse.ty = ty;
+  };
+  Game.canvas.addEventListener('touchstart', updateTouchPos, { passive: true });
+  Game.canvas.addEventListener('touchmove', updateTouchPos, { passive: true });
+  Game.canvas.addEventListener('contextmenu', (e) => e.preventDefault()); /* 防 iOS 長按選單 */
+
   Game.canvas.addEventListener('wheel', (e) => {
     /* 第十一輪c：牆飾放置/調整中用滾輪調高度（上滾＝調高） */
     if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {

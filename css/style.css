@@ -33,7 +33,7 @@ body {
   user-select: none;
 }
 
-#game-canvas { position: fixed; inset: 0; display: block; z-index: 0; }
+#game-canvas { position: fixed; inset: 0; display: block; z-index: 0; touch-action: none; } /* 14a：禁捲動/雙擊縮放，tap 仍會 fire click */
 
 .hidden { display: none !important; }
 
@@ -661,10 +661,42 @@ body {
 }
 .pop-in { animation: pop-in .3s cubic-bezier(.34,1.56,.64,1); }
 
-/* 小螢幕 */
+/* 小螢幕／手機直式（14a：以 390×844 為基準） */
 @media (max-width: 820px) {
-  .create-wrap { flex-direction: column; height: auto; overflow-y: auto; }
-  .create-preview { flex: none; height: 300px; }
+  html, body { height: 100dvh; } /* iOS Safari 動態視口 */
+  .create-wrap { flex-direction: column; height: calc(100dvh - 30px); overflow-y: auto; } /* 14a：固定高度內部捲動，避免被 .screen 置中裁掉頂端 */
+  .create-preview { flex: none; height: 484px; } /* 14a：canvas 本徵高 400px，框太矮會被裁（只剩一顆頭） */
   .t-char { font-size: 56px; }
   .cover-title { font-size: 44px; }
+
+  /* 建造面板：全寬、避開 dpad 與提示列 */
+  .build-panel { left: 10px; right: 10px; width: auto; bottom: 88px; }
+  .build-items { gap: 8px; max-height: 220px; }
+  .build-item { width: 104px; }
+
+  /* 對話框收小 */
+  .dialogue { bottom: 14px; gap: 10px; padding: 12px 12px 12px 10px; }
+  .dlg-portrait { flex: 0 0 62px; }
+  #dlg-portrait { width: 62px; height: 62px; }
+  .dlg-main { min-height: 62px; padding-top: 30px; }
+  .dlg-text { font-size: 16px; }
+  .dlg-name { font-size: 14px; padding: 3px 12px; }
+  .click-next { bottom: 16px; font-size: 16px; padding: 8px 20px; }
+
+  /* 提示列：可換行不出邊 */
+  .hint-bar { bottom: 12px; padding: 8px 14px; font-size: 14px; white-space: normal; text-align: center; max-width: calc(100vw - 16px); border-radius: 20px; }
+
+  /* 方向鍵／放置操作鈕：手機指頭好按 */
+  .dpad button, .place-actions button { width: 46px; height: 40px; font-size: 18px; }
+  .dpad-mid { gap: 30px; }
+  .place-actions { bottom: 112px; } /* 14a：hint-bar 最長 3 行會蓋住原位置，往上移 */
+
+  /* 商店：關卡卡折行、預覽移到下方、面板太高新可捲動 */
+  .shop-title { font-size: 34px; }
+  .shop-sub { font-size: 18px; }
+  .shop-body { flex-direction: column; }
+  .shop-preview { flex: none; width: 100%; }
+  .level-list { flex-wrap: wrap; }
+  .level-card { flex: 1 1 30%; min-width: 96px; }
+  .shop-panel { max-height: calc(100dvh - 16px); overflow-y: auto; }
 }
