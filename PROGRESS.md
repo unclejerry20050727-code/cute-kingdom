@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（14a 完成後更新）：第十四輪調查已完成、14a 已完成（c5475be）、**14b 尚未動工**。新 session：讀完本節 → 從 14b 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
+> 📌 **接手筆記**（14b 完成後更新）：第十四輪 14a（c5475be）、14b（716c7cd）已完成、**14c 尚未動工**。新 session：讀完本節 → 從 14c 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -612,9 +612,16 @@
 
 **驗證**：peek-mobile 13 項全過 0 pageerror；flow.mjs 32 步桌面回歸 0 失敗（手機 CSS 全在 media query 內，不影響桌面）
 
-### 14b 📋 手機全流程
-- 手機 touch 跑通：商店（買制服帽子、點關卡卡）、打工 L1（點食材卡上菜）、建造面板（拖 ghost 放置/移除/牆飾高度 ▲▼）
-- peek-mobile 擴充成完整流程（對標 flow.mjs 32 步的 touch 版）＋手機截圖目視 QA
+### 14b ✅ 手機全流程（commit 716c7cd）
+- ✅ peek-mobile.mjs 14a 的 13 步 13 項 → **21 步 40 項斷言**（全過 0 pageerror、截圖 m01-m23）：
+  - 建造深化：牆飾 tab→心形框→CDP 拖曳上牆 B pos2（ghost 跟手）→tap 掛上→tap 牆飾進 **wallAdj**→tap **▲** 調高→tap 確認寫入→**移除模式** 🧹 卡→tap 牆飾移除→✖️ 退出
+  - 商店（手機版）：tap 買制服 50＋帽子 30→錢-80、`Game.gear` 標記
+  - 打工 L1：tap 關卡卡→倒數→依訂單食譜 tap 食材卡→上菜 count=1 工資入帳→快轉結算（`Work.left→0`，不等 60s 班）
+  - 重新整理續玩：床還在、錢持久（含工資）、子狀態合法
+- **調查發現（未改遊戲 code）**：
+  - `#work-x`（exitWork）不存檔是既有設計——存檔在班末結算 `endWork→saveGameEndShift`（fullSave＋work 進度）；測試改快轉結算驗證存檔路徑
+  - 打工場景手機偏小（場景帶約 263px 高、食材卡約 64×44px 仍可點）→ **記為日後 polish 建議**（手機置景放大，可開新輪）
+  - 商店手機版 14a CSS 已撐住：關卡卡 2 欄折行、面板超高可捲、結算/續玩畫面皆可讀
 
 ### 14c 📋 節慶地面裝飾＋🎉 節慶分頁
 **資料**（BUILD_ITEMS，js/world.js:961，tab:'fest'）：
