@@ -1,7 +1,9 @@
-/* ══════════ 14a — 手機觸控基礎測試 ══════════
+/* ══════════ 14a+14b — 手機觸控完整流程測試 ══════════
  * 用法：node test/peek-mobile.mjs
- * 390×844 直式手機視口 + 真實觸控（hasTouch）：
- * 封面→標題→建角→睜眼→對話→wakeup→建角→建造教學放床（含拖曳 ghost）→出門→地圖走路→回家
+ * 390×844 直式手機視口 + 真實觸控（hasTouch），對標 flow.mjs 32 步的 touch 版：
+ * 封面→標題→建角→睜眼→對話→wakeup→放床（拖曳 ghost）→誇獎→出門→地圖走路→回家
+ * →牆飾放置（拖曳上牆）→牆飾調高度（wallAdj ▲）→移除模式→商店（買制服+帽子）
+ * →打工 L1（tap 關卡卡→依食譜 tap 食材卡）→回房→重新整理續玩存檔
  * 斷言：全程 0 pageerror、各階段 sub/state 正確
  */
 import { chromium } from 'playwright';
@@ -72,6 +74,27 @@ async function tilePt(tx, ty) {
 }
 async function worldPt(x, y) {
   return page.evaluate(([a, b]) => ({ x: Game.offX + a * Game.ws, y: Game.offY + b * Game.ws }), [x, y]);
+}
+/* 已掛牆飾的 hit 中心（wallAdj 入口 tap 用） */
+async function wallItemCenter(idx) {
+  return page.evaluate((i) => {
+    const w = Game.wallItems[i];
+    const it = WALL_ITEMS[w.id];
+    const hMid = w.h != null ? w.h : (it ? (it.hMid ?? 110) : 110);
+    const span = it ? (it.span || 1) : 1;
+    const [cx, cy] = P(w.wall === 'A' ? w.pos + 0.5 * span : 0, w.wall === 'A' ? 0 : w.pos + 0.5 * span, -hMid);
+    return { x: Game.offX + cx * Game.ws, y: Game.offY + cy * Game.ws };
+  }, idx);
+}
+/* 牆 B（左牆）pos≈2 的牆面點（forbid 6-8 是門，避開） */
+async function wallBPoint() {
+  return page.evaluate(() => {
+    const [ax, ay] = P(0, 0);
+    const [cx] = P(0, N);
+    const mx = ax - (ax - cx) * 0.25;          /* u=2.5 → pos 2 */
+    const my = ay + (ax - mx) * 0.5 - 90;     /* 地板線以上＝牆面 */
+    return { x: Game.offX + mx * Game.ws, y: Game.offY + my * Game.ws };
+  });
 }
 const tapTile = async (tx, ty) => { const p = await tilePt(tx, ty); await page.touchscreen.tap(p.x, p.y); };
 const tapWorld = async (x, y) => { const p = await worldPt(x, y); await page.touchscreen.tap(p.x, p.y); };
@@ -199,8 +222,138 @@ await waitMs(900);
 check('回家 → 房間 free', (await sub()) === 'free/game');
 await shot('home');
 
+/* ══════ 14b：牆飾／移除／商店／打工／存檔 ══════ */
+console.log('1️⃣4️⃣ 建造面板：tap 牆飾 tab → 心形框 → 拖曳上牆 B pos2 → tap 掛上');
+await tapEl('#build-btn');
+await waitMs(400);
+await tapEl('.btab[data-tab="wall"]');
+await waitMs(400);
+check('牆飾 tab 可用（家具已放過床）', (await page.locator('#build-items .build-item').count()) >= 4);
+await tapEl('#build-items .build-item');
+await waitMs(500);
+check('牆飾卡 tap → 牆飾放置', (await sub()) === 'placing/game'
+  && (await page.evaluate(() => Game.placement && Game.placement.mode === 'wall')));
+const wStart = await tilePt(4, 7);
+const wEnd = await wallBPoint();
+await touchDrag(wStart, wEnd);
+await waitMs(300);
+const wGhost = await page.evaluate(() => ({ wall: Game.placement.wall, pos: Game.placement.pos, valid: Game.placement.valid }));
+check('拖曳上牆 → ghost 對準牆 B pos2', wGhost.wall === 'B' && wGhost.pos === 2 && wGhost.valid === true);
+await shot('wall-ghost');
+await page.touchscreen.tap(wEnd.x, wEnd.y);
+await waitMs(700);
+check('tap 掛上牆飾', (await page.evaluate(() => Game.wallItems.length)) === 1);
+check('掛完 → 回 free＋面板重開', (await sub()) === 'free/game');
+await tapEl('#build-btn'); /* 關面板，下面要直接 tap 牆飾 */
+await waitMs(300);
+await shot('wall-placed');
+
+console.log('1️⃣5️⃣ tap 已掛牆飾 → wallAdj → tap ▲ 調高 → tap 確認');
+const wpt1 = await wallItemCenter(0);
+await page.touchscreen.tap(wpt1.x, wpt1.y);
+await waitMs(400);
+check('tap 牆飾 → wallAdj', (await sub()) === 'placing/game'
+  && (await page.evaluate(() => Game.placement && Game.placement.mode === 'wallAdj')));
+const h0 = await page.evaluate(() => Game.placement.h);
+await tapEl('#pa-up');
+await waitMs(300);
+check('tap ▲ → 高度調高', (await page.evaluate(() => Game.placement.h)) > h0);
+await shot('wall-adj');
+await page.touchscreen.tap(wEnd.x, wEnd.y); /* wallAdj 下再 tap 一次＝確認（不需再 hit） */
+await waitMs(500);
+check('tap 確認 → 回 free、高度寫入', (await sub()) === 'free/game'
+  && (await page.evaluate(() => Game.wallItems[0].h)) > h0);
+
+console.log('1️⃣6️⃣ 移除模式：🧹 卡 → tap 牆飾移除 → ✖️ 退出');
+await tapEl('#build-btn');
+await waitMs(400);
+await tapEl('.btab[data-tab="remove"]');
+await waitMs(400);
+await tapEl('#build-items .build-item');
+await waitMs(400);
+check('🧹 卡 → 移除模式', await page.evaluate(() => Game.placement && Game.placement.mode === 'remove'));
+const wpt2 = await wallItemCenter(0);
+await page.touchscreen.tap(wpt2.x, wpt2.y);
+await waitMs(600);
+check('tap 牆飾 → 移除成功', (await page.evaluate(() => Game.wallItems.length)) === 0);
+await tapEl('#pa-cancel');
+await waitMs(400);
+check('✖️ 退出移除 → free', (await sub()) === 'free/game');
+await shot('removed');
+
+console.log('1️⃣7️⃣ tap 出門 → 地圖 → tap 麥當勞 → 商店');
+await tapEl('#out-btn');
+await page.waitForFunction(() => Game.sub === 'map', null, { timeout: 20000 });
+await waitMs(800);
+await tapWorld(490, 432);
+await waitMs(700);
+check('tap 麥當勞 → 商店', !(await page.evaluate(() => document.getElementById('screen-shop').classList.contains('hidd' + 'en'))));
+await shot('shop');
+
+console.log('1️⃣8️⃣ 商店：tap 買制服（50）＋帽子（30）');
+const money0 = await page.evaluate(() => Game.money);
+await tapEl('#buy-uniform');
+await waitMs(400);
+await tapEl('#buy-hat');
+await waitMs(400);
+check('制服+帽子 → 錢 -80', (await page.evaluate(() => Game.money)) === money0 - 80);
+check('已購買標記（制服+帽子）', await page.evaluate(() => !!(Game.gear && Game.gear.uniform && Game.gear.hat)));
+await shot('shop-gear');
+
+console.log('1️⃣9️⃣ tap 關卡卡 L1 → 倒數 → 依訂單 tap 食材卡上菜 → 快轉結算存檔');
+await tapEl('.level-card[data-lv="1"]');
+await waitMs(700);
+check('關卡卡 tap → 打工', (await sub()) === 'work/game');
+await shot('work-count');
+await waitMs(3000);
+const recipe = await page.evaluate(() => Work.customer ? Work.customer.item.recipe.slice() : []);
+check('客人已就緒（有訂單）', recipe.length > 0);
+const cards = await page.evaluate(() => WORK_CARDS.map(c => ({ id: c.id, x: c.x, y: c.y + CARD_H / 2 })));
+for (const id of recipe) {
+  const c = cards.find(k => k.id === id);
+  const p = await worldPt(c.x, c.y);
+  await page.touchscreen.tap(p.x, p.y);
+  await waitMs(300);
+}
+await waitMs(1100);
+const wk = await page.evaluate(() => ({ money: Game.money, count: Work.count }));
+check('依食譜 tap 完 → 上菜成功（count=1）', wk.count === 1);
+check('工資入帳（錢 > 買裝備後）', wk.money > money0 - 80);
+await shot('work-delivered');
+/* 快轉班末：Work.left→0 觸發結算（4.2s）→ endWork 存檔回商店（不等 60 秒班） */
+await page.evaluate(() => { Work.left = 0.4; });
+await waitMs(700);
+check('班末 → 結算畫面', (await page.evaluate(() => Work.phase)) === 'end');
+await shot('work-settle');
+await waitMs(4500);
+check('結算完 → endWork 回商店（已存檔）', !(await page.evaluate(() => document.getElementById('screen-shop').classList.contains('hidd' + 'en')))
+  && (await sub()) === 'map/game');
+await tapEl('#shop-x');
+await waitMs(600);
+check('商店關閉 → 地圖（Work 已清）', (await sub()) === 'map/game' && (await page.evaluate(() => Work == null)));
+await shot('back-map');
+
+console.log('2️⃣0️⃣ tap 回家 → 房間');
+await tapEl('#map-home');
+await waitMs(900);
+check('回家 → free', (await sub()) === 'free/game');
+await shot('home-2');
+
+console.log('2️⃣1️⃣ 重新整理 → 續玩（存檔：床/錢/裝備）');
+const moneyFinal = await page.evaluate(() => Game.money);
+await page.reload();
+await waitMs(900);
+await tapEl('#cover-enter');
+await waitMs(600);
+await tapEl('#btn-start');
+await waitMs(2800);
+check('續玩 → 床還在', await page.evaluate(() => Game.furniture.some(f => f.id === 'bed')));
+check('續玩 → 錢持久（含工資）', (await page.evaluate(() => Game.money)) === moneyFinal);
+check('續玩 → 子狀態合法', ['free', 'map', 'goOut'].includes(await page.evaluate(() => Game.sub)));
+await shot('resume');
+
 check('全程 0 pageerror', errors.length === 0);
-console.log(fails === 0 ? '✅ 14a 手機基礎測試完成' : `❌ 14a 完成（${fails} 項失敗）`);
+console.log(fails === 0 ? '✅ 14b 手機完整流程測試完成' : `❌ 14b 完成（${fails} 項失敗）`);
 await browser.close();
 server.close();
 process.exit(fails === 0 ? 0 : 1);
