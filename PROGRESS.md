@@ -594,34 +594,23 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（寫於 compaction 中斷前）：第十四輪調查已完成、**14a 尚未動工**。git HEAD = a58b56c、工作區乾淨。新 session：讀完本節 → 從 14a 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
+> 📌 **接手筆記**（14a 完成後更新）：第十四輪調查已完成、14a 已完成（c5475be）、**14b 尚未動工**。新 session：讀完本節 → 從 14b 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
 2. **建造新增節慶裝飾**：台灣常見節慶（春節、萬聖節、聖誕節…）＋生日的蛋糕、牆壁掛歲數氣球、各種裝飾
 
-### 14a 📋 手機基礎：canvas 觸控＋viewport＋CSS＋基礎手機測試
-**調查結果（已確認）**：
-- index.html:5 已有 viewport meta（`width=device-width, initial-scale=1.0`），缺 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
-- canvas 輸入全滑鼠：js/game.js ~876 `mousemove`、~883 `wheel`、~890 `click`；**全域沒有 touch handler**（grep touch/Touch 於 js+index.html 零命中）
-- **關鍵架構**：`click` 事件已是所有操作統一入口（對話推進/fp 片頭/wakeup/free 點地板移動/wallAdj 確認/放置確認/移除/打工食材卡）→ 手機只要「tap 產生 click」＋「手指拖曳更新 mouse 座標」即可全數重用，不需重寫任何 click 邏輯
-- canvas 已自適應視窗：game.js 83-85（`ws = min(innerWidth/VW, innerHeight/VH)`、offX/offY 置中）、onResize 45
-- dpad（DOM 按鈕、free/map 才顯示，css 319-336）與 place-actions 🔄▲▼✖️（css 339-355）已存在、tap 即可用（尺寸待 mobile 驗證）
-- html/body 已 `overflow:hidden`＋`user-select:none`＋`-webkit-tap-highlight-color:transparent`
-- 現成 `@media (max-width:820px)`（css:665-670）只修了建立角色畫面
+### 14a ✅ 手機基礎：canvas 觸控＋viewport＋CSS＋基礎手機測試（commit c5475be）
+1. ✅ viewport meta：補 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
+2. ✅ `#game-canvas { touch-action: none; }`＋game.js：`touchstart/touchmove`（passive）取 `touches[0]`、與 mousemove 同公式寫 `Game.mouse`＋`contextmenu` preventDefault（tap→原生 click 全數重用既有邏輯；拖曳→只移 ghost 不誤放）
+3. ✅ 手機 CSS（≤820px）：`100dvh`（iOS 動態視口）、建角預覽框 300→**484px**、建角頁固定高度內部捲動、建造面板全寬、對話框收小、hint-bar 可換行、dpad/place-actions 46×40、place-actions 上移、商店關卡卡折行＋預覽下移＋面板超高可捲動
+4. ✅ 新 `test/peek-mobile.mjs` 13 項：390×844 hasTouch 真實觸控全流程（tap 封面→建角→睜眼→對話推進→wakeup→起來→meet→建造教學 tap 床卡→**CDP 手指拖曳 ghost**→tap 放床→誇獎→出門→地圖 tap 走路→回家）0 pageerror（shots/m01-m11）
 
-**實作步驟**：
-1. viewport meta 補 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
-2. css：`#game-canvas { touch-action: none; }`（line 29 既有規則內加）——禁頁面捲動/雙擊縮放，tap 仍會產生 click
-3. game.js 在 mousemove 旁加：`touchstart`/`touchmove`（passive）→ 取 `e.touches[0]`，用與 mousemove 相同公式寫 `Game.mouse.{wx,wy,tx,ty}`（`(clientX - Game.offX)/Game.ws`＋`screenToTile`）；另加 `contextmenu` preventDefault（防 iOS 長按選單）
-   - 行為：tap（無移動）→ 瀏覽器原生 fire click → 重用既有邏輯；拖曳（有移動）→ 不 fire click → 只移 ghost（正是放置所需）
-4. css mobile 微調（@media max-width:820px 內加）：build-panel 定位/寬、shop 關卡卡折行（.level-list flex-wrap）、對話框、hint-bar、dpad 尺寸、iOS Safari `100dvh`
-5. 新 `test/peek-mobile.mjs`：viewport 390x844＋`hasTouch:true`，用 `page.touchscreen.tap(x,y)` 走：標題→建立角色→教學放床（touch）→free→出門→地圖點地板走→回家；0 pageerror
+**本輪抓到的 bug（手機截圖目視 QA）：**
+- **建角預覽只剩一顆頭**：canvas `flex:1` 被 replaced element 的 `min-height:auto`（本徵 400px）頂住、300px 框把身體裁掉→手機預覽框改 484px（canvas 完整不壓縮；桌面 400px 本就剛好、未動）
+- **放置中 hint-bar（3 行）蓋住 place-actions**（🔄/✖️ 按不到）→ 手機 place-actions 上移到 `bottom:112px`
 
-**測試注意**：
-- `page.touchscreen.tap(x, y)` 吃座標非 selector（第十二輪 b 驗證過）；取座標用 `locator.boundingBox()` 或 canvas 用 toScreen 公式
-- 測試腳本一定要從專案目錄跑（/tmp 解析不到 playwright，第十三輪 c 踩過）
-- 每個測試自己起 http server（照現有 peek-*.mjs 骨架）
+**驗證**：peek-mobile 13 項全過 0 pageerror；flow.mjs 32 步桌面回歸 0 失敗（手機 CSS 全在 media query 內，不影響桌面）
 
 ### 14b 📋 手機全流程
 - 手機 touch 跑通：商店（買制服帽子、點關卡卡）、打工 L1（點食材卡上菜）、建造面板（拖 ghost 放置/移除/牆飾高度 ▲▼）
