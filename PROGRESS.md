@@ -591,3 +591,112 @@
 - 七套件全過：flow（32 步）/ peek-build（98 項）/ peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work（18 項）
 - README：打工章節全面更新（五關/排隊/耐心/連擊/星星）、測試表加 peek-work
 - 字型子集 914→947 字（含新文案：連擊小費/新紀錄/氣走等）
+
+## 第十四輪（Jerry 回饋 2 點）
+
+> 📌 **接手筆記**（寫於 compaction 中斷前）：第十四輪調查已完成、**14a 尚未動工**。git HEAD = a58b56c、工作區乾淨。新 session：讀完本節 → 從 14a 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
+
+### Jerry 的要求
+1. **支援手機操作**（直式手機能完整遊玩）
+2. **建造新增節慶裝飾**：台灣常見節慶（春節、萬聖節、聖誕節…）＋生日的蛋糕、牆壁掛歲數氣球、各種裝飾
+
+### 14a 📋 手機基礎：canvas 觸控＋viewport＋CSS＋基礎手機測試
+**調查結果（已確認）**：
+- index.html:5 已有 viewport meta（`width=device-width, initial-scale=1.0`），缺 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
+- canvas 輸入全滑鼠：js/game.js ~876 `mousemove`、~883 `wheel`、~890 `click`；**全域沒有 touch handler**（grep touch/Touch 於 js+index.html 零命中）
+- **關鍵架構**：`click` 事件已是所有操作統一入口（對話推進/fp 片頭/wakeup/free 點地板移動/wallAdj 確認/放置確認/移除/打工食材卡）→ 手機只要「tap 產生 click」＋「手指拖曳更新 mouse 座標」即可全數重用，不需重寫任何 click 邏輯
+- canvas 已自適應視窗：game.js 83-85（`ws = min(innerWidth/VW, innerHeight/VH)`、offX/offY 置中）、onResize 45
+- dpad（DOM 按鈕、free/map 才顯示，css 319-336）與 place-actions 🔄▲▼✖️（css 339-355）已存在、tap 即可用（尺寸待 mobile 驗證）
+- html/body 已 `overflow:hidden`＋`user-select:none`＋`-webkit-tap-highlight-color:transparent`
+- 現成 `@media (max-width:820px)`（css:665-670）只修了建立角色畫面
+
+**實作步驟**：
+1. viewport meta 補 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
+2. css：`#game-canvas { touch-action: none; }`（line 29 既有規則內加）——禁頁面捲動/雙擊縮放，tap 仍會產生 click
+3. game.js 在 mousemove 旁加：`touchstart`/`touchmove`（passive）→ 取 `e.touches[0]`，用與 mousemove 相同公式寫 `Game.mouse.{wx,wy,tx,ty}`（`(clientX - Game.offX)/Game.ws`＋`screenToTile`）；另加 `contextmenu` preventDefault（防 iOS 長按選單）
+   - 行為：tap（無移動）→ 瀏覽器原生 fire click → 重用既有邏輯；拖曳（有移動）→ 不 fire click → 只移 ghost（正是放置所需）
+4. css mobile 微調（@media max-width:820px 內加）：build-panel 定位/寬、shop 關卡卡折行（.level-list flex-wrap）、對話框、hint-bar、dpad 尺寸、iOS Safari `100dvh`
+5. 新 `test/peek-mobile.mjs`：viewport 390x844＋`hasTouch:true`，用 `page.touchscreen.tap(x,y)` 走：標題→建立角色→教學放床（touch）→free→出門→地圖點地板走→回家；0 pageerror
+
+**測試注意**：
+- `page.touchscreen.tap(x, y)` 吃座標非 selector（第十二輪 b 驗證過）；取座標用 `locator.boundingBox()` 或 canvas 用 toScreen 公式
+- 測試腳本一定要從專案目錄跑（/tmp 解析不到 playwright，第十三輪 c 踩過）
+- 每個測試自己起 http server（照現有 peek-*.mjs 骨架）
+
+### 14b 📋 手機全流程
+- 手機 touch 跑通：商店（買制服帽子、點關卡卡）、打工 L1（點食材卡上菜）、建造面板（拖 ghost 放置/移除/牆飾高度 ▲▼）
+- peek-mobile 擴充成完整流程（對標 flow.mjs 32 步的 touch 版）＋手機截圖目視 QA
+
+### 14c 📋 節慶地面裝飾＋🎉 節慶分頁
+**資料**（BUILD_ITEMS，js/world.js:961，tab:'fest'）：
+| id | 名稱 | 節慶 | w×d | max | 備註 |
+|---|---|---|---|---|---|
+| cake | 生日蛋糕 | 生日 | 1×1 | 1 | onFurn 可放家具上 |
+| giftBox | 禮盒 | 聖誕/生日 | 1×1 | 3 | onFurn |
+| xmasTree | 聖誕樹 | 聖誕 | 1×1 | 1 | |
+| pumpkin | 南瓜 | 萬聖 | 1×1 | 2 | |
+| lantern | 紅燈籠 | 春節 | 1×1 | 2 | |
+| firecracker | 鞭炮 | 春節 | 1×1 | 2 | |
+| balloonBunch | 一束氣球 | 生日 | 1×1 | 2 | |
+
+**onFurn 機制**（蛋糕/禮盒可放家具上，沿用第十一輪 b 的 surfaceHAt/drawLifted）：
+- 給品項加 `onFurn: true` 旗標
+- 要改的 lift 判定（目前只看 `it.tab === 'decor'`）：game.js ~722（繪製 lift）、~762（ghost lift）、~1365-1366（移除優先序 score）＋ world.js 11b 的 `cls()` 重疊分類
+- floorValid 不用改（同類不可重疊邏輯已通用）
+
+**🎉 分頁**：
+- index.html:130-135 build-tabs 加 `<button class="btab" data-tab="fest">🎉 節慶</button>`（放地飾之後）
+- js/game.js:1068 BUILD_TABS 加 `fest: '🎉 節慶'`
+- selectBuildTab（game.js ~1103）加 `tab === 'fest'` 分支：`BUILD_ITEMS` 中 `tab==='fest'` → floorCard ＋ `WALL_ITEMS` 中 `tab==='fest'` → wallCard（14d 才有）
+- 現行 'wall' 分支列出**全部** WALL_ITEMS（~1159-1166）→ 要加 filter `it.tab === 'wall'`，否則 14d 的牆上節慶會重複出現
+- 教學鎖：inTutorial（stage==='created'）時 fest 分支顯示「先完成放床教學」（照 remove/renovate 分支的 emptyMsg 模式）
+
+**繪製**：world.js 新增 draw 函式（用 handEllipse/handShape 手繪風）；floorCard 預覽用 `s = Math.min(0.72, 78 / (it.h + (it.w + it.d) * 8))` 公式自動縮放（h 記得給合理值）
+
+### 14d 📋 節慶牆飾（含歲數氣球）
+**資料**（WALL_ITEMS，js/world.js:1227，tab:'fest'）：
+| id | 名稱 | 節慶 | span | max | 備註 |
+|---|---|---|---|---|---|
+| couplet | 春聯 | 春節 | 1 | 2 | 直長條 |
+| fuChar | 福字 | 春節 | 1 | 1 | 倒貼紅底 |
+| wreath | 冬青花環 | 聖誕 | 1 | 2 | |
+| lights | 彩燈串 | 聖誕 | 2 | 1 | 照 garland 跨槽 |
+| cobweb | 蜘蛛網 | 萬聖 | 1 | 2 | 角落 |
+| numBalloon | 歲數氣球 | 生日 | 1 | 1 | **數字 1-9 可選** |
+
+**歲數氣球設計**：
+- wallItems 存 `num`（1-9）；舊存檔/無 num → 預設 8
+- 放置中按 R／🔄 循環換數字（1→2→…→9→1）——要讓 place-actions 的 #pa-rot 在**牆飾放置**時也出現（目前 updatePlaceActions 只給非正方形地面品項顯示）
+- 已掛的 numBalloon 進 wallAdj 模式時 🔄 也能換數字（點一下確認寫入存檔）
+- draw 畫氣球＋中間數字（RHR 900）
+
+**測試**：peek-build.mjs 加節慶段（地面放置/onFurn 上家具/牆飾掛/歲數氣球換數/reload 持久/移除）
+
+### 14e 📋 全回歸＋文件＋報告
+- 八套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-mobile**
+- README：新增「手機操作」＋「節慶裝飾」章節、測試表加 peek-mobile；PROGRESS 收尾
+- 向 Jerry 報告（繁體中文＋🤖）
+
+### 關鍵位置速查
+| 東西 | 位置 |
+|---|---|
+| viewport meta | index.html:5 |
+| canvas mouse 事件（mousemove/wheel/click） | js/game.js ~876/883/890 |
+| ws/offX/offY 縮放 | js/game.js 83-85（onResize 45） |
+| click 主 dispatch（fp/wakeup/free/placing…） | js/game.js ~890 起 |
+| BUILD_ITEMS（地面/家具/擺飾/地飾） | js/world.js:961 |
+| WALL_ITEMS＋WALL_FORBID＋wallSlotValid | js/world.js:1227 |
+| BUILD_TABS | js/game.js:1068 |
+| setupBuildUI/openBuildPanel/selectBuildTab | js/game.js 1080-1103 |
+| floorCard（卡片預覽 canvas 128x84） | js/game.js ~1178 |
+| wallCard | js/game.js（floorCard 附近） |
+| build-tabs HTML | index.html:128-135 |
+| 小螢幕 media query | css/style.css:665-670 |
+| dpad / place-actions CSS | css/style.css:319-355 |
+| #game-canvas CSS（加 touch-action 處） | css/style.css:29 |
+| surfaceHAt/drawLifted/itemDepth（onFurn 重用） | js/world.js（第十一輪 b） |
+| 字型子集重跑（新增中文後必做） | `/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf`（現 947 字） |
+| 存檔 key | `cute-kingdom-save-v1` |
+
+### 檔案規模（供估算）
+index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/mini.js 584 / js/mapscene.js 206 行
