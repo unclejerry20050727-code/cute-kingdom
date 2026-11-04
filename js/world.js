@@ -957,6 +957,280 @@ function drawFlower(ctx, tx, ty, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* ── 第十四輪c：節慶地面裝飾（tab:'fest' 🎉 頁；onFurn＝可放家具上，重用 11b surfaceHAt/drawLifted） ── */
+
+/* 生日蛋糕（onFurn） */
+function drawCake(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const [cx, cy] = P(tx + 0.5, ty + 0.5, 0);
+  /* 盤子 */
+  ctx.beginPath(); ctx.ellipse(cx, cy - 1.5, 15.5, 6.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = bad ? '#E7B9C3' : '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  /* 下層 / 上層 */
+  isoBox(ctx, tx + 0.15, ty + 0.15, 0.7, 0.7, 1.5, 14, {
+    top: bad ? '#E3AEBB' : '#FFD3E2', right: bad ? '#DE8794' : '#F5A9C4', left: bad ? '#D47A88' : '#E88FB0', lw: 2,
+  });
+  isoBox(ctx, tx + 0.26, ty + 0.26, 0.48, 0.48, 14, 24, {
+    top: bad ? '#EFD6DD' : '#FFF0F5', right: bad ? '#DE8794' : '#F7BFD2', left: bad ? '#D47A88' : '#EEA3BE', lw: 2,
+  });
+  /* 櫻桃裝飾（下層前緣） */
+  if (!o.ghost) {
+    for (const [dx, dy] of [[0.32, 0.8], [0.5, 0.84], [0.68, 0.8]]) {
+      const [px, py] = P(tx + dx, ty + dy, -14.5);
+      ctx.beginPath(); ctx.arc(px, py, 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = bad ? '#D47A88' : '#E85A6A'; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  /* 蠟燭＋火苗 */
+  for (const [dx, dy, c] of [
+    [0.38, 0.38, bad ? '#E3AEBB' : '#F9E04E'],
+    [0.56, 0.5, bad ? '#DE8794' : '#7EC8E3'],
+    [0.44, 0.62, bad ? '#D47A88' : '#FF9FBE'],
+  ]) {
+    const [px, py] = P(tx + dx, ty + dy, -24);
+    roundRectPath(ctx, px - 1.6, py - 8, 3.2, 8, 1.4);
+    ctx.fillStyle = c; ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
+    if (!o.ghost) {
+      const [fx, fy] = P(tx + dx, ty + dy, -34);
+      ctx.beginPath(); ctx.ellipse(fx, fy, 2, 3, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFC94E'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(fx, fy + 0.8, 0.9, 1.4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFF3C4'; ctx.fill();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 禮盒（onFurn） */
+function drawGiftBox(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 盒身＋盒蓋 */
+  isoBox(ctx, tx + 0.2, ty + 0.2, 0.6, 0.6, 0, 15, {
+    top: bad ? '#E3AEBB' : '#F08A9A', right: bad ? '#DE8794' : '#E86A80', left: bad ? '#D47A88' : '#D95570', lw: 2,
+  });
+  isoBox(ctx, tx + 0.13, ty + 0.13, 0.74, 0.74, 15, 20, {
+    top: bad ? '#EFD6DD' : '#F5A3B1', right: bad ? '#DE8794' : '#E87C92', left: bad ? '#D47A88' : '#DA627C', lw: 2,
+  });
+  /* 絲帶（頂面十字＋兩正面垂落） */
+  const rb = bad ? '#E7B9C3' : '#FFD166';
+  ctx.strokeStyle = rb; ctx.lineWidth = 4;
+  for (const [a, b] of [
+    [P(tx + 0.5, ty + 0.13, -20.5), P(tx + 0.5, ty + 0.87, -20.5)],
+    [P(tx + 0.13, ty + 0.5, -20.5), P(tx + 0.87, ty + 0.5, -20.5)],
+    [P(tx + 0.5, ty + 0.87, -20), P(tx + 0.5, ty + 0.87, -1)],
+    [P(tx + 0.87, ty + 0.5, -20), P(tx + 0.87, ty + 0.5, -1)],
+  ]) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  /* 蝴蝶結 */
+  const [bx, by] = P(tx + 0.5, ty + 0.5, -22);
+  ctx.fillStyle = rb; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(bx + s * 5.5, by - 2, 4.5, 3.4, s * 0.4, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(bx, by, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 聖誕樹 */
+function drawXmasTree(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const [cx] = P(tx + 0.5, ty + 0.5, 0);
+  const yAt = z => P(tx + 0.5, ty + 0.5, -z)[1];
+  /* 樹幹 */
+  isoBox(ctx, tx + 0.4, ty + 0.4, 0.2, 0.2, 0, 7, {
+    top: bad ? '#DE8794' : '#A9744F', right: bad ? '#D47A88' : '#96653F', left: bad ? '#C96A7A' : '#83573A', lw: 1.8,
+  });
+  /* 三層葉片 */
+  for (const t of [
+    { w: 19, z0: 5, z1: 30, c: bad ? '#DE8794' : '#5FA463', seed: 41 },
+    { w: 14, z0: 24, z1: 46, c: bad ? '#E3AEBB' : '#6FB573', seed: 42 },
+    { w: 9, z0: 40, z1: 59, c: bad ? '#EFD6DD' : '#7FC483', seed: 43 },
+  ]) {
+    handShape(ctx, [[cx - t.w, yAt(t.z0)], [cx + t.w, yAt(t.z0)], [cx, yAt(t.z1)]], {
+      fill: t.c, stroke: INK, lw: 2, seed: t.seed, amp: 1.8,
+    });
+  }
+  /* 頂星（重用既有 starPath） */
+  const [sx, sy] = P(tx + 0.5, ty + 0.5, -62);
+  starPath(ctx, sx, sy, 7.5);
+  ctx.fillStyle = bad ? '#E7B9C3' : '#FFD166'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
+  /* 裝飾球 */
+  if (!o.ghost) {
+    for (const [dx, z, c] of [[-8, 19, '#E85A6A'], [7, 17, '#FFD166'], [-4, 37, '#7EC8E3'], [3, 41, '#FF9FBE']]) {
+      ctx.beginPath(); ctx.arc(cx + dx, yAt(z), 2.3, 0, Math.PI * 2);
+      ctx.fillStyle = c; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 南瓜 */
+function drawPumpkin(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const [cx, c12] = P(tx + 0.5, ty + 0.5, -12);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = INK;
+  /* 側瓣→中央瓣 */
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(cx + s * 8.5, c12, 8, 10.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = bad ? '#D47A88' : '#E0742E'; ctx.fill(); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.ellipse(cx, c12, 11.5, 11.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = bad ? '#DE8794' : '#F5883C'; ctx.fill(); ctx.stroke();
+  /* 瓜蒂 */
+  const [sx, sy] = P(tx + 0.5, ty + 0.5, -21);
+  roundRectPath(ctx, sx - 2, sy - 6, 4.4, 7, 1.6);
+  ctx.fillStyle = bad ? '#DE8794' : '#7FB89A'; ctx.fill(); ctx.stroke();
+  /* 表情 */
+  if (!o.ghost) {
+    ctx.fillStyle = '#5C3A1E';
+    ctx.beginPath(); ctx.arc(cx - 4, c12 - 1.5, 1.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 4, c12 - 1.5, 1.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#5C3A1E'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(cx, c12 + 2.5, 3.2, 0.25, Math.PI - 0.25); ctx.stroke();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 紅燈籠 */
+function drawLantern(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 木座 */
+  isoBox(ctx, tx + 0.32, ty + 0.32, 0.36, 0.36, 0, 4, {
+    top: bad ? '#DE8794' : '#C7A26F', right: bad ? '#D47A88' : '#B08D5F', left: bad ? '#C96A7A' : '#9A7A4E', lw: 1.8,
+  });
+  /* 燈身＋縱肋 */
+  const [lx, ly] = P(tx + 0.5, ty + 0.5, -18);
+  handEllipse(ctx, lx, ly, 12, 13.5, { fill: bad ? '#DE8794' : '#E84A3C', stroke: INK, lw: 2.2, seed: 7 });
+  ctx.strokeStyle = bad ? '#C96A7A' : '#C93A2E'; ctx.lineWidth = 1.1;
+  for (const rx of [4.5, 8.5]) {
+    ctx.beginPath(); ctx.ellipse(lx, ly, rx, 13.2, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  /* 上下金箍＋絨球流蘇 */
+  const [tcx, tcy] = P(tx + 0.5, ty + 0.5, -31);
+  ctx.fillStyle = bad ? '#E7B9C3' : '#FFD166'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(tcx, tcy, 5.5, 2.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  const [bcx, bcy] = P(tx + 0.5, ty + 0.5, -5.5);
+  ctx.beginPath(); ctx.ellipse(bcx, bcy, 4.5, 2.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = bad ? '#C96A7A' : '#E84A3C'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(bcx, bcy + 1); ctx.lineTo(bcx, bcy + 4.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(bcx, bcy + 6, 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = bad ? '#E7B9C3' : '#FFD166'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 鞭炮 */
+function drawFirecracker(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const [cx, cy] = P(tx + 0.5, ty + 0.5, 0);
+  const red = bad ? '#DE8794' : '#E84A3C', gold = bad ? '#E7B9C3' : '#FFD166';
+  const knot = P(tx + 0.5, ty + 0.5, -17);
+  /* 引線（兩條） */
+  ctx.strokeStyle = bad ? '#C96A7A' : '#B08D5F'; ctx.lineWidth = 1.4;
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(knot[0], knot[1] + 2);
+    ctx.quadraticCurveTo(cx + s * 6, cy - 9, cx + s * 13, cy - 4);
+    ctx.stroke();
+  }
+  /* 鞭炮（每側 4 枚） */
+  const drawOne = (x, y, ang) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    roundRectPath(ctx, -3.4, -5, 6.8, 10, 2);
+    ctx.fillStyle = red; ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = gold; ctx.fillRect(-3.4, -1.2, 6.8, 2.4);
+    ctx.restore();
+  };
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 4; i++) {
+      const t = (i + 1) / 4.6;
+      const x = cx + s * (4 + t * 11);
+      const y = P(tx + 0.5, ty + 0.5, -(17 - t * 12))[1] - 1;
+      drawOne(x, y, s * 0.38);
+    }
+  }
+  /* 節結 */
+  ctx.beginPath(); ctx.arc(knot[0], knot[1], 2.8, 0, Math.PI * 2);
+  ctx.fillStyle = gold; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
+  /* 火花 */
+  if (!o.ghost) {
+    ctx.fillStyle = gold;
+    for (const [dx, dy] of [[-15, -3], [15, -4], [-10, -1], [10, -2]]) {
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 1.3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* 一束氣球 */
+function drawBalloonBunch(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const knotP = P(tx + 0.5, ty + 0.5, -4);
+  const balloons = [
+    { dx: -13, z: 52, rx: 10, ry: 12, c: bad ? '#DE8794' : '#FF9FBE', d: bad ? '#D47A88' : '#F27DA4' },
+    { dx: 1, z: 64, rx: 11, ry: 13, c: bad ? '#E3AEBB' : '#7EC8E3', d: bad ? '#D47A88' : '#5FB0CC' },
+    { dx: 13, z: 49, rx: 9, ry: 11, c: bad ? '#EFD6DD' : '#FFD166', d: bad ? '#DE8794' : '#E8B94E' },
+  ];
+  /* 繩子 */
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
+  for (const b of balloons) {
+    const [bx, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    ctx.beginPath(); ctx.moveTo(knotP[0], knotP[1] - 2);
+    ctx.quadraticCurveTo((knotP[0] + bx) / 2 + b.dx * 0.15, (knotP[1] + by) / 2, bx, by + b.ry);
+    ctx.stroke();
+  }
+  /* 氣球 */
+  for (const b of balloons) {
+    const [bx, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    ctx.beginPath(); ctx.ellipse(bx, by, b.rx, b.ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = b.c; ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx - 2.6, by + b.ry); ctx.lineTo(bx + 2.6, by + b.ry); ctx.lineTo(bx, by + b.ry + 4);
+    ctx.closePath();
+    ctx.fillStyle = b.d; ctx.fill(); ctx.stroke();
+    if (!o.ghost) {
+      ctx.beginPath(); ctx.ellipse(bx - b.rx * 0.38, by - b.ry * 0.4, b.rx * 0.3, b.ry * 0.38, -0.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
+    }
+  }
+  /* 蝴蝶結（結點） */
+  ctx.fillStyle = bad ? '#DE8794' : '#E85A6A'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(knotP[0] + s * 3.6, knotP[1] - 4, 3.2, 2.4, s * 0.4, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(knotP[0], knotP[1] - 3, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
 /* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路、layer:'floor' 貼地層） ── */
 const BUILD_ITEMS = {
   bed:     { name: '床',     tab: 'furniture', w: 2, d: 1, h: 30, max: 1, block: true,  draw: drawBed },
