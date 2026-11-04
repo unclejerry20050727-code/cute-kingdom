@@ -719,7 +719,7 @@ function renderGame() {
     const it = BUILD_ITEMS[f.id];
     if (!it || it.layer === 'floor') return;
     const isRm = rmTarget && rmTarget.type === 'floor' && rmTarget.idx === i;
-    const lift = it.tab === 'decor' ? surfaceHAt(f.tx, f.ty) : 0; /* 第十一輪b：擺飾抬到家具頂面 */
+    const lift = (it.tab === 'decor' || it.onFurn) ? surfaceHAt(f.tx, f.ty) : 0; /* 第十一/十四輪c：擺飾＋onFurn（蛋糕/禮盒）抬到家具頂面 */
     items.push({
       depth: itemDepth(f), /* 第十一輪b：站在家具上的擺飾畫在家具之後 */
       draw: () => {
@@ -759,7 +759,7 @@ function renderGame() {
   if (Game.placement && Game.placement.mode === 'floor') {
     const pl = Game.placement, it = BUILD_ITEMS[pl.item];
     if (it && it.layer !== 'floor') {
-      const gLift = it.tab === 'decor' ? surfaceHAt(pl.tx, pl.ty) : 0; /* 第十一輪b：ghost 跟隨家具頂面高度 */
+      const gLift = (it.tab === 'decor' || it.onFurn) ? surfaceHAt(pl.tx, pl.ty) : 0; /* 第十一/十四輪c：ghost 跟隨家具頂面高度（含 onFurn） */
       items.push({
         depth: itemDepthAt(pl.item, pl.tx, pl.ty, pl.rot), /* 第十一輪b：ghost 在家具上時也要畫在家具之後 */
         draw: () => {
@@ -1084,6 +1084,7 @@ const BUILD_TABS = {
   decor: '⭐ 擺飾',
   wall: '🖼️ 牆飾',
   floor: '🌸 地飾',
+  fest: '🎉 節慶',
   renovate: '🎨 裝潢',
   remove: '🧹 移除',
 };
@@ -1172,12 +1173,25 @@ function selectBuildTab(tab, force) {
 
   if (tab === 'wall') {
     if (inTutorial) { emptyMsg('🌟 先完成放床教學，就能掛牆飾囉～ 🌟'); return; } /* 第十輪：補上教學鎖（舊版牆飾可跳過教學直接掛） */
-    const list = Object.entries(WALL_ITEMS);
+    const list = Object.entries(WALL_ITEMS).filter(([id, it]) => it.tab === 'wall'); /* 第十四輪c：排除 14d 節慶牆飾（會進 🎉 頁） */
     if (!list.length) {
       emptyMsg(`🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
       return;
     }
     for (const [id, it] of list) box.appendChild(wallCard(id, it));
+    return;
+  }
+
+  if (tab === 'fest') { /* 第十四輪c：🎉 節慶頁（fest 地面裝飾＋14d fest 牆飾） */
+    if (inTutorial) { emptyMsg('🌟 先完成放床教學，就能放節慶裝飾囉～ 🌟'); return; }
+    const fl = Object.entries(BUILD_ITEMS).filter(([id, it]) => it.tab === 'fest');
+    const wl = Object.entries(WALL_ITEMS).filter(([id, it]) => it.tab === 'fest');
+    if (!fl.length && !wl.length) {
+      emptyMsg(`🌟 ${BUILD_TABS[tab]} 敬請期待 🌟<br><small style="opacity:.7">之後會開更多好玩的東西！</small>`);
+      return;
+    }
+    for (const [id, it] of fl) box.appendChild(floorCard(id, it));
+    for (const [id, it] of wl) box.appendChild(wallCard(id, it));
     return;
   }
 
@@ -1376,8 +1390,8 @@ function removeTargetFromMouse() {
     const it = BUILD_ITEMS[f.id];
     if (!it) continue;
     if (!itemTiles(f.id, f.tx, f.ty, f.rot).some(([x, y]) => x === mtx && y === mty)) continue;
-    const lift = it.tab === 'decor' ? surfaceHAt(f.tx, f.ty) : 0;
-    const score = lift * 100 + (it.tab === 'decor' ? 2 : 0) + (it.layer === 'floor' ? 0 : 1);
+    const lift = (it.tab === 'decor' || it.onFurn) ? surfaceHAt(f.tx, f.ty) : 0; /* 第十四輪c：含 onFurn */
+    const score = lift * 100 + ((it.tab === 'decor' || it.onFurn) ? 2 : 0) + (it.layer === 'floor' ? 0 : 1);
     if (!best || score > best.score) best = { idx: i, score };
   }
   return best ? { type: 'floor', idx: best.idx } : null;
