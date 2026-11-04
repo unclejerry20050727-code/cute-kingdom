@@ -1251,6 +1251,14 @@ const BUILD_ITEMS = {
   doormat: { name: '門墊',   tab: 'floor', w: 1, d: 1, h: 3,  max: 1, block: false, layer: 'floor', draw: drawDoormat },
   decal:   { name: '地板貼', tab: 'floor', w: 1, d: 1, h: 2,  max: 4, block: false, layer: 'floor', draw: drawDecal },
   flower:  { name: '小花叢', tab: 'floor', w: 1, d: 1, h: 16, max: 3, block: false, draw: drawFlower },
+  /* 第十四輪c：節慶裝飾（tab:'fest' 🎉 頁；onFurn＝可放家具上，高度跟 surfaceHAt） */
+  cake:         { name: '生日蛋糕', tab: 'fest', w: 1, d: 1, h: 38, max: 1, block: false, onFurn: true, draw: drawCake },
+  giftBox:      { name: '禮物盒', tab: 'fest', w: 1, d: 1, h: 28, max: 3, block: false, onFurn: true, draw: drawGiftBox },
+  xmasTree:     { name: '聖誕樹', tab: 'fest', w: 1, d: 1, h: 70, max: 1, block: false, draw: drawXmasTree },
+  pumpkin:      { name: '南瓜', tab: 'fest', w: 1, d: 1, h: 27, max: 2, block: false, draw: drawPumpkin },
+  lantern:      { name: '紅燈籠', tab: 'fest', w: 1, d: 1, h: 34, max: 2, block: false, draw: drawLantern },
+  firecracker:  { name: '爆竹', tab: 'fest', w: 1, d: 1, h: 20, max: 2, block: false, draw: drawFirecracker },
+  balloonBunch: { name: '氣球束', tab: 'fest', w: 1, d: 1, h: 78, max: 2, block: false, draw: drawBalloonBunch },
 };
 
 /* 品項佔用格 */
@@ -1273,12 +1281,12 @@ function floorValid(id, tx, ty, rot = 0) {
   if (tx < 0 || ty < 0 || tx + w > N || ty + d > N) return false;
   for (const [x, y] of itemTiles(id, tx, ty, rot)) {
     if (x < 0 || y < 0 || x >= N || y >= N) return false;
-    if (Game.blocked.has(x + ',' + y) && it.tab !== 'decor') return false; /* 第十一輪b：擺飾可放家具上（高度由 surfaceHAt 處理） */
+    if (Game.blocked.has(x + ',' + y) && it.tab !== 'decor' && !it.onFurn) return false; /* 第十一輪b：擺飾可放家具上；第十四輪c：onFurn（蛋糕/禮盒）同理（高度由 surfaceHAt 處理） */
     if (Math.floor(Game.player.x) === x && Math.floor(Game.player.y) === y) return false;
     if (Game.npc.visible && Math.floor(Game.npc.x) === x && Math.floor(Game.npc.y) === y) return false;
   }
   /* 同類品項不可重疊（第十一輪b：三類 floor/decor/furniture；擺飾可與家具同格＝站上去） */
-  const cls = x => (x.layer === 'floor' ? 2 : (x.tab === 'decor' ? 1 : 0));
+  const cls = x => (x.layer === 'floor' ? 2 : ((x.tab === 'decor' || x.onFurn) ? 1 : 0)); /* 第十四輪c：onFurn 與擺飾同類（可上家具、彼此不可重疊） */
   const myL = cls(it);
   const mine = new Set(itemTiles(id, tx, ty, rot).map(([x, y]) => x + ',' + y));
   for (const f of Game.furniture) {
@@ -1314,7 +1322,7 @@ function itemDepthAt(id, tx, ty, rot = 0) {
   const it = BUILD_ITEMS[id];
   if (!it) return tx + ty;
   let depth = tx + ty + (rot ? it.d : it.w) + (rot ? it.w : it.d) - 1;
-  if (it.tab === 'decor') {
+  if (it.tab === 'decor' || it.onFurn) { /* 第十四輪c：onFurn 同樣畫在承托家具之後 */
     for (const g of Game.furniture) {
       const git = BUILD_ITEMS[g.id];
       if (!git || git.layer === 'floor' || git.tab === 'decor') continue;
