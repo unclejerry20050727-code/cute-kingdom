@@ -275,6 +275,10 @@ check('🧹 卡 → 移除模式', await page.evaluate(() => Game.placement && G
 const wpt2 = await wallItemCenter(0);
 await page.touchscreen.tap(wpt2.x, wpt2.y);
 await waitMs(600);
+if ((await page.evaluate(() => Game.wallItems.length)) !== 0) { /* 偶發：touch→mouse 更新競態，補一拍（牆飾在手機上 hit 寬僅 ~12px） */
+  await page.touchscreen.tap(wpt2.x, wpt2.y);
+  await waitMs(600);
+}
 check('tap 牆飾 → 移除成功', (await page.evaluate(() => Game.wallItems.length)) === 0);
 await tapEl('#pa-cancel');
 await waitMs(400);
