@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（14c 完成後更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成、**14d 尚未動工**。新 session：讀完本節 → 從 14d 開始（節慶牆飾含歲數氣球）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
+> 📌 **接手筆記**（11-05 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成、**14d 已預查（見下）、尚未動工**。新 session：讀完本節 → 從 14d d1 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -675,6 +675,30 @@
 - draw 畫氣球＋中間數字（RHR 900）
 
 **測試**：peek-build.mjs 加節慶段（地面放置/onFurn 上家具/牆飾掛/歲數氣球換數/reload 持久/移除）
+
+**📋 預查（11-05，給新 session 直接接手；14c 插碼後行號已位移）**：
+- **座標慣例**：wallSlotFromMouse 的 `pos`＝tile 索引（0..N-span）；`wallSpace`（world.js:1557）origin＝slot 左緣 `P(pos)`，local x 沿牆、y 向下；span-1 品項在 local `(0,0)` 附近畫（跟 heartFrame 等一致）、span-2（garland）local 0 為中心 ±36；**繪製與 hit 都用 `pos + 0.5*span` 當 draw 中心**（game.js 682/685/688、wallItemHit world.js:1566）→ 新 draw 照既有 local 慣例畫即可，勿「修正」中心。
+- **WALL_ITEMS**（world.js:1511）結構 `{ name, tab, max, span, hMid, hitW, draw }`；draw 簽名 `draw(ctx, wall, pos, o)`；`o.ghost`→alpha×0.62、`o.tint==='bad'`→bad 色（#DE8794 主色、#C96A7A 線）。
+- **品項參數（擬定）**：couplet hMid175 hitW14／fuChar hMid160 hitW15／wreath hMid185 hitW17／lights hMid235 hitW36 span2／cobweb hMid245 hitW16／numBalloon hMid185 hitW16 ＋ `numSelectable: true`。
+- **num 邏輯整合點（11 處，全部已定位）**：
+  1. world.js draw×6：插在 drawWallGarland 之後、`WALL_H_MIN` 註解前（~1505）；numBalloon 數字用 `ctx.font='700 19px "RHR", sans-serif'`、`o.num ?? 8`、textBaseline middle
+  2. world.js WALL_ITEMS（1511）：＋6 項（tab:'fest'）
+  3. game.js fullSave（1333）：wallItems.map 加 `num: w.num`（undefined 會被 JSON 剔除、不影響其他品項）
+  4. game.js load（138）：map 加 `num: w.num != null ? w.num : 8`（舊存檔預設 8）
+  5. game.js startWallPlacement（1291-1299）：placement 加 `num: 8`；numBalloon 時 hint 文字補「R/🔄 換數字」
+  6. game.js wall 確認（962）：push 加 `num: pl.num`
+  7. game.js R 鍵（854）：＋wall/wallAdj 分支，`WALL_ITEMS[pl.item].numSelectable` 時 `pl.num = pl.num % 9 + 1`
+  8. game.js pa-rot（1024-1030）：＋wall/wallAdj numBalloon 分支（同 7，含 updatePlaceActions()）
+  9. game.js updatePlaceActions（412-426）：wall 分支 showRot＝品項 numSelectable（目前只 floor 非正方形才顯示 🔄）
+  10. game.js wallAdj init（940）：加 `num: w.num != null ? w.num : 8`；hint 補「R/🔄 換數字」；wallAdj 確認（973）：numSelectable 時 `Game.wallItems[pl.idx].num = pl.num`
+  11. game.js 渲染（675-689）：實物 `o={h:w.h}` 加 `num: w.num`；wall ghost 加 `num: pl.num`；wallAdj ghost 加 `num: adjPl.num`
+- **字型（重要）**：子集缺 16 字（含 14c 漏跑的）：`蛋 糕 禮 聖 誕 南 瓜 爆 竹 春 聯 冬 蜘 蛛 網 歲`（福 已有✓）。加字後**必重跑** `/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf`，`fonts/rhr.woff2` 併入同一 commit（腳本自動掃 index.html/js/css 收字；canvas 數字 1-9 已在子集✓）。
+- **繪製小提醒**：牆面是奶油色（wallC tint）→ 蜘蛛網線用灰調 `rgba(140,150,180,.9)`（白色對比不足）；fuChar 倒貼＝紅菱（rotate 45° 正方形）＋福字 rotate(PI)。
+- **拆分**（照 14c c1-c4 模式）：
+  - d1：world.js draw×6＋WALL_ITEMS×6＋字型重跑（含 rhr.woff2 的 commit）
+  - d2：game.js num 邏輯 11 處
+  - d3：peek-build.mjs 加節慶牆飾段（掛 6 牆飾／numBalloon 放置中 R 換數／wallAdj 換數＋確認寫入／reload 持久／移除／0 pageerror）＋截圖
+  - d4：八套件回歸＋14d ✅＋交接筆記 → 14e
 
 ### 14e 📋 全回歸＋文件＋報告
 - 八套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-mobile**

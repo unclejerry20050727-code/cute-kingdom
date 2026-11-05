@@ -106,3 +106,35 @@ context 變大（128k 視窗、session JSONL 2MB+、compaction 已觸發 3 次�
 
 - 新 session 開頭觀察：大 context 請求（>80k tokens）是否還會在 300s 整斷線 → 若變成 900s 或成功，P0 生效。
 - 14c 的 c1～c5 全程用 P2 紀律執行，目標 **0 terminated**。
+
+## 6. Update 11-05：本 session 仍持續失敗 → 交接新 session
+
+### 6.1 新數據（本 session 01a1a17d，進行中）
+
+- 累計 **25 × `terminated`**（11-04 分析時的 22 次之後又多 3 次）＋ 3 × `Request timed out.`（~10.5s，瞬態，非主因）。
+- duration 分佈：
+  - 21 筆 **314.7s～345.7s**（300s idle timeout 正上方，最典型）
+  - 4 筆 393s～486s
+  - 5 筆 600s～787s（≈ 2～2.6 × 300s，SDK 重試鏈累加）
+- **最近兩筆：11-05 13:41、13:47 UTC（345.7s / 318.5s）——正是本 session 做 14d 調查時**。
+
+### 6.2 結論（根因不變；P0 未生效於本 session）
+
+1. 失敗仍全部落在 300s 界線上方 → 根因（§3）維持不變。
+2. P0（`httpIdleTimeoutMs=900000`）11-04 已寫入 `~/.pi/agent/settings.json`，但**設定檔只在 pi 啟動時讀取** → 本 session 仍是 300s。
+3. 本 session context 已大（compaction 摘要＋14c/14d 多輪工具輸出），prefill＋thinking 常 >300s → 本 session 每回合都有 terminated 風險，且會隨 context 成長惡化。
+
+### 6.3 行動 plan（P1'：交接新 session）
+
+| # | 動作 | 狀態 |
+|---|---|---|
+| 1 | 14d 已查明的整合點、字型缺字清單、d1-d4 拆分寫入 PROGRESS.md 14d 節 | ✅ |
+| 2 | 確認 git 乾淨（無未提交變更） | ✅ |
+| 3 | 重新啟動 pi／新開 session：P0 的 900s timeout 生效＋context 歸零 | ⏳ 等 Jerry 執行 |
+| 4 | 新 session 讀 PROGRESS.md 14d 交接筆記，從 d1 開始 | ⏳ |
+
+### 6.4 長期紀律（補進 P2）
+
+- **主動交接門檻**：context 變大（compaction 觸發後再跑 2～3 個大 turn）就寫交接筆記＋開新 session，**不要等 terminated 發生才換**。
+- session JSONL >~10MB 是失敗重災區（10-30 的 24MB）→ 定期開新 session 保持檔小。
+- 新 session 開頭驗證 P0：大請求斷線點若從 300s 變 900s（或成功）即生效。
