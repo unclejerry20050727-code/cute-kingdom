@@ -1200,14 +1200,16 @@ function drawBalloonBunch(ctx, tx, ty, o = {}) {
   /* 繩子 */
   ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
   for (const b of balloons) {
-    const [bx, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    const [bxc, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    const bx = bxc + b.dx; /* 第十四輪c修：氣球本體要帶 dx 偏移（之前 3 顆疊在同一 x） */
     ctx.beginPath(); ctx.moveTo(knotP[0], knotP[1] - 2);
-    ctx.quadraticCurveTo((knotP[0] + bx) / 2 + b.dx * 0.15, (knotP[1] + by) / 2, bx, by + b.ry);
+    ctx.quadraticCurveTo((knotP[0] + bx) / 2, (knotP[1] + by) / 2, bx, by + b.ry);
     ctx.stroke();
   }
   /* 氣球 */
   for (const b of balloons) {
-    const [bx, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    const [bxc, by] = P(tx + 0.5, ty + 0.5, -b.z);
+    const bx = bxc + b.dx; /* 第十四輪c修：同繩子迴圈 */
     ctx.beginPath(); ctx.ellipse(bx, by, b.rx, b.ry, 0, 0, Math.PI * 2);
     ctx.fillStyle = b.c; ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
