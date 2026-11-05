@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（14b 完成後更新）：第十四輪 14a（c5475be）、14b（716c7cd）已完成、**14c 尚未動工**。新 session：讀完本節 → 從 14c 開始。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
+> 📌 **接手筆記**（14c 完成後更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成、**14d 尚未動工**。新 session：讀完本節 → 從 14d 開始（節慶牆飾含歲數氣球）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -623,7 +623,7 @@
   - 打工場景手機偏小（場景帶約 263px 高、食材卡約 64×44px 仍可點）→ **記為日後 polish 建議**（手機置景放大，可開新輪）
   - 商店手機版 14a CSS 已撐住：關卡卡 2 欄折行、面板超高可捲、結算/續玩畫面皆可讀
 
-### 14c 📋 節慶地面裝飾＋🎉 節慶分頁
+### 14c ✅ 節慶地面裝飾＋🎉 節慶分頁（commits：c1 4fc5062／c2 045ca8a／c3 c442294／c4 0f269bb）
 **資料**（BUILD_ITEMS，js/world.js:961，tab:'fest'）：
 | id | 名稱 | 節慶 | w×d | max | 備註 |
 |---|---|---|---|---|---|
@@ -648,6 +648,14 @@
 - 教學鎖：inTutorial（stage==='created'）時 fest 分支顯示「先完成放床教學」（照 remove/renovate 分支的 emptyMsg 模式）
 
 **繪製**：world.js 新增 draw 函式（用 handEllipse/handShape 手繪風）；floorCard 預覽用 `s = Math.min(0.72, 78 / (it.h + (it.w + it.d) * 8))` 公式自動縮放（h 記得給合理值）
+
+**✅ 完成紀錄**：
+- 按 TERMINATED-ANALYSIS.md plan 拆 4 個小 commit 做（防大 context terminated）：c1 7 個 draw 函式（4fc5062）／c2 目錄＋onFurn（045ca8a）／c3 UI＋lift（c442294）／c4 peek-fest 專測＋修正（0f269bb）
+- onFurn 最終實作：cake/giftBox 加 `onFurn: true`；floorValid blocked 判定改 `it.tab !== 'decor' && !it.onFurn`（onFurn 可放家具 blocked 格）；cls 把 onFurn 歸 decor 同類；itemDepthAt 與 game.js lift×3＋移除 score 統一用 `(it.tab === 'decor' || it.onFurn)`
+- 🎉 分頁：index.html 加按鈕、BUILD_TABS＋selectBuildTab 加 fest 分支（教學中 emptyMsg「先完成放床教學，就能放節慶裝飾囉～」）；wall tab 加 filter `it.tab === 'wall'`（防 14d 重複）
+- 修正：氣球束 3 顆本體漏加 dx 偏移（疊在同一 x 看起來只剩一顆）→ 補 `bxc + b.dx`
+- 測試：test/peek-fest.mjs 21 項全過（教學鎖／7 卡／7 件放置／onFurn 書桌 valid＋surfaceHAt=34／max dis／移除／存檔重載）、0 pageerror；南瓜測試位 (5,5)→(3,8)（原位被書桌禮盒遮住）
+- 回歸：flow 32 項 ✅／peek-build ✅／peek-mobile 通過（14c 首跑遇 1 次偶發 flake：step 16 移除牆飾 tap，目標在手機上 hit 寬僅 ~12px、touch→mouse 競態）→ peek-mobile 該步加失敗補一拍（獨立小 commit）
 
 ### 14d 📋 節慶牆飾（含歲數氣球）
 **資料**（WALL_ITEMS，js/world.js:1227，tab:'fest'）：
