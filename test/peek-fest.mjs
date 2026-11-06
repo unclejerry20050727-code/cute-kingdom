@@ -1,6 +1,6 @@
 /* ══════════ 可愛國 — 節慶裝飾專測（第十四輪c）══════════
  * Part A：全新遊戲 → 建角 → 教學中點 🎉 節慶 tab → 驗證教學鎖
- * Part B：注入 done 存檔 → 🎉 頁 7 張卡 → 放 7 件＋onFurn（禮盒上書桌）
+ * Part B：注入 done 存檔 → 🎉 頁 13 張卡（7 地＋6 牆，14d）→ 放 7 件＋onFurn（禮盒上書桌）
  *         → 移除 → 重新載入驗證存檔
  * 用法：node test/peek-fest.mjs
  */
@@ -117,11 +117,11 @@ await page.click('#cover-enter'); await ms(500);
 await page.click('#btn-start'); await ms(1200);
 check('載入存檔 → sub=free', (await G(() => Game.sub)) === 'free');
 
-/* 開建造面板 → 🎉 節慶頁：7 張卡 */
+/* 開建造面板 → 🎉 節慶頁：13 張卡（14d：7 地＋6 牆） */
 await page.click('#build-btn'); await ms(500);
 await page.click('.btab[data-tab="fest"]'); await ms(500);
 const nFest = await G(() => document.querySelectorAll('#build-items .build-item').length);
-check(`🎉 節慶頁 7 張卡（實際 ${nFest}）`, nFest === 7);
+check(`🎉 節慶頁 13 張卡（實際 ${nFest}）`, nFest === 13); /* 14d：7 地飾＋6 牆飾 */
 await shot('b-fest-tab', '7 件節慶卡預覽');
 
 /* 先放書桌（6,6）做 onFurn 承面 */

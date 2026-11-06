@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（11-06 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成；**14d d1–d3 已完成**（d1：3ba4d21/884595d/aee3878；d2：9351523/f1d08e5/51be057，11 處 num 邏輯全整合；d3：peek-build 加 29 項節慶牆飾段，125 項全過）。**新 session：讀完本節 → 從 14d d4 開始**（全套回歸：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile＋14d ✅＋交接筆記）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
+> 📌 **接手筆記**（11-06 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）、**14d 全部完成**（d1：3ba4d21/884595d/aee3878；d2：9351523/f1d08e5/51be057；d3：f3119b3；d4：全 9 套件回歸全過，peek-fest 卡數預期 7→13 修正）。**新 session：讀完本節 → 直接做 14e**（全回歸＋README 文件＋向 Jerry 報告，見下）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -657,7 +657,7 @@
 - 測試：test/peek-fest.mjs 21 項全過（教學鎖／7 卡／7 件放置／onFurn 書桌 valid＋surfaceHAt=34／max dis／移除／存檔重載）、0 pageerror；南瓜測試位 (5,5)→(3,8)（原位被書桌禮盒遮住）
 - 回歸：flow 32 項 ✅／peek-build ✅／peek-mobile 通過（14c 首跑遇 1 次偶發 flake：step 16 移除牆飾 tap，目標在手機上 hit 寬僅 ~12px、touch→mouse 競態）→ peek-mobile 該步加失敗補一拍（獨立小 commit）
 
-### 14d 📋 節慶牆飾（含歲數氣球）
+### 14d ✅ 節慶牆飾（含歲數氣球）
 **資料**（WALL_ITEMS，js/world.js:1227，tab:'fest'）：
 | id | 名稱 | 節慶 | span | max | 備註 |
 |---|---|---|---|---|---|
@@ -698,10 +698,10 @@
   - d1 ✅（3ba4d21 draw×3 春聯/福字/冬青花環、884595d draw×3 彩燈串/蜘蛛網/歲數氣球、aee3878 WALL_ITEMS×6＋字型重跑 947→1013 字，14c 漏字 16 個全補進✓；視覺 QA 13 卡/6 件放置/數字 8/0 pageerror）
   - d2 ✅（9351523 d2a 存檔/載入/placement/確認、f1d08e5 d2b R 鍵/🔄 鈕/updatePlaceActions＋draw NaN 防呆、51be057 d2c wallAdj＋渲染 o.num×3；11 處全整合）
   - d3 ✅（peek-build 加 section 10½ 共 29 項：13 卡/移除騰槽×3/掛 4 件/彩燈串 🔄 隱藏＋R 不崩/歲數氣球初始 8/R→9/🔄→1/🔄→2/掛上 num=2/wallAdj num 2→3 確認寫入/reload num=3 持久＋其他補 num=8/移除；修 3 小問題：balloonPt 與 section 9 重名、Esc 移除模式後面板停 remove tab、section 7 JSON 精確比對多 num:8；125 項全過、新增截圖 b26-b29）
-  - d4：全套回歸（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile）＋14d ✅＋交接筆記 → 14e
+  - d4 ✅（全 9 套件回歸全過：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile；修 peek-fest 卡數預期 7→13，因 14d 加 6 牆飾卡；本 commit）
 
 ### 14e 📋 全回歸＋文件＋報告
-- 八套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-mobile**
+- 九套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-fest** / **peek-mobile**（14d d4 已全過一次，14e 再跑確認無回歸）
 - README：新增「手機操作」＋「節慶裝飾」章節、測試表加 peek-mobile；PROGRESS 收尾
 - 向 Jerry 報告（繁體中文＋🤖）
 
