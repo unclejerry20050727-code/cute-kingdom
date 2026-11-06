@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（11-06 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成；**14d d1 已完成**（3ba4d21 draw×3、884595d draw×3、d1c WALL_ITEMS×6＋字型 947→1013 字，視覺 QA 13 卡/6 件放置/數字 8/0 pageerror 全過）。**新 session：讀完本節 → 從 14d d2 開始**（game.js num 邏輯 11 處，見上「num 邏輯整合點」）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
+> 📌 **接手筆記**（11-06 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）已完成；**14d d1–d3 已完成**（d1：3ba4d21/884595d/aee3878；d2：9351523/f1d08e5/51be057，11 處 num 邏輯全整合；d3：peek-build 加 29 項節慶牆飾段，125 項全過）。**新 session：讀完本節 → 從 14d d4 開始**（全套回歸：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile＋14d ✅＋交接筆記）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -695,10 +695,10 @@
 - **字型（重要）**：子集缺 16 字（含 14c 漏跑的）：`蛋 糕 禮 聖 誕 南 瓜 爆 竹 春 聯 冬 蜘 蛛 網 歲`（福 已有✓）。加字後**必重跑** `/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf`，`fonts/rhr.woff2` 併入同一 commit（腳本自動掃 index.html/js/css 收字；canvas 數字 1-9 已在子集✓）。
 - **繪製小提醒**：牆面是奶油色（wallC tint）→ 蜘蛛網線用灰調 `rgba(140,150,180,.9)`（白色對比不足）；fuChar 倒貼＝紅菱（rotate 45° 正方形）＋福字 rotate(PI)。
 - **拆分**（照 14c c1-c4 模式）：
-  - d1 ✅（3ba4d21 draw×3 春聯/福字/冬青花環、884595d draw×3 彩燈串/蜘蛛網/歲數氣球、d1c WALL_ITEMS×6＋字型重跑 947→1013 字，14c 漏字 16 個全補進✓）
-  - d2：game.js num 邏輯 11 處
-  - d3：peek-build.mjs 加節慶牆飾段（掛 6 牆飾／numBalloon 放置中 R 換數／wallAdj 換數＋確認寫入／reload 持久／移除／0 pageerror）＋截圖
-  - d4：八套件回歸＋14d ✅＋交接筆記 → 14e
+  - d1 ✅（3ba4d21 draw×3 春聯/福字/冬青花環、884595d draw×3 彩燈串/蜘蛛網/歲數氣球、aee3878 WALL_ITEMS×6＋字型重跑 947→1013 字，14c 漏字 16 個全補進✓；視覺 QA 13 卡/6 件放置/數字 8/0 pageerror）
+  - d2 ✅（9351523 d2a 存檔/載入/placement/確認、f1d08e5 d2b R 鍵/🔄 鈕/updatePlaceActions＋draw NaN 防呆、51be057 d2c wallAdj＋渲染 o.num×3；11 處全整合）
+  - d3 ✅（peek-build 加 section 10½ 共 29 項：13 卡/移除騰槽×3/掛 4 件/彩燈串 🔄 隱藏＋R 不崩/歲數氣球初始 8/R→9/🔄→1/🔄→2/掛上 num=2/wallAdj num 2→3 確認寫入/reload num=3 持久＋其他補 num=8/移除；修 3 小問題：balloonPt 與 section 9 重名、Esc 移除模式後面板停 remove tab、section 7 JSON 精確比對多 num:8；125 項全過、新增截圖 b26-b29）
+  - d4：全套回歸（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile）＋14d ✅＋交接筆記 → 14e
 
 ### 14e 📋 全回歸＋文件＋報告
 - 八套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-mobile**

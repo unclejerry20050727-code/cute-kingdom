@@ -146,10 +146,10 @@ await page.keyboard.press('Escape'); await ms(300);
 await page.click('.btab[data-tab="wall"]'); await ms(400);
 await placeWallByName('心形框', 'A', 1, 170);
 check('牆 A 槽 1 掛心形框', (await G(() => Game.wallItems.length)) === 1);
-check('心形框確在 A 槽 1', (await G(() => JSON.stringify(Game.wallItems[0]))) === '{"id":"heartFrame","wall":"A","pos":1,"h":170}');
+check('心形框確在 A 槽 1', (await G(() => JSON.stringify(Game.wallItems[0]))) === '{"id":"heartFrame","wall":"A","pos":1,"h":170,"num":8}'); /* 14d：多 num 欄位（預設 8） */
 await placeWallByName('時鐘', 'B', 2, 185);
 check('牆 B 槽 2 掛時鐘', (await G(() => Game.wallItems.length)) === 2);
-check('時鐘確在 B 槽 2', (await G(() => JSON.stringify(Game.wallItems[1]))) === '{"id":"clock","wall":"B","pos":2,"h":185}');
+check('時鐘確在 B 槽 2', (await G(() => JSON.stringify(Game.wallItems[1]))) === '{"id":"clock","wall":"B","pos":2,"h":185,"num":8}'); /* 14d：多 num 欄位（預設 8） */
 await placeWallByName('海報', 'A', 8, 150);
 check('牆 A 槽 8 掛海報', (await G(() => Game.wallItems.length)) === 3);
 await placeWallByName('牆架', 'A', 6, 105);
@@ -383,6 +383,96 @@ check('reload 後牆飾 h 保留（時鐘 179 / 心形框 182）', (await G(() =
 })) === true);
 check('reload 後 tints 保留', (await G(() => JSON.stringify(Game.tints))) === '{"wall":4,"floor":2}');
 await shot('after-reload', '換色+家具+牆飾保留');
+
+/* ── 10½. 節慶牆飾（第十四輪d：6 種新牆飾＋歲數氣球）── */
+await page.click('#build-btn'); await ms(400);
+await page.click('.btab[data-tab="fest"]'); await ms(400);
+check('fest tab 13 張卡（7 地＋6 牆）', (await G(() => document.querySelectorAll('#build-items .build-item').length)) === 13);
+/* 先騰槽位：移除海報(A8)／牆架(A6)／彩旗(B0-1) */
+await page.click('.btab[data-tab="remove"]'); await ms(300);
+await page.click('#build-items .build-item'); await ms(400);
+const posterPt = await wallPt('A', 8, 165);
+await page.mouse.move(posterPt.x, posterPt.y); await ms(400);
+await page.mouse.click(posterPt.x, posterPt.y); await ms(500);
+check('移除海報 → 4 件牆飾', (await G(() => Game.wallItems.length)) === 4);
+const shelfPt = await wallPt('A', 6, 105);
+await page.mouse.move(shelfPt.x, shelfPt.y); await ms(400);
+await page.mouse.click(shelfPt.x, shelfPt.y); await ms(500);
+check('移除牆架 → 3 件牆飾', (await G(() => Game.wallItems.length)) === 3);
+const garlandPt = await wallPt('B', 1, 232);
+await page.mouse.move(garlandPt.x, garlandPt.y); await ms(400);
+await page.mouse.click(garlandPt.x, garlandPt.y); await ms(500);
+check('移除彩旗 → 2 件牆飾', (await G(() => Game.wallItems.length)) === 2);
+await page.keyboard.press('Escape'); await ms(300);
+check('Esc 離開移除模式（sub free）', (await G(() => Game.sub)) === 'free');
+await G(() => { openBuildPanel(); selectBuildTab('fest'); }); /* 面板重開會停原 tab，明確切回 fest */
+await ms(300);
+/* 春聯×2／福字／冬青花環 */
+await placeWallByName('春聯', 'A', 0, 175);
+await placeWallByName('春聯', 'A', 8, 175);
+await placeWallByName('福字', 'A', 6, 160);
+await placeWallByName('冬青花環', 'B', 5, 185);
+check('春聯×2/福字/冬青花環 掛好 → 6 件牆飾', (await G(() => Game.wallItems.length)) === 6);
+/* 彩燈串（span 2）：非 numSelectable → 🔄 隱藏、R 無效不崩 */
+await page.click('.btab[data-tab="fest"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("彩燈串")'); await ms(400);
+check('彩燈串放置：🔄 隱藏（非 numSelectable）', (await G(() => document.querySelector('#pa-rot').classList.contains('hidden'))) === true);
+await page.keyboard.press('r'); await ms(200);
+check('彩燈串按 R → 不崩（placement 仍在）', (await G(() => !!Game.placement)) === true);
+const lightsPt = await wallPt('B', 3, 235);
+await page.mouse.move(lightsPt.x, lightsPt.y); await ms(400);
+check('彩燈串 B3（span 2）有效', (await G(() => Game.placement.valid)) === true);
+await page.mouse.click(lightsPt.x, lightsPt.y); await ms(500);
+await placeWallByName('蜘蛛網', 'B', 9, 245);
+check('彩燈串＋蜘蛛網 掛好 → 8 件牆飾', (await G(() => Game.wallItems.length)) === 8);
+/* 歲數氣球：放置中 R/🔄 換數字 */
+await page.click('.btab[data-tab="fest"]'); await ms(300);
+await page.click('#build-items .build-item:has-text("歲數氣球")'); await ms(400);
+check('歲數氣球初始 num=8', (await G(() => Game.placement.num)) === 8);
+check('hint 含「換數字」', (await G(() => document.querySelector('#hint-bar').textContent.includes('換數字'))) === true);
+check('🔄 顯示（numSelectable）', (await G(() => !document.querySelector('#pa-rot').classList.contains('hidden'))) === true);
+await page.keyboard.press('r'); await ms(200);
+check('按 R → num=9', (await G(() => Game.placement.num)) === 9);
+await page.click('#pa-rot'); await ms(200);
+check('點 🔄 → num=1（9→1 循環）', (await G(() => Game.placement.num)) === 1);
+await page.click('#pa-rot'); await ms(200);
+check('再點 🔄 → num=2', (await G(() => Game.placement.num)) === 2);
+const festBalloonPt = await wallPt('B', 1, 185);
+await page.mouse.move(festBalloonPt.x, festBalloonPt.y); await ms(400);
+check('歲數氣球 B1 有效', (await G(() => Game.placement.valid)) === true);
+await shot('fest-numballoon-ghost', '歲數氣球 ghost（數字 2）');
+await page.mouse.click(festBalloonPt.x, festBalloonPt.y); await ms(500);
+check('掛歲數氣球 → 9 件牆飾', (await G(() => Game.wallItems.length)) === 9);
+check('氣球帶 num=2', (await G(() => Game.wallItems.find(w => w.id === 'numBalloon')?.num)) === 2);
+await shot('fest-wall-placed', '6 種節慶牆飾掛滿房間');
+/* wallAdj：點氣球 → 換數字 → 確認寫入 */
+await page.mouse.click(festBalloonPt.x, festBalloonPt.y); await ms(400);
+check('點氣球 → wallAdj', (await G(() => Game.placement?.mode)) === 'wallAdj');
+check('wallAdj 初始 num=2', (await G(() => Game.placement?.num)) === 2);
+check('wallAdj hint 含「換數字」', (await G(() => document.querySelector('#hint-bar').textContent.includes('換數字'))) === true);
+await page.keyboard.press('r'); await ms(200);
+check('wallAdj 按 R → num=3', (await G(() => Game.placement?.num)) === 3);
+await shot('fest-numballoon-adj', 'wallAdj ghost 數字 3');
+await page.mouse.click(festBalloonPt.x, festBalloonPt.y); await ms(500);
+check('確認 → 氣球 num=3 寫入', (await G(() => Game.wallItems.find(w => w.id === 'numBalloon')?.num)) === 3);
+check('調完 sub 回 free', (await G(() => Game.sub)) === 'free');
+/* reload → num 持久 */
+await page.reload(); await ms(800);
+await page.click('#cover-enter'); await ms(500);
+await page.click('#btn-start'); await ms(1200);
+check('reload 後 9 件牆飾', (await G(() => Game.wallItems.length)) === 9);
+check('reload 後氣球 num=3 保留', (await G(() => Game.wallItems.find(w => w.id === 'numBalloon')?.num)) === 3);
+check('reload 後其他牆飾補 num=8', (await G(() => Game.wallItems.find(w => w.id === 'fuChar')?.num)) === 8);
+await shot('fest-after-reload', '節慶牆飾＋數字保留');
+/* 移除：歲數氣球也能拆 */
+await page.click('#build-btn'); await ms(400);
+await page.click('.btab[data-tab="remove"]'); await ms(300);
+await page.click('#build-items .build-item'); await ms(400);
+const balloonPt3 = await wallPt('B', 1, 185);
+await page.mouse.move(balloonPt3.x, balloonPt3.y); await ms(400);
+await page.mouse.click(balloonPt3.x, balloonPt3.y); await ms(500);
+check('移除歲數氣球 → 8 件牆飾', (await G(() => Game.wallItems.length)) === 8);
+await page.keyboard.press('Escape'); await ms(300);
 
 console.log(fails === 0 ? '\n✅ 建造系統測試全過' : `\n❌ ${fails} 項失敗`);
 await browser.close();
