@@ -1583,6 +1583,103 @@ function drawWallWreath(ctx, wall, pos, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* 彩燈串：綢帶同款弧線＋5 顆彩色圓燈泡（span 2，local 0 為中心 ±36） */
+function drawWallLights(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 235);
+  const bad = o.tint === 'bad';
+  const P0 = [-36, -10], P1 = [0, 14], P2 = [36, -10];
+  ctx.strokeStyle = bad ? '#C96A7A' : INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(P0[0], P0[1]);
+  ctx.quadraticCurveTo(P1[0], P1[1], P2[0], P2[1]);
+  ctx.stroke();
+  const cols = bad
+    ? ['#DE8794', '#DE8794', '#DE8794', '#DE8794', '#DE8794']
+    : ['#FF9FBE', '#FFD166', '#A8DFC0', '#9FD8E8', '#FF9FBE'];
+  for (let i = 1; i <= 5; i++) {
+    const t = i / 6;
+    const x = (1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * P1[0] + t ** 2 * P2[0];
+    const y = (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * P1[1] + t ** 2 * P2[1];
+    ctx.fillStyle = bad ? '#C96A7A' : '#B08968';
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.rect(x - 1.8, y, 3.6, 3.4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = cols[i - 1];
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y + 9, 4.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (!bad) {
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.arc(x - 1.4, y + 7.6, 1.3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.fillStyle = bad ? '#C96A7A' : '#B08968';
+  ctx.beginPath(); ctx.arc(P0[0], P0[1], 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(P2[0], P2[1], 1.8, 0, Math.PI * 2); ctx.fill();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+/* 蜘蛛網：左上扇形網（灰調，奶油牆對比）＋小蜘蛛 */
+function drawWallCobweb(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 245);
+  const bad = o.tint === 'bad';
+  const webC = bad ? 'rgba(201,106,122,.95)' : 'rgba(140,150,180,.9)';
+  const C = [-15, -15], R = 30;
+  ctx.strokeStyle = webC; ctx.lineWidth = 1.2;
+  for (const a of [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) {
+    ctx.beginPath();
+    ctx.moveTo(C[0], C[1]);
+    ctx.lineTo(C[0] + Math.cos(a) * R, C[1] + Math.sin(a) * R);
+    ctx.stroke();
+  }
+  for (const r of [10, 19, 28]) {
+    ctx.beginPath(); ctx.arc(C[0], C[1], r, 0, Math.PI / 2); ctx.stroke();
+  }
+  ctx.fillStyle = webC;
+  ctx.beginPath(); ctx.arc(C[0], C[1], 1.8, 0, Math.PI * 2); ctx.fill();
+  /* 小蜘蛛（45° 線末端垂下） */
+  const sx = C[0] + Math.cos(Math.PI / 4) * R, sy = C[1] + Math.sin(Math.PI / 4) * R;
+  ctx.strokeStyle = bad ? '#C96A7A' : INK; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(sx, sy - 4); ctx.lineTo(sx, sy - 1.5); ctx.stroke();
+  ctx.fillStyle = bad ? '#DE8794' : '#7A5236';
+  ctx.beginPath(); ctx.arc(sx, sy + 1, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 1;
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + s * 4, sy - 2.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy + 1.8); ctx.lineTo(sx + s * 4.5, sy + 2.4); ctx.stroke();
+  }
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+/* 歲數氣球：3 顆氣球＋中央數字（o.num 1-9、預設 8；RHR 900） */
+function drawWallNumBalloon(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 185);
+  const bad = o.tint === 'bad';
+  const num = o.num != null ? o.num : 8;
+  ctx.strokeStyle = bad ? '#C96A7A' : '#B08968'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(-9, 6); ctx.quadraticCurveTo(-4, 11, 0, 14.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9, 6); ctx.quadraticCurveTo(4, 11, 0, 14.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, 14.5); ctx.stroke();
+  ctx.fillStyle = bad ? '#C96A7A' : '#B08968';
+  ctx.beginPath(); ctx.arc(0, 15.5, 1.6, 0, Math.PI * 2); ctx.fill();
+  handEllipse(ctx, -10, 1, 5.5, 6.8, { fill: bad ? '#DE8794' : '#9FD8E8', lw: 1.6, seed: 41, amp: 1.2 });
+  handEllipse(ctx, 10, 1, 5.5, 6.8, { fill: bad ? '#DE8794' : '#A8DFC0', lw: 1.6, seed: 43, amp: 1.2 });
+  handEllipse(ctx, 0, -3, 8.5, 10.5, { fill: bad ? '#DE8794' : '#FF9FBE', lw: 2, seed: 47, amp: 1.4 });
+  ctx.fillStyle = bad ? '#F6DCE2' : '#FFFDF4';
+  ctx.font = '900 14px RHR';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(num), 0, -2.5);
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
 /* 第十一輪c：牆飾高度可調範圍（離地 px） */
 const WALL_H_MIN = 50, WALL_H_MAX = 262;
 function clampWallH(h) { return Math.max(WALL_H_MIN, Math.min(WALL_H_MAX, h)); }
