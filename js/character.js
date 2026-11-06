@@ -126,6 +126,57 @@ function makeBlinkState() {
  * o = { x, y(腳底), facing: down|up|left|right, t, walking, gaze(-1..1),
  *       blink(0..1,1=閉眼), scale, alpha }
  */
+/* 第十五輪：擺拍姿勢（o.pose = { id, t }，t＝姿勢已持續秒數）
+   hL/hR＝手目標 [x,y]（角色座標、原點在腳）、elbL/elbR＝手肘、hand＝手型、sway＝全身搖擺角（以腳為樞） */
+const POSES = {
+  peace:    { label: '比耶',     emoji: '✌️', fn: () => ({ hR: [26, -70], elbR: [22, -48], hand: 'peace' }) },
+  wave:     { label: '揮手',     emoji: '👋', fn: (pt) => ({ hR: [25 + Math.sin(pt * 10) * 4, -72], elbR: [22, -48] }) },
+  cheer:    { label: '歡呼',     emoji: '🙌', fn: (pt) => ({ hL: [-24, -70 + Math.sin(pt * 6) * 2], hR: [24, -70 - Math.sin(pt * 6) * 2], elbL: [-20, -50], elbR: [20, -50] }) },
+  dance:    { label: '跳舞',     emoji: '♪',  sway: (pt) => Math.sin(pt * 6) * 0.09, fn: (pt) => ({ hL: [-24, -55 - Math.sin(pt * 6) * 12], hR: [24, -55 + Math.sin(pt * 6) * 12], elbL: [-20, -42], elbR: [20, -42] }) },
+  hug:      { label: '張開雙臂', emoji: '💕', fn: () => ({ hL: [-28, -30], hR: [28, -30], elbL: [-22, -33], elbR: [22, -33] }) },
+  pray:     { label: '比心合掌', emoji: '❤️', fn: () => ({ hL: [-2, -30], hR: [2, -30], elbL: [-16, -28], elbR: [16, -28], hand: 'prayer' }) },
+  salute:   { label: '敬禮',     emoji: '🫡', fn: () => ({ hR: [12, -68], elbR: [24, -42], hand: 'fist' }) },
+  flex:     { label: '秀肌肉',   emoji: '💪', fn: (pt) => ({ hL: [-22, -60 + Math.sin(pt * 10) * 1.5], hR: [22, -60 + Math.sin(pt * 10 + Math.PI) * 1.5], elbL: [-26, -42], elbR: [26, -42], hand: 'fist' }) },
+  meditate: { label: '打坐',     emoji: '🧘', seated: true, eyes: true, fn: () => ({ hL: [-13, -16], hR: [13, -16], elbL: [-18, -26], elbR: [18, -26] }) },
+  wink:     { label: '啾咪',     emoji: '😉', wink: true, fn: () => ({}) },
+};
+
+/* 姿勢手部：kind＝peace（V 兩指）/fist（拳頭）/prayer（合掌豎長）/預設圓手 */
+function drawHand(ctx, c, hx, hy, kind) {
+  ctx.fillStyle = c.skinColor;
+  if (kind === 'prayer') {
+    ellipse(ctx, hx, hy, 3.2, 5.2);
+  } else {
+    ellipse(ctx, hx, hy, kind === 'fist' ? 4.2 : 3.7, kind === 'fist' ? 4.2 : 3.7);
+  }
+  if (kind === 'peace') {
+    ctx.strokeStyle = c.skinColor;
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx - 1.5, hy - 1);
+    ctx.lineTo(hx - 3.2, hy - 7);
+    ctx.moveTo(hx + 1.5, hy - 1);
+    ctx.lineTo(hx + 3.6, hy - 6.5);
+    ctx.stroke();
+  }
+}
+
+/* 姿勢手臂兩段（上臂＋前臂）＋手；高低層共用 */
+function drawPoseArmSeg(ctx, c, isLongSleeve, sx, sy, ex, ey, tx, ty, handKind) {
+  if (isLongSleeve) {
+    ctx.strokeStyle = c.topColor;
+    capsule(ctx, sx, sy, ex, ey, 7);
+    capsule(ctx, ex, ey, tx, ty, 6.5);
+  } else {
+    ctx.strokeStyle = c.topColor;
+    capsule(ctx, sx, sy, ex, ey, 7);
+    ctx.strokeStyle = c.skinColor;
+    capsule(ctx, ex, ey, tx, ty, 6);
+  }
+  drawHand(ctx, c, tx, ty, handKind);
+}
+
 function drawCharacter(ctx, cfg, o) {
   const c = resolveConfig(cfg);
   const s = o.scale ?? 1;
@@ -134,6 +185,13 @@ function drawCharacter(ctx, cfg, o) {
   ctx.scale(s, s);
   if (o.alpha != null) ctx.globalAlpha *= o.alpha;
 
+  /* 第十五輪：擺拍姿勢 */
+  const pose = o.pose ? POSES[o.pose.id] : null;
+  const pt = o.pose && o.pose.t != null ? o.pose.t : 0;
+  const poseData = pose && pose.fn ? pose.fn(pt) : null;
+  const seated = !!(poseData && poseData.seated);
+  if (pose && pose.sway) ctx.rotate(pose.sway(pt)); /* 以腳為樞搖擺 */
+
   const t = o.t ?? 0;
   const walking = o.walking;
   const ph = t * 11;
@@ -141,11 +199,11 @@ function drawCharacter(ctx, cfg, o) {
   const f = o.facing ?? 'down';
   const fx = f === 'left' ? -1 : f === 'right' ? 1 : 0;
   const gz = (o.gaze ?? 0) * (f === 'left' || f === 'right' ? 0.5 : 1);
-  const closed = o.eyesClosed || (o.blink ?? 0) > 0.5;
+  const closed = o.eyesClosed || (o.blink ?? 0) > 0.5 || !!(pose && pose.eyes);
 
-  /* 影子 */
+  /* 影子（打坐時寬一點） */
   ctx.fillStyle = 'rgba(90,62,43,0.20)';
-  ellipse(ctx, fx * 1, 1, 19, 7.5);
+  ellipse(ctx, fx * 1, 1, seated ? 24 : 19, seated ? 8 : 7.5);
 
   /* ── 後層頭髮（在身體後方） ── */
   const headY = -58 + bob * 0.5;
@@ -154,6 +212,7 @@ function drawCharacter(ctx, cfg, o) {
   /* ── 腿與鞋 ── */
   const liftL = walking ? Math.max(0, Math.sin(ph)) * 3 : 0;
   const liftR = walking ? Math.max(0, -Math.sin(ph)) * 3 : 0;
+  if (!seated) {
   for (const side of [-1, 1]) {
     const lift = side < 0 ? liftL : liftR;
     const x = side * 6 + fx * 1.5;
@@ -215,8 +274,10 @@ function drawCharacter(ctx, cfg, o) {
       ctx.stroke();
     }
   }
+  }
 
-  /* ── 身體（上衣） ── */
+  /* ── 身體（上衣） ──（打坐：上身下移 8px，盤腿畫在最後一層） */
+  if (seated) { ctx.save(); ctx.translate(0, 8); }
   ctx.fillStyle = c.topColor;
   ctx.strokeStyle = shade(c.topColor, -0.16);
   ctx.lineWidth = 2;
@@ -266,29 +327,39 @@ function drawCharacter(ctx, cfg, o) {
     ellipse(ctx, 0, y0 + 15.5, 1.5, 2.3);
   }
 
-  /* ── 手臂 ── */
+  /* ── 手臂 ──（高舉的手 head 之後前層畫，避免被臉擋住） */
+  const frontArms = [];
   for (const side of [-1, 1]) {
-    const swing = walking ? Math.sin(ph + (side < 0 ? Math.PI : 0)) * 2.6 : Math.sin(t * 2.4 + side) * 0.9;
     const ax = side * 15.5 + fx * 2.5;
     const top = -36 + bob * 0.3;
-    const handY = -14;
-    if (c.isLongSleeve) {
-      ctx.strokeStyle = c.topColor;
-      capsule(ctx, ax, top, ax + swing, handY + 2, 7);
-      ctx.strokeStyle = shade(c.topColor, -0.16);
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.arc(ax + swing, handY + 3, 3.6, 0, Math.PI * 2); ctx.stroke();
-      ctx.lineWidth = 7;
-    } else {
-      /* 短袖：上段衣服 + 下段皮膚 */
-      ctx.strokeStyle = c.topColor;
-      capsule(ctx, ax, top, ax + swing * 0.4, top + 9, 7.5);
-      ctx.strokeStyle = c.skinColor;
-      capsule(ctx, ax + swing * 0.4, top + 9, ax + swing, handY + 2, 6);
+    const target = poseData && poseData[side < 0 ? 'hL' : 'hR'];
+    if (!target) {
+      /* idle／走路：原本擺動 */
+      const swing = walking ? Math.sin(ph + (side < 0 ? Math.PI : 0)) * 2.6 : Math.sin(t * 2.4 + side) * 0.9;
+      const handY = -14;
+      if (c.isLongSleeve) {
+        ctx.strokeStyle = c.topColor;
+        capsule(ctx, ax, top, ax + swing, handY + 2, 7);
+        ctx.strokeStyle = shade(c.topColor, -0.16);
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(ax + swing, handY + 3, 3.6, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 7;
+      } else {
+        /* 短袖：上段衣服 + 下段皮膚 */
+        ctx.strokeStyle = c.topColor;
+        capsule(ctx, ax, top, ax + swing * 0.4, top + 9, 7.5);
+        ctx.strokeStyle = c.skinColor;
+        capsule(ctx, ax + swing * 0.4, top + 9, ax + swing, handY + 2, 6);
+      }
+      /* 手 */
+      ctx.fillStyle = c.skinColor;
+      ellipse(ctx, ax + swing, handY, 3.7, 3.7);
+      continue;
     }
-    /* 手 */
-    ctx.fillStyle = c.skinColor;
-    ellipse(ctx, ax + swing, handY, 3.7, 3.7);
+    /* 姿勢：上臂＋前臂兩段，手到目標位（高舉的手記到 frontArms，head 後畫） */
+    const elb = poseData[side < 0 ? 'elbL' : 'elbR'] || [ax + (target[0] - ax) * 0.5 + side * 3, (top + target[1]) * 0.5 + 4];
+    if (target[1] <= -50) { frontArms.push([ax, top, elb[0], elb[1], target[0], target[1]]); continue; }
+    drawPoseArmSeg(ctx, c, c.isLongSleeve, ax, top, elb[0], elb[1], target[0], target[1], poseData.hand);
   }
 
   /* 書包背帶（畫在手臂上：背帶穿在最外面；制服時不畫） */
@@ -308,7 +379,7 @@ function drawCharacter(ctx, cfg, o) {
     /* 瀏海帽 */
     drawBangs(ctx, c, headX, headY, R, fx);
     /* 臉 */
-    drawFace(ctx, c, headX, headY, R, gz, closed, t);
+    drawFace(ctx, c, headX, headY, R, gz, closed, t, pose && pose.wink && (pt % 0.7) < 0.38 ? 1 : 0);
   }
 
   /* 書包包體（背面視角，畫在垂髮之後→包在髮前，對應角色立繪） */
@@ -363,6 +434,42 @@ function drawCharacter(ctx, cfg, o) {
       };
       arch(headX - mw - 1.2);
       arch(headX + 1.2);
+    }
+  }
+
+  /* 姿勢手臂前層：高舉的手在臉前，不被頭擋（第十五輪） */
+  for (const a of frontArms) drawPoseArmSeg(ctx, c, c.isLongSleeve, a[0], a[1], a[2], a[3], a[4], a[5], poseData.hand);
+
+  /* 擺拍特效：頭頂漂浮 emoji（第十五輪） */
+  if (pose) {
+    const ey = headY - R - 16 - Math.sin(pt * 3) * 3;
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (o.pose.id === 'dance') {
+      ctx.fillText('♪', headX - 30, ey + 8 - Math.sin(pt * 6) * 4);
+      ctx.fillText('♫', headX + 30, ey - Math.sin(pt * 6 + 2) * 4);
+    } else {
+      ctx.fillText(pose.emoji, headX + 20, ey);
+    }
+  }
+
+  if (seated) {
+    ctx.restore(); /* 結束上身下移 */
+    /* 盤腿（最前層、地面高度） */
+    ctx.strokeStyle = shade(c.bottomColor, -0.1);
+    capsule(ctx, -8, -13, 13, -5, 7);
+    ctx.strokeStyle = c.bottomColor;
+    capsule(ctx, 8, -13, -13, -5, 7);
+    /* 白帆布鞋（跟站姿同款） */
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#CBB89E';
+    ctx.lineWidth = 1.5;
+    for (const sx2 of [13, -13]) {
+      ctx.beginPath();
+      ctx.ellipse(sx2, -4, 5.6, 3.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
     }
   }
 
@@ -882,7 +989,7 @@ function bangPoints(style, R, fx) {
 }
 
 /* ── 臉 ── */
-function drawFace(ctx, c, x, y, R, gz, closed, t) {
+function drawFace(ctx, c, x, y, R, gz, closed, t, winkSide) {
   const ox = gz * R * 0.2;
 
   /* 腮紅（兩層柔化，對照 art 立繪） */
@@ -905,19 +1012,20 @@ function drawFace(ctx, c, x, y, R, gz, closed, t) {
     ctx.stroke();
   }
 
-  /* 眼睛 */
-  if (closed) {
+  /* 眼睛（winkSide：單眼閉＝啾咪） */
+  const eyeClosed = (side) => {
     ctx.strokeStyle = c.eyeColor;
     ctx.lineWidth = 2.6;
-    for (const side of [-1, 1]) {
-      ctx.beginPath();
-      ctx.arc(x + side * ex + ox, ey + R * 0.04, R * 0.13, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    ctx.arc(x + side * ex + ox, ey + R * 0.04, R * 0.13, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+  };
+  if (closed) {
+    for (const side of [-1, 1]) eyeClosed(side);
   } else {
     for (const side of [-1, 1]) {
-      const exx = x + side * ex + ox, eyy = ey;
-      drawEye(ctx, c, exx, eyy, R, side);
+      if (winkSide === side) eyeClosed(side);
+      else drawEye(ctx, c, x + side * ex + ox, ey, R, side);
     }
   }
 

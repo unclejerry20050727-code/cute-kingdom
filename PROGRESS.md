@@ -728,3 +728,51 @@
 
 ### 檔案規模（供估算）
 index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/mini.js 584 / js/mapscene.js 206 行
+
+## 第十五輪：人物擺拍姿勢（Jerry 要求：支援人物各種擺拍姿勢；已批准 10 姿勢含 🧘/🫡/💪/😉）
+
+> 📌 **接手筆記**（11-06 更新）：e1 繪製層已完成（POSES 10 姿勢＋坐姿＋啾咪＋前層手臂）＋字型 1035 字。下一步 e2（game.js 狀態機＋P 鍵＋📷 鈕）。每完成一個子階段就 commit（commit message 用繁體中文）＋把對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6。
+
+### 功能設計（已批准）
+- **10 種擺拍姿勢**（character.js `POSES` 表＋`drawCharacter` 新增 `o.pose = { id, t }` 參數）：
+  | id | 名稱 | 特效 emoji | 實作要點 |
+  |---|---|---|---|
+  | peace | 比耶 | ✌️ | 右手舉頭旁 (26,-70)、elbow (22,-48)、hand:'peace'（V 兩指線） |
+  | wave | 揮手 | 👋 | 右手 (25+sin(t*10)*4, -72)、elbow (22,-48) |
+  | cheer | 歡呼 | 🙌 | 雙手 (±24,-70±sin 錯相)、elbow (±20,-50) |
+  | dance | 跳舞 | ♪ | 全身 sway：ctx.rotate(sin(t*6)*0.09) 以腳為樞；雙手交替 (±24, -55∓sin(t*6)*12) |
+  | hug | 張開雙臂 | 💕 | 雙手水平 (±28,-30)、elbow (±22,-33) |
+  | pray | 比心合掌 | ❤️ | 雙手胸前合十 (∓2,-30)、elbow (±16,-28)、hand:'prayer'（單顆豎長合掌） |
+  | meditate | 打坐 | 🧘 | **seated**：站姿腿換盤腿（上身體 translate(0,8) 下移、盤腿畫在最後最前層）、eyes 閉、雙手放膝 (±13,-16) |
+  | salute | 敬禮 | 🫡 | 右手到額前 (12,-68)、elbow (24,-42)、hand:'fist' |
+  | flex | 秀肌肉 | 💪 | 雙臂彎屈：elbow (±26,-42)、手 (±22, -60+sin 錯相)、hand:'fist' |
+  | wink | 啾咪 | 😉 | **臉**：drawFace 加第 9 參 `winkSide`（單眼閉＝闭眼弧線、另眼照畫）＋頭頂 😉 特效；手臂 idle |
+- 坐姿（meditate）畫法：腿段改畫盤腿兩條 capsule＋鞋；torso→arms→head→gear 段包 `ctx.save(); ctx.translate(0,8); … ctx.restore()`；盤腿在 restore 後畫（最前層）；影子改寬扁
+- 姿勢手臂畫法（通用）：shoulder=(side*15.5+fx*2.5, -36+bob*0.3)；有 pose 手標時畫 upper(shoulder→elbow)＋forearm(elbow→hand)；短袖上段衣色 7/前段膚色 6、長袖全衣色 7；hand 膚色 ellipse 3.7（fist 4.2）；peace 加兩指線
+- **特效**：headY-R-12 上方填 emoji（fillText 16px，bob sin(t*3)*3）；dance 兩邊各一個 ♪
+- **互動**（game.js）：
+  - 只在 `sub==='free'`（房間）可用；按 **P** 或 📷 鈕循環下一姿勢：`p.pose = { id, t: 0 }`、`p.facing='down'`、`p.walking=false`、sfx('pop')、toast（label）
+  - 姿勢 1.8s 自動恢復（tick 累加 `p.pose.t`）；**按移動鍵取消**
+  - **📸 拍照**：C 鍵或 📸 鈕 → `#game-canvas`.toDataURL → a.download `cute-kingdom-<ts>.png`（全程序化繪製無跨域，安全）；sfx('blip')＋toast
+  - UI：index.html 右下新增 `.pose-actions`（📷＋📸 兩鈕，bottom:16px right:16px——注意與右下「出門/建造」鈕不重疊，看 CSS 定位置）；setSub('free') 顯示、其他隱藏
+- **不存檔**（姿勢是瞬間動作）；地圖场景不做（加分項，之後要再加 mapP.pose）
+
+### 拆細
+- e1a ✅（7fd45c6）：character.js `POSES` 表＋drawCharacter pose 手臂/sway/特效支援（peace/wave/cheer/dance/hug/pray/salute/flex 八個站姿）
+- e1b ✅（7fd45c6）：character.js 坐姿（meditate 盤腿＋下移）＋wink（drawFace winkSide 參）
+  - 目視 QA 全過（shots/p1-*.png，test/peek-pose-qa.mjs）；Jerry 回饋修正：**高舉的手（y≤-50）改在 head 之後前層畫**（frontArms＋drawPoseArmSeg），比耶/揮手/敬禮的手不再被臉擋
+  - 字型子集重跑：1013→1035 字（POSES label 新字），fonts/rhr.woff2 已併入
+- e2 📋：game.js 姿勢狀態機（P 鍵/tick 1.8s 自動恢復/移動取消/toast/sfx）＋📷 鈕＋show/hide
+- e3 📋：📸 拍照（C 鍵＋鈕＋PNG 下載）＋pose-actions CSS/HTML
+- e4 📋：test/peek-pose.mjs（注入 done 存檔→P 循環 10 姿勢/POSE_ORDER 對/1.8s 自動回/移動取消/📷 鈕/📸 download 事件/各姿勢截圖×10/0 pageerror）＋目視 QA（重點看 meditate/wink/flex）
+- e5 📋：九套件回歸（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile）＋README（操作說明＋測試表加 peek-pose）＋收尾報告
+
+### 預查備忘
+- drawCharacter：js/character.js:129（手臂段 ~262-284、頭段 ~300-318、gear ~320-372）；drawFace :885（簽名 `(ctx,c,x,y,R,gz,closed,t)`，閉眼弧線樣式可複製給 wink）；drawEye :978
+- 既有 o 參：x,y,scale,alpha,t,walking,facing,gaze,eyesClosed,blink,gear；新增 o.pose
+- drawFace 呼叫點：drawCharacter(~311)、drawLying(~1079)、drawPortrait(~1108)、dialogue.js:77——winkSide 用第 9 參預設 0，不改其他呼叫
+- sfx 可用：click/confirm/back/place/pop/blip/toast/whoosh/wake/ding/buzz/coin/tick/fly（js/audio.js:71）
+- toast：showToast（game.js）；鍵盤 dispatch ~843-873（P/C 未佔用）；setSub :205（dpad show 邏輯 :214 可參考）
+- player state：`Game.player = { x, y, facing, walkT, walking, gaze, eyesClosed, getup }`（game.js:13）
+- peek-build.mjs 的 done 存檔注入法可照抄給 peek-pose（localStorage `cute-kingdom-save-v1`）
+- capsule/ellipse/roundRectPath/shade 等 helper 都在 character.js 同檔可用
