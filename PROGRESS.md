@@ -594,7 +594,7 @@
 
 ## 第十四輪（Jerry 回饋 2 點）
 
-> 📌 **接手筆記**（11-06 更新）：第十四輪 14a（c5475be）、14b（716c7cd）、14c（4fc5062/045ca8a/c442294/0f269bb）、**14d 全部完成**（d1：3ba4d21/884595d/aee3878；d2：9351523/f1d08e5/51be057；d3：f3119b3；d4：全 9 套件回歸全過，peek-fest 卡數預期 7→13 修正）。**新 session：讀完本節 → 直接做 14e**（全回歸＋README 文件＋向 Jerry 報告，見下）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
+> 📌 **接手筆記**（11-06 更新）：第十四輪**全部完成** ✅（14a c5475be、14b 716c7cd、14c 4fc5062/045ca8a/c442294/0f269bb、14d 3ba4d21/884595d/aee3878/9351523/f1d08e5/51be057/f3119b3/fef1383、14e 本 commit：九套件複跑全過＋README 更新）。Jerry 2 點要求皆交付：① 手機操作（14a/14b）② 節慶裝飾含歲數氣球（14c/14d）。**新 session：等 Jerry 新一輪回饋** → 開新輪章節（照 P2 工作流：預查→小 commit 拆分→逐段測試→回歸→文件）。每完成一個子階段就 commit（commit message 用繁體中文）＋把本節對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6：舊 session context 過大會 terminated，**新 session 才能吃到 900s timeout**。
 
 ### Jerry 的要求
 1. **支援手機操作**（直式手機能完整遊玩）
@@ -700,10 +700,10 @@
   - d3 ✅（peek-build 加 section 10½ 共 29 項：13 卡/移除騰槽×3/掛 4 件/彩燈串 🔄 隱藏＋R 不崩/歲數氣球初始 8/R→9/🔄→1/🔄→2/掛上 num=2/wallAdj num 2→3 確認寫入/reload num=3 持久＋其他補 num=8/移除；修 3 小問題：balloonPt 與 section 9 重名、Esc 移除模式後面板停 remove tab、section 7 JSON 精確比對多 num:8；125 項全過、新增截圖 b26-b29）
   - d4 ✅（全 9 套件回歸全過：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile；修 peek-fest 卡數預期 7→13，因 14d 加 6 牆飾卡；本 commit）
 
-### 14e 📋 全回歸＋文件＋報告
-- 九套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-fest** / **peek-mobile**（14d d4 已全過一次，14e 再跑確認無回歸）
-- README：新增「手機操作」＋「節慶裝飾」章節、測試表加 peek-mobile；PROGRESS 收尾
-- 向 Jerry 報告（繁體中文＋🤖）
+### 14e ✅ 全回歸＋文件＋報告
+- ✅ 九套件全過：flow / peek-build / peek-recover / peek-bgm-filefix / peek-character / peek-map / peek-work / **peek-fest** / **peek-mobile**（14e 複跑確認無回歸，9/9 exit=0）
+- ✅ README：新增「手機操作（第十四輪）」章節、建造表加節慶行（7 地＋6 牆）、操作說明補歲數氣球 R/🔄 換數字、測試表更新（peek-build 98→125 項、加 peek-fest/peek-mobile 兩行）
+- ✅ PROGRESS 收尾＋向 Jerry 報告（本輪 summary）
 
 ### 關鍵位置速查
 | 東西 | 位置 |
