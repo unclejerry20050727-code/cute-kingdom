@@ -408,7 +408,7 @@ function nudgeWallH(delta) {
     sfx('click');
   }
 }
-/* 第十一輪d：放置操作鈕顯示邏輯（🔄 僅 floor 非正方形；▲▼ 僅 wall/wallAdj；✖️ 常駐） */
+/* 第十一輪d：放置操作鈕顯示邏輯（🔄 floor 非正方形／14d 歲數氣球；▲▼ 僅 wall/wallAdj；✖️ 常駐） */
 function updatePlaceActions() {
   const bar = $('#place-actions');
   if (!bar) return;
@@ -422,6 +422,8 @@ function updatePlaceActions() {
     showRot = !!(it && it.w !== it.d);
   } else if (pl.mode === 'wall' || pl.mode === 'wallAdj') {
     showH = true;
+    const it = WALL_ITEMS[pl.item]; /* 14d：歲數氣球顯示 🔄（兼換數字入口） */
+    showRot = !!(it && it.numSelectable);
   }
   $('#pa-rot').classList.toggle('hidden', !showRot);
   $('#pa-up').classList.toggle('hidden', !showH);
@@ -856,6 +858,12 @@ function setupInput() {
       if (it && it.w !== it.d) { Game.placement.rot = Game.placement.rot ? 0 : 1; sfx('click'); }
       e.preventDefault();
     }
+    /* 14d：牆飾放置/調整中按 R 換數字（歲數氣球 1→2→…→9→1） */
+    if ((e.key === 'r' || e.key === 'R') && Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
+      const it = WALL_ITEMS[Game.placement.item];
+      if (it && it.numSelectable) { Game.placement.num = (Game.placement.num || 8) % 9 + 1; sfx('click'); }
+      e.preventDefault();
+    }
     /* 第十一輪c：牆飾放置/調整中，↑↓/WS 微調高度 */
     if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
       const up = e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W';
@@ -1026,6 +1034,9 @@ function setupInput() {
     if (Game.sub === 'placing' && pl && pl.mode === 'floor') {
       const it = BUILD_ITEMS[pl.item];
       if (it && it.w !== it.d) { pl.rot = pl.rot ? 0 : 1; sfx('click'); updatePlaceActions(); }
+    } else if (Game.sub === 'placing' && pl && (pl.mode === 'wall' || pl.mode === 'wallAdj')) { /* 14d：歲數氣球換數字 */
+      const it = WALL_ITEMS[pl.item];
+      if (it && it.numSelectable) { pl.num = (pl.num || 8) % 9 + 1; sfx('click'); updatePlaceActions(); }
     }
   });
   paBind('pa-up', () => nudgeWallH(6));

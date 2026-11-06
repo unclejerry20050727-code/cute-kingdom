@@ -1662,7 +1662,7 @@ function drawWallNumBalloon(ctx, wall, pos, o = {}) {
   if (o.ghost) ctx.globalAlpha *= 0.62;
   wallSpace(ctx, wall, pos, o.h ?? 185);
   const bad = o.tint === 'bad';
-  const num = o.num != null ? o.num : 8;
+  const num = (o.num >= 1 && o.num <= 9) ? o.num : 8; /* 14d：防 NaN/undefined → 預設 8 */
   ctx.strokeStyle = bad ? '#C96A7A' : '#B08968'; ctx.lineWidth = 1.3;
   ctx.beginPath(); ctx.moveTo(-9, 6); ctx.quadraticCurveTo(-4, 11, 0, 14.5); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(9, 6); ctx.quadraticCurveTo(4, 11, 0, 14.5); ctx.stroke();
