@@ -1503,6 +1503,86 @@ function drawWallGarland(ctx, wall, pos, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* ═════════ 第十四輪d：節慶牆飾 draw×6（手繪風、ghost/bad tint 支援） ═════════ */
+
+/* 春聯：紅底直長條＋上下金箍＋3 個金色字塊（聯文） */
+function drawWallCouplet(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 175);
+  const bad = o.tint === 'bad';
+  const red = bad ? '#DE8794' : '#E84A3C', gold = bad ? '#E7B9C3' : '#FFD166';
+  handShape(ctx, [[-8, -30], [8, -30], [8, 30], [-8, 30]], { fill: red, lw: 2.2, seed: 31, amp: 1.2 });
+  ctx.fillStyle = gold; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.rect(-9.5, -33, 19, 5); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(-9.5, 28, 19, 5); ctx.fill(); ctx.stroke();
+  for (let i = -1; i <= 1; i++) {
+    ctx.fillStyle = gold;
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    roundRectPath(ctx, -4.5, i * 17 - 4.5, 9, 9, 2);
+    ctx.fill(); ctx.stroke();
+  }
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+/* 福字：紅菱（rotate 45°）＋金內框＋福字倒貼（rotate PI） */
+function drawWallFuChar(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 160);
+  const bad = o.tint === 'bad';
+  ctx.save();
+  ctx.rotate(Math.PI / 4);
+  handShape(ctx, [[-10.5, -10.5], [10.5, -10.5], [10.5, 10.5], [-10.5, 10.5]], {
+    fill: bad ? '#DE8794' : '#E84A3C', lw: 2.2, seed: 33, amp: 1.1,
+  });
+  ctx.strokeStyle = bad ? '#C96A7A' : '#FFD166';
+  ctx.lineWidth = 1.6;
+  ctx.strokeRect(-7.4, -7.4, 14.8, 14.8);
+  ctx.restore();
+  ctx.save();
+  ctx.rotate(Math.PI);
+  ctx.fillStyle = bad ? '#F6DCE2' : '#FFF6E5';
+  ctx.font = '900 16px RHR';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('福', 0, 1);
+  ctx.restore();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
+/* 冬青花環：12 片交替葉＋紅果×3＋底部紅蝴蝶結 */
+function drawWallWreath(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 185);
+  const bad = o.tint === 'bad';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(Math.cos(a) * 12, Math.sin(a) * 12);
+    ctx.rotate(a + Math.PI / 2);
+    ctx.fillStyle = bad ? '#DE8794' : (i % 2 ? '#7FC98F' : '#5FAE74');
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(0, 0, 3, 5.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.fillStyle = bad ? '#C96A7A' : '#E84A3C';
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  for (const [bx, by] of [[-4.5, -2.5], [0, -4.5], [4.5, -2.5]]) {
+    ctx.beginPath(); ctx.arc(bx, by, 2.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.fillStyle = bad ? '#DE8794' : '#FF6E97';
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(-7, 9.5); ctx.lineTo(-7, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(7, 9.5); ctx.lineTo(7, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#C96A7A' : '#E84A3C';
+  ctx.beginPath(); ctx.arc(0, 12, 2.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
 /* 第十一輪c：牆飾高度可調範圍（離地 px） */
 const WALL_H_MIN = 50, WALL_H_MAX = 262;
 function clampWallH(h) { return Math.max(WALL_H_MIN, Math.min(WALL_H_MAX, h)); }
