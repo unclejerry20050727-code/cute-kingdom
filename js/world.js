@@ -1692,6 +1692,13 @@ const WALL_ITEMS = {
   poster:     { name: '海報',   tab: 'wall', max: 2, span: 1, hMid: 150, hitW: 15, draw: drawWallPoster },
   wallShelf:  { name: '牆架',   tab: 'wall', max: 2, span: 1, hMid: 105, hitW: 19, draw: drawWallShelf },
   garland:    { name: '彩旗',   tab: 'wall', max: 1, span: 2, hMid: 232, hitW: 36, draw: drawWallGarland },
+  /* 第十四輪d：節慶牆飾（🎉 分頁；numBalloon 可換數字 1-9） */
+  couplet:    { name: '春聯',   tab: 'fest', max: 2, span: 1, hMid: 175, hitW: 14, draw: drawWallCouplet },
+  fuChar:     { name: '福字',   tab: 'fest', max: 1, span: 1, hMid: 160, hitW: 15, draw: drawWallFuChar },
+  wreath:     { name: '冬青花環', tab: 'fest', max: 2, span: 1, hMid: 185, hitW: 17, draw: drawWallWreath },
+  lights:     { name: '彩燈串', tab: 'fest', max: 1, span: 2, hMid: 235, hitW: 36, draw: drawWallLights },
+  cobweb:     { name: '蜘蛛網', tab: 'fest', max: 2, span: 1, hMid: 245, hitW: 16, draw: drawWallCobweb },
+  numBalloon: { name: '歲數氣球', tab: 'fest', max: 1, span: 1, hMid: 185, hitW: 16, numSelectable: true, draw: drawWallNumBalloon },
 };
 
 const WALL_FORBID = { A: [2, 3, 4, 5, 7], B: [6, 7, 8] };
