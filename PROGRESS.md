@@ -731,7 +731,7 @@ index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/min
 
 ## 第十五輪：人物擺拍姿勢（Jerry 要求：支援人物各種擺拍姿勢；已批准 10 姿勢含 🧘/🫡/💪/😉）
 
-> 📌 **接手筆記**（11-06 更新）：e1 繪製層已完成（POSES 10 姿勢＋坐姿＋啾咪＋前層手臂）＋字型 1035 字。下一步 e2（game.js 狀態機＋P 鍵＋📷 鈕）。每完成一個子階段就 commit（commit message 用繁體中文）＋把對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6。
+> 📌 **接手筆記**（11-07 更新）：e1–e4 全完成（繪製層/狀態機/拍照/29 項專測全過）。剩 e5：九套件回歸＋README＋收尾報告。每完成一個子階段就 commit（commit message 用繁體中文）＋把對應 📋 改成 ✅＋hash。另見 TERMINATED-ANALYSIS.md §6。
 
 ### 功能設計（已批准）
 - **10 種擺拍姿勢**（character.js `POSES` 表＋`drawCharacter` 新增 `o.pose = { id, t }` 參數）：
@@ -763,8 +763,8 @@ index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/min
   - 目視 QA 全過（shots/p1-*.png，test/peek-pose-qa.mjs）；Jerry 回饋修正：**高舉的手（y≤-50）改在 head 之後前層畫**（frontArms＋drawPoseArmSeg），比耶/揮手/敬禮的手不再被臉擋
   - 字型子集重跑：1013→1035 字（POSES label 新字），fonts/rhr.woff2 已併入
 - e2 📋：game.js 姿勢狀態機（P 鍵/tick 1.8s 自動恢復/移動取消/toast/sfx）＋📷 鈕＋show/hide
-- e3 📋：📸 拍照（C 鍵＋鈕＋PNG 下載）＋pose-actions CSS/HTML
-- e4 📋：test/peek-pose.mjs（注入 done 存檔→P 循環 10 姿勢/POSE_ORDER 對/1.8s 自動回/移動取消/📷 鈕/📸 download 事件/各姿勢截圖×10/0 pageerror）＋目視 QA（重點看 meditate/wink/flex）
+- e3 ✅（bd87f1e）：📸 拍照（C 鍵＋📸 鈕＋PNG 下載 cute-kingdom-<ts>.png）＋按鈕疊在擺拍鈕上方（bottom:270px）；字型 1036 字
+- e4 ✅（ca61569）：test/peek-pose.mjs 29 項全過＋十姿勢遊戲內截圖 pp01-pp11
 - e5 📋：九套件回歸（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile）＋README（操作說明＋測試表加 peek-pose）＋收尾報告
 
 ### 預查備忘
