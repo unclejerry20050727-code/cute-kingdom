@@ -253,6 +253,7 @@ body {
 #build-btn { bottom: 26px; }
 #out-btn { bottom: 118px; }
 #pose-btn { bottom: 194px; } /* 第十五輪：擺拍鈕（疊在出門鈕上方） */
+#photo-btn { bottom: 270px; } /* 第十五輪：拍照鈕（疊在擺拍鈕上方） */
 
 /* 建造面板 */
 .build-panel {

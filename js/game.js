@@ -57,6 +57,8 @@ function init() {
     if (Game.sub === 'goOut') hideHint();
     if (Game.sub === 'goOut' || Game.sub === 'free') goOutside();
   };
+  $('#pose-btn').onclick = () => startPose(); /* 第十五輪：📷 擺拍（sfx 在 startPose 內） */
+  $('#photo-btn').onclick = () => takePhoto(); /* 第十五輪：📸 拍照（sfx 在 takePhoto 內） */
   $('#map-home').onclick = () => { sfx('whoosh'); homeFromMap(); };
   $('#shop-x').onclick = () => { sfx('back'); closeShop(); };
   $('#work-x').onclick = () => { sfx('back'); exitWork(); };
@@ -214,6 +216,7 @@ function setSub(sub) {
   else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
   $('#pose-btn').classList.toggle('hidden', sub !== 'free'); /* 第十五輪：擺拍鈕只在自由狀態 */
+  $('#photo-btn').classList.toggle('hidden', sub !== 'free'); /* 第十五輪：拍照鈕同上 */
   updatePlaceActions(); /* 第十一輪d：放置操作鈕跟隨子狀態 */
   syncMoneyUI();
 }
@@ -600,6 +603,18 @@ function startPose() {
   showToast(`📷 ${POSES[id].label}！`);
 }
 
+/* 第十五輪：拍照（C 鍵/📸 鈕）——全程序化繪製無跨域，toDataURL 安全 */
+function takePhoto() {
+  if (Game.sub !== 'free') return;
+  sfx('blip');
+  const url = Game.canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cute-kingdom-${Date.now()}.png`;
+  a.click();
+  showToast('📸 拍照完成！');
+}
+
 function updateMovement(dt) {
   const p = Game.player;
   let dx = 0, dy = 0;
@@ -869,6 +884,12 @@ function setupInput() {
     /* 第十五輪：P = 擺拍（10 姿勢輪流） */
     if ((e.key === 'p' || e.key === 'P') && Game.sub === 'free' && !Dialogue.active) {
       startPose();
+      e.preventDefault();
+      return;
+    }
+    /* 第十五輪：C = 拍照（下載 PNG） */
+    if ((e.key === 'c' || e.key === 'C') && Game.sub === 'free' && !Dialogue.active) {
+      takePhoto();
       e.preventDefault();
       return;
     }
@@ -1145,12 +1166,16 @@ function setupBuildUI() {
 
 function openBuildPanel(tab) {
   $('#build-panel').classList.remove('hidden');
-  $('#pose-btn').classList.add('hidden'); /* 第十五輪：面板開啟時隱藏擺拍鈕，避免蓋到 */
+  $('#pose-btn').classList.add('hidden'); /* 第十五輪：面板開啟時隱藏擺拍/拍照鈕，避免蓋到 */
+  $('#photo-btn').classList.add('hidden');
   selectBuildTab(tab || buildTab || 'furniture');
 }
 function closeBuildPanel() {
   $('#build-panel').classList.add('hidden');
-  if (Game.sub === 'free') $('#pose-btn').classList.remove('hidden'); /* 第十五輪 */
+  if (Game.sub === 'free') { /* 第十五輪 */
+    $('#pose-btn').classList.remove('hidden');
+    $('#photo-btn').classList.remove('hidden');
+  }
 }
 function toggleBuildPanel() {
   const panel = $('#build-panel');
