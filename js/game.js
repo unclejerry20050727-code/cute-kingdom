@@ -213,6 +213,7 @@ function setSub(sub) {
   if (sub === 'free' || sub === 'map') showDpad();
   else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
+  $('#pose-btn').classList.toggle('hidden', sub !== 'free'); /* 第十五輪：擺拍鈕只在自由狀態 */
   updatePlaceActions(); /* 第十一輪d：放置操作鈕跟隨子狀態 */
   syncMoneyUI();
 }
@@ -281,6 +282,11 @@ function updateGame(dt) {
     }
     case 'free': {
       updateMovement(dt);
+      /* 第十五輪：姿勢計時（1.8s 自動回 idle） */
+      if (Game.player.pose) {
+        Game.player.pose.t += dt;
+        if (Game.player.pose.t >= 1.8) Game.player.pose = null;
+      }
       break;
     }
     case 'map': {
@@ -577,6 +583,23 @@ function tileBlocked(tx, ty) {
   return Game.blocked.has(tx + ',' + ty);
 }
 
+/* ══════════ 第十五輪：擺拍 ══════════ */
+const POSE_ORDER = ['peace', 'wave', 'cheer', 'dance', 'hug', 'pray', 'salute', 'flex', 'meditate', 'wink'];
+
+function startPose() {
+  const p = Game.player;
+  if (Game.sub !== 'free' || p.getup < 1 || Dialogue.active) return;
+  if (!$('#build-panel').classList.contains('hidden')) return; /* 建造面板開啟中不擺拍（第十五輪） */
+  sfx('pop');
+  p.poseIdx = p.poseIdx == null ? 0 : (p.poseIdx + 1) % POSE_ORDER.length;
+  const id = POSE_ORDER[p.poseIdx];
+  p.pose = { id, t: 0 };
+  p.facing = 'down';
+  p.walking = false;
+  Game.moveTarget = null;
+  showToast(`📷 ${POSES[id].label}！`);
+}
+
 function updateMovement(dt) {
   const p = Game.player;
   let dx = 0, dy = 0;
@@ -586,6 +609,8 @@ function updateMovement(dt) {
   if (k.has('left')) { dx -= 1; dy += 1; }
   if (k.has('right')) { dx += 1; dy -= 1; }
   if (dx === 0 && dy === 0 && Game.dpadDir) { dx = Game.dpadDir[0]; dy = Game.dpadDir[1]; }
+  /* 第十五輪：按移動鍵（或點地面走）立即取消擺拍 */
+  if (p.pose && (dx !== 0 || dy !== 0 || Game.moveTarget)) p.pose = null;
 
   if (dx !== 0 || dy !== 0) {
     Game.moveTarget = null;
@@ -794,6 +819,7 @@ function renderGame() {
           x: sx, y: sy, facing: p.facing, t: p.walkT,
           walking: p.walking, gaze: p.gaze, eyesClosed: p.eyesClosed,
           blink: Game.blink.timer > 0 ? 1 : 0,
+          pose: p.pose || undefined,
         });
       }
     },
@@ -839,6 +865,12 @@ function setupInput() {
     if (Game.sub === 'map' && keyMap[e.key]) {
       Game.keys.add(keyMap[e.key]);
       e.preventDefault();
+    }
+    /* 第十五輪：P = 擺拍（10 姿勢輪流） */
+    if ((e.key === 'p' || e.key === 'P') && Game.sub === 'free' && !Dialogue.active) {
+      startPose();
+      e.preventDefault();
+      return;
     }
     if ((e.key === ' ' || e.key === 'Enter') && Dialogue.active) {
       Dialogue.advance();
@@ -1113,10 +1145,12 @@ function setupBuildUI() {
 
 function openBuildPanel(tab) {
   $('#build-panel').classList.remove('hidden');
+  $('#pose-btn').classList.add('hidden'); /* 第十五輪：面板開啟時隱藏擺拍鈕，避免蓋到 */
   selectBuildTab(tab || buildTab || 'furniture');
 }
 function closeBuildPanel() {
   $('#build-panel').classList.add('hidden');
+  if (Game.sub === 'free') $('#pose-btn').classList.remove('hidden'); /* 第十五輪 */
 }
 function toggleBuildPanel() {
   const panel = $('#build-panel');

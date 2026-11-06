@@ -252,6 +252,7 @@ body {
 .hud-emoji { font-size: 26px; }
 #build-btn { bottom: 26px; }
 #out-btn { bottom: 118px; }
+#pose-btn { bottom: 194px; } /* 第十五輪：擺拍鈕（疊在出門鈕上方） */
 
 /* 建造面板 */
 .build-panel {
