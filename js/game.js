@@ -135,7 +135,7 @@ function beginGame(save, skipIntro) {
     cleanFurn.push({ id, tx: f.tx, ty: f.ty, rot: f.rot ? 1 : 0 }); /* 第十輪：保留旋轉（舊存檔無 rot 預設 0） */
   }
   Game.furniture = cleanFurn;
-  Game.wallItems = (save.wallItems || []).map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h != null ? w.h : (WALL_ITEMS[w.id] ? WALL_ITEMS[w.id].hMid : 110) })); /* 第十一輪c：舊存檔補預設高度 */
+  Game.wallItems = (save.wallItems || []).map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h != null ? w.h : (WALL_ITEMS[w.id] ? WALL_ITEMS[w.id].hMid : 110), num: w.num != null ? w.num : 8 })); /* 第十一輪c：舊存檔補預設高度；14d：補歲數氣球 num（舊存檔預設 8） */
   Game.tints = save.tints || { wall: 0, floor: 0 };
   setRoomTints(Game.tints.wall, Game.tints.floor);
   Game.stage = save.stage || 'created';
@@ -959,7 +959,7 @@ function setupInput() {
         } else if (pl.mode === 'wall') {
           if (pl.valid) {
             const prevSub = pl.prevSub;
-            Game.wallItems.push({ id: pl.item, wall: pl.wall, pos: pl.pos, h: pl.h }); /* 第十一輪c：帶高度 */
+            Game.wallItems.push({ id: pl.item, wall: pl.wall, pos: pl.pos, h: pl.h, num: pl.num }); /* 第十一輪c：帶高度；14d：帶 num（numBalloon 才有用） */
             Game.placement = null;
             $('#hint-bar').classList.add('hidden');
             sfx('place');
@@ -1296,9 +1296,10 @@ function startWallPlacement(id) {
   hideHint();
   setSub('placing');
   const s = wallSlotFromMouse() || { wall: 'A', pos: 3 };
-  Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false, h: item.hMid }; /* 第十一輪c：初始高度 = hMid */
+  Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false, h: item.hMid, num: 8 }; /* 第十一輪c：初始高度 = hMid；14d：numBalloon 初始 8 */
   const bar = $('#hint-bar');
-  bar.textContent = `🖼️ 移到牆上，點一下掛上${item.name}！（↑↓/滾輪/▲▼ 調高度、Esc／✖️ 取消）`;
+  const numTip = item.numSelectable ? '、R/🔄 換數字' : ''; /* 14d：歲數氣球可換數字 */
+  bar.textContent = `🖼️ 移到牆上，點一下掛上${item.name}！（↑↓/滾輪/▲▼ 調高度${numTip}、Esc／✖️ 取消）`;
   bar.classList.remove('hidden');
   updatePlaceActions(); /* 第十一輪d */
 }
@@ -1330,7 +1331,7 @@ function fullSave(stage) {
   return {
     cfg: Game.playerCfg,
     furniture: Game.furniture,
-    wallItems: Game.wallItems.map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h })), /* 第十一輪c：存高度 */
+    wallItems: Game.wallItems.map(w => ({ id: w.id, wall: w.wall, pos: w.pos, h: w.h, num: w.num })), /* 第十一輪c：存高度；14d：存 num（undefined 被 JSON 剔除，不影響其他品項） */
     tints: Game.tints,
     stage,
     money: Game.money ?? 100,
