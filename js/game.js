@@ -678,17 +678,17 @@ function renderGame() {
     const it = WALL_ITEMS[w.id];
     if (!it) return;
     if (adjPl && adjPl.idx === i) return; /* 調整中的品項用新高度 ghost 畫，實物先跳過 */
-    const o = { h: w.h };
+    const o = { h: w.h, num: w.num }; /* 14d：numBalloon 帶數字 */
     if (rmTarget0 && rmTarget0.type === 'wall' && rmTarget0.idx === i) o.highlight = true;
     it.draw(ctx, w.wall, w.pos + 0.5 * (it.span || 1), o);
   });
   if (Game.placement && Game.placement.mode === 'wall') {
     const pl = Game.placement, it = WALL_ITEMS[pl.item];
-    if (it) it.draw(ctx, pl.wall, pl.pos + 0.5 * (it.span || 1), { ghost: true, tint: pl.valid ? 'ok' : 'bad', h: pl.h });
+    if (it) it.draw(ctx, pl.wall, pl.pos + 0.5 * (it.span || 1), { ghost: true, tint: pl.valid ? 'ok' : 'bad', h: pl.h, num: pl.num });
   }
   if (adjPl) {
     const it = WALL_ITEMS[adjPl.item];
-    if (it) it.draw(ctx, adjPl.wall, adjPl.pos + 0.5 * (it.span || 1), { ghost: true, tint: 'ok', h: adjPl.h });
+    if (it) it.draw(ctx, adjPl.wall, adjPl.pos + 0.5 * (it.span || 1), { ghost: true, tint: 'ok', h: adjPl.h, num: adjPl.num });
   }
 
   /* 地飾（地層：貼地板，先於家具與角色繪製；移除模式標紅） */
@@ -945,10 +945,11 @@ function setupInput() {
           if (it && wallItemHit(w, wx, wy)) { adjHit = { i, w, it }; break; }
         }
         if (adjHit) {
-          Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free' };
+          Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free', num: adjHit.w.num != null ? adjHit.w.num : 8 }; /* 14d：帶 num */
           setSub('placing');
           const bar = $('#hint-bar');
-          bar.textContent = `🖼️ ${adjHit.it.name}：按 ↑/↓ 或滾輪調高度，再點一次確認！（Esc／✖️ 取消）`;
+          const adjNumTip = adjHit.it.numSelectable ? '、R/🔄 換數字' : ''; /* 14d：歲數氣球 */
+          bar.textContent = `🖼️ ${adjHit.it.name}：按 ↑/↓ 或滾輪調高度${adjNumTip}，再點一次確認！（Esc／✖️ 取消）`;
           bar.classList.remove('hidden');
           sfx('click');
           break;
@@ -977,8 +978,10 @@ function setupInput() {
             openBuildPanel();
           } else showToast('這裡掛不了喔，換個位置試試～');
         } else if (pl.mode === 'wallAdj') {
-          /* 第十一輪c：再點一次 → 確認新高度 */
+          /* 第十一輪c：再點一次 → 確認新高度；14d：numSelectable 同時寫入 num */
           Game.wallItems[pl.idx].h = pl.h;
+          const adjIt = WALL_ITEMS[pl.item];
+          if (adjIt && adjIt.numSelectable) Game.wallItems[pl.idx].num = pl.num;
           Game.placement = null;
           $('#hint-bar').classList.add('hidden');
           sfx('place');
