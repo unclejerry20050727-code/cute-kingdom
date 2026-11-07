@@ -803,5 +803,5 @@ Jerry 需求三點：
 ## 子任務
 - 16a ✅：地圖擺拍（mapscene.js pose 參數＋game.js map case tick/取消＋startPose/takePhoto/setSub 放寬 map）＋peek-pose 地圖段
 - 16b ✅：牆飾同槽疊掛（world.js sizeH＋wallSlotValid(h,excludeIdx)＋game.js 呼叫點+wallAdj 驗證）＋peek-build 新段
-- 16c 📋：封面圖（index.html＋css＋刪「封面製作中」備註）
+- 16c ✅：封面圖（index.html＋css＋刪「封面製作中」備註）
 - 16d 📋：十套件回歸＋README（操作說明/建造表/測試表）＋PROGRESS 收尾＋報告

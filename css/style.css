@@ -80,18 +80,17 @@ body {
   background: var(--panel);
   border: 4px solid var(--panel-border);
   border-radius: 34px;
-  padding: 46px 64px;
+  padding: 20px;
+  width: min(460px, 92vw);
   box-shadow: 0 10px 0 rgba(122,82,54,.28);
 }
-.cover-hearts { font-size: 30px; letter-spacing: 12px; }
-.cover-title {
-  font-size: 62px; font-weight: 700; letter-spacing: 6px;
-  color: var(--pink-deep);
-  text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(122,82,54,.25);
-  margin: 10px 0 6px;
+/* 第十六輪c：正式封面海報（art/game-cover.png，標題已含在圖中） */
+.cover-art {
+  display: block; width: 100%; max-height: 70vh; object-fit: contain;
+  border-radius: 18px; border: 3px solid var(--panel-border); background: #fff;
+  margin-bottom: 16px;
 }
-.cover-note { font-size: 17px; color: var(--ink-soft); margin-bottom: 6px; }
-.cover-credit { font-size: 12px; color: var(--ink-soft); opacity: .85; margin-bottom: 24px; }
+.cover-credit { font-size: 12px; color: var(--ink-soft); opacity: .85; margin-bottom: 0; }
 
 /* ══════════ 標題畫面 ══════════ */
 .title-wrap { text-align: center; }
@@ -669,7 +668,7 @@ body {
   .create-wrap { flex-direction: column; height: calc(100dvh - 30px); overflow-y: auto; } /* 14a：固定高度內部捲動，避免被 .screen 置中裁掉頂端 */
   .create-preview { flex: none; height: 484px; } /* 14a：canvas 本徵高 400px，框太矮會被裁（只剩一顆頭） */
   .t-char { font-size: 56px; }
-  .cover-title { font-size: 44px; }
+  .cover-art { max-height: 62vh; }
 
   /* 建造面板：全寬、避開 dpad 與提示列 */
   .build-panel { left: 10px; right: 10px; width: auto; bottom: 88px; }
