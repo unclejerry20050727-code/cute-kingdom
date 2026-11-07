@@ -1686,31 +1686,43 @@ function clampWallH(h) { return Math.max(WALL_H_MIN, Math.min(WALL_H_MAX, h)); }
 
 /* id → { name, tab:'wall', max, span, hMid, hitW, draw(ctx, wall, pos, o) } */
 const WALL_ITEMS = {
-  heartFrame: { name: '心形框', tab: 'wall', max: 2, span: 1, hMid: 170, hitW: 17, draw: drawWallHeartFrame },
-  starFrame:  { name: '星星框', tab: 'wall', max: 2, span: 1, hMid: 165, hitW: 16, draw: drawWallStarFrame },
-  clock:      { name: '時鐘',   tab: 'wall', max: 1, span: 1, hMid: 185, hitW: 17, draw: drawWallClock },
-  poster:     { name: '海報',   tab: 'wall', max: 2, span: 1, hMid: 150, hitW: 15, draw: drawWallPoster },
-  wallShelf:  { name: '牆架',   tab: 'wall', max: 2, span: 1, hMid: 105, hitW: 19, draw: drawWallShelf },
-  garland:    { name: '彩旗',   tab: 'wall', max: 1, span: 2, hMid: 232, hitW: 36, draw: drawWallGarland },
+  heartFrame: { name: '心形框', tab: 'wall', max: 2, span: 1, hMid: 170, hitW: 17, sizeH: 46, draw: drawWallHeartFrame },
+  starFrame:  { name: '星星框', tab: 'wall', max: 2, span: 1, hMid: 165, hitW: 16, sizeH: 44, draw: drawWallStarFrame },
+  clock:      { name: '時鐘',   tab: 'wall', max: 1, span: 1, hMid: 185, hitW: 17, sizeH: 34, draw: drawWallClock },
+  poster:     { name: '海報',   tab: 'wall', max: 2, span: 1, hMid: 150, hitW: 15, sizeH: 46, draw: drawWallPoster },
+  wallShelf:  { name: '牆架',   tab: 'wall', max: 2, span: 1, hMid: 105, hitW: 19, sizeH: 30, draw: drawWallShelf },
+  garland:    { name: '彩旗',   tab: 'wall', max: 1, span: 2, hMid: 232, hitW: 36, sizeH: 24, draw: drawWallGarland },
   /* 第十四輪d：節慶牆飾（🎉 分頁；numBalloon 可換數字 1-9） */
-  couplet:    { name: '春聯',   tab: 'fest', max: 2, span: 1, hMid: 175, hitW: 14, draw: drawWallCouplet },
-  fuChar:     { name: '福字',   tab: 'fest', max: 1, span: 1, hMid: 160, hitW: 15, draw: drawWallFuChar },
-  wreath:     { name: '冬青花環', tab: 'fest', max: 2, span: 1, hMid: 185, hitW: 17, draw: drawWallWreath },
-  lights:     { name: '彩燈串', tab: 'fest', max: 1, span: 2, hMid: 235, hitW: 36, draw: drawWallLights },
-  cobweb:     { name: '蜘蛛網', tab: 'fest', max: 2, span: 1, hMid: 245, hitW: 16, draw: drawWallCobweb },
-  numBalloon: { name: '歲數氣球', tab: 'fest', max: 1, span: 1, hMid: 185, hitW: 16, numSelectable: true, draw: drawWallNumBalloon },
+  couplet:    { name: '春聯',   tab: 'fest', max: 2, span: 1, hMid: 175, hitW: 14, sizeH: 66, draw: drawWallCouplet },
+  fuChar:     { name: '福字',   tab: 'fest', max: 1, span: 1, hMid: 160, hitW: 15, sizeH: 30, draw: drawWallFuChar },
+  wreath:     { name: '冬青花環', tab: 'fest', max: 2, span: 1, hMid: 185, hitW: 17, sizeH: 36, draw: drawWallWreath },
+  lights:     { name: '彩燈串', tab: 'fest', max: 1, span: 2, hMid: 235, hitW: 36, sizeH: 26, draw: drawWallLights },
+  cobweb:     { name: '蜘蛛網', tab: 'fest', max: 2, span: 1, hMid: 245, hitW: 16, sizeH: 32, draw: drawWallCobweb },
+  numBalloon: { name: '歲數氣球', tab: 'fest', max: 1, span: 1, hMid: 185, hitW: 16, sizeH: 32, numSelectable: true, draw: drawWallNumBalloon },
 };
 
 const WALL_FORBID = { A: [2, 3, 4, 5, 7], B: [6, 7, 8] };
 
-function wallSlotValid(id, wall, pos) {
+/* 16b：同槽可多件（上下錯開）——只拒「垂直範圍重疊」；excludeIdx 供 wallAdj 排除自己 */
+function wallSlotValid(id, wall, pos, h, excludeIdx = -1) {
   const it = WALL_ITEMS[id];
   if (!it) return false;
   const span = it.span || 1;
   if (pos < 0 || pos + span > N) return false;
+  const hNew = h != null ? h : it.hMid;
   for (let p = pos; p < pos + span; p++) {
     if (WALL_FORBID[wall].includes(p)) return false;
-    if (Game.wallItems.some(w => w.wall === wall && w.pos === p)) return false;
+    for (let i = 0; i < Game.wallItems.length; i++) {
+      const w = Game.wallItems[i];
+      if (i === excludeIdx || w.wall !== wall) continue;
+      const wIt = WALL_ITEMS[w.id];
+      const wSpan = (wIt && wIt.span) || 1;
+      if (w.pos <= p && p < w.pos + wSpan) {
+        const wH = w.h != null ? w.h : (wIt ? wIt.hMid : 160);
+        const wSize = (wIt && wIt.sizeH) || 40;
+        if (Math.abs(wH - hNew) < ((wSize + it.sizeH) / 2) + 2) return false; /* 留 2px 縫 */
+      }
+    }
   }
   return true;
 }

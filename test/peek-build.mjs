@@ -474,6 +474,54 @@ await page.mouse.click(balloonPt3.x, balloonPt3.y); await ms(500);
 check('移除歲數氣球 → 8 件牆飾', (await G(() => Game.wallItems.length)) === 8);
 await page.keyboard.press('Escape'); await ms(300);
 
+/* ── 10¾. 16b：牆飾同槽多件（上下錯開）── */
+console.log('── 10¾. 16b 同槽疊掛 ──');
+await G(() => { Game.wallItems.length = 0; });
+await G(() => { openBuildPanel('fest'); });
+await ms(400);
+await placeWallByName('福字', 'A', 1, 160);
+check('A1 掛福字（h=160）', (await G(() => Game.wallItems.length)) === 1);
+await page.click('#build-items .build-item:has-text("歲數氣球")');
+await ms(400);
+await G(() => { nudgeWallH(50); }); /* hMid 185 → 235（錯開福字 160） */
+const ballPt = await wallPt('A', 1, 235);
+await page.mouse.move(ballPt.x, ballPt.y); await ms(350);
+check('歲數氣球 ghost A1 h=235 有效', (await G(() => Game.placement.valid)) === true);
+await page.mouse.click(ballPt.x, ballPt.y); await ms(500);
+check('同槽 A1 上下錯開掛歲數氣球（h=235）→ 2 件', (await G(() => Game.wallItems.length)) === 2);
+/* 垂直重疊 → 拒 */
+await G(() => selectBuildTab('wall'));
+await ms(300);
+await placeWallByName('星星框', 'A', 1, 165);
+check('同槽垂直重疊被拒（星星框 h=165）', (await G(() => Game.wallItems.length)) === 2);
+check('被拒 toast 顯示', (await G(() => $('#toast').textContent)).includes('這裡掛不了'));
+await page.keyboard.press('Escape'); await ms(300);
+/* wallAdj：調福字高度，與氣球重疊則拒 */
+const fuPt = await wallPt('A', 1, 160);
+await page.mouse.click(fuPt.x, fuPt.y); await ms(500);
+check('點福字 → wallAdj', (await G(() => Game.placement && Game.placement.mode)) === 'wallAdj');
+await G(() => { nudgeWallH(50); });
+await ms(200);
+check('wallAdj h=210 與氣球(235)重疊 → invalid', (await G(() => Game.placement.valid)) === false);
+await page.mouse.click(fuPt.x, fuPt.y); await ms(500);
+check('重疊確認被拒（福字仍 h=160）', (await G(() => Game.wallItems.find(w => w.id === 'fuChar').h)) === 160);
+check('仍在調整中', (await G(() => Game.placement && Game.placement.mode)) === 'wallAdj');
+await G(() => { nudgeWallH(-90); });
+await ms(200);
+check('wallAdj h=120 不重疊 → valid', (await G(() => Game.placement.valid)) === true);
+await page.mouse.click(fuPt.x, fuPt.y); await ms(500);
+check('確認成功 → 福字 h=120', (await G(() => Game.wallItems.find(w => w.id === 'fuChar').h)) === 120);
+/* 持久化：同槽高度 reload 保留 */
+await G(() => saveGame(fullSave(Game.stage)));
+await page.reload(); await ms(800);
+await page.click('#cover-enter'); await ms(300);
+await page.click('#btn-start'); await ms(1200);
+check('reload 後同槽 2 件（120/235）保留', await G(() => {
+  const w = Game.wallItems.filter(x => x.wall === 'A' && x.pos === 1);
+  return w.length === 2 && w.some(x => x.h === 120) && w.some(x => x.h === 235);
+}));
+await shot('16b-same-slot', '16b：同槽多件上下錯開');
+
 console.log(fails === 0 ? '\n✅ 建造系統測試全過' : `\n❌ ${fails} 項失敗`);
 await browser.close();
 server.close();

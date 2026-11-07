@@ -345,7 +345,9 @@ function updateGame(dt) {
       } else if (pl.mode === 'wall') {
         const s = wallSlotFromMouse();
         if (s) { pl.wall = s.wall; pl.pos = s.pos; }
-        pl.valid = wallSlotValid(pl.item, pl.wall, pl.pos);
+        pl.valid = wallSlotValid(pl.item, pl.wall, pl.pos, pl.h); /* 16b：帶高度驗垂直重疊 */
+      } else if (pl.mode === 'wallAdj') {
+        pl.valid = wallSlotValid(pl.item, pl.wall, pl.pos, pl.h, pl.idx); /* 16b：調整中重驗重疊（排除自己） */
       } else if (pl.mode === 'remove') {
         pl.target = removeTargetFromMouse();
       }
@@ -421,7 +423,15 @@ function nudgeWallH(delta) {
   const pl = Game.placement;
   if (Game.sub === 'placing' && pl && (pl.mode === 'wall' || pl.mode === 'wallAdj')) {
     pl.h = clampWallH(pl.h + delta);
+    refreshWallValid(); /* 16b：調高度後立即重驗垂直重疊 */
     sfx('click');
+  }
+}
+/* 16b：牆飾放置/調整高度後重驗同槽重疊（wallAdj 排除自己） */
+function refreshWallValid() {
+  const pl = Game.placement;
+  if (Game.sub === 'placing' && pl && (pl.mode === 'wall' || pl.mode === 'wallAdj')) {
+    pl.valid = wallSlotValid(pl.item, pl.wall, pl.pos, pl.h, pl.mode === 'wallAdj' ? pl.idx : -1);
   }
 }
 /* 第十一輪d：放置操作鈕顯示邏輯（🔄 floor 非正方形／14d 歲數氣球；▲▼ 僅 wall/wallAdj；✖️ 常駐） */
@@ -967,6 +977,7 @@ function setupInput() {
     /* 第十一輪c：牆飾放置/調整中用滾輪調高度（上滾＝調高） */
     if (Game.sub === 'placing' && Game.placement && (Game.placement.mode === 'wall' || Game.placement.mode === 'wallAdj')) {
       Game.placement.h = clampWallH(Game.placement.h + (e.deltaY > 0 ? -6 : 6));
+      refreshWallValid(); /* 16b：滾輪調高度後重驗重疊 */
       e.preventDefault();
     }
   }, { passive: false });
@@ -1007,7 +1018,7 @@ function setupInput() {
           if (it && wallItemHit(w, wx, wy)) { adjHit = { i, w, it }; break; }
         }
         if (adjHit) {
-          Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free', num: adjHit.w.num != null ? adjHit.w.num : 8 }; /* 14d：帶 num */
+          Game.placement = { mode: 'wallAdj', item: adjHit.w.id, wall: adjHit.w.wall, pos: adjHit.w.pos, h: adjHit.w.h != null ? adjHit.w.h : adjHit.it.hMid, idx: adjHit.i, prevSub: 'free', num: adjHit.w.num != null ? adjHit.w.num : 8, valid: true }; /* 14d：帶 num；16b：初始 valid（自己不算重疊） */
           setSub('placing');
           const bar = $('#hint-bar');
           const adjNumTip = adjHit.it.numSelectable ? '、R/🔄 換數字' : ''; /* 14d：歲數氣球 */
@@ -1038,18 +1049,22 @@ function setupInput() {
             showToast(`掛上${WALL_ITEMS[pl.item].name}～`);
             setSub(prevSub || 'free');
             openBuildPanel();
-          } else showToast('這裡掛不了喔，換個位置試試～');
+          } else showToast('這裡掛不了～換個位置，或↑↓調高度上下錯開即可同槽多掛～');
         } else if (pl.mode === 'wallAdj') {
-          /* 第十一輪c：再點一次 → 確認新高度；14d：numSelectable 同時寫入 num */
-          Game.wallItems[pl.idx].h = pl.h;
-          const adjIt = WALL_ITEMS[pl.item];
-          if (adjIt && adjIt.numSelectable) Game.wallItems[pl.idx].num = pl.num;
-          Game.placement = null;
-          $('#hint-bar').classList.add('hidden');
-          sfx('place');
-          saveGame(fullSave(Game.stage));
-          showToast('牆飾高度調好啦～');
-          setSub(pl.prevSub || 'free');
+          /* 第十一輪c：再點一次 → 確認新高度；14d：numSelectable 同時寫入 num；16b：重驗垂直重疊 */
+          if (pl.valid === false) {
+            showToast('這裡掛不了～把高度上下錯開不重疊再確認喔～');
+          } else {
+            Game.wallItems[pl.idx].h = pl.h;
+            const adjIt = WALL_ITEMS[pl.item];
+            if (adjIt && adjIt.numSelectable) Game.wallItems[pl.idx].num = pl.num;
+            Game.placement = null;
+            $('#hint-bar').classList.add('hidden');
+            sfx('place');
+            saveGame(fullSave(Game.stage));
+            showToast('牆飾高度調好啦～');
+            setSub(pl.prevSub || 'free');
+          }
         } else if (pl.mode === 'remove') {
           if (pl.target) removeItem(pl.target);
           else showToast('點家具或牆飾把它移走');
@@ -1381,7 +1396,7 @@ function startWallPlacement(id) {
   Game.placement = { mode: 'wall', item: id, prevSub, wall: s.wall, pos: s.pos, valid: false, h: item.hMid, num: 8 }; /* 第十一輪c：初始高度 = hMid；14d：numBalloon 初始 8 */
   const bar = $('#hint-bar');
   const numTip = item.numSelectable ? '、R/🔄 換數字' : ''; /* 14d：歲數氣球可換數字 */
-  bar.textContent = `🖼️ 移到牆上，點一下掛上${item.name}！（↑↓/滾輪/▲▼ 調高度${numTip}、Esc／✖️ 取消）`;
+  bar.textContent = `🖼️ 移到牆上，點一下掛上${item.name}！（↑↓/滾輪/▲▼ 調高度${numTip}、Esc／✖️ 取消；上下錯開可同槽多掛）`;
   bar.classList.remove('hidden');
   updatePlaceActions(); /* 第十一輪d */
 }
