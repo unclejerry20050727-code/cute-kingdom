@@ -731,7 +731,7 @@ index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/min
 
 ## 第十五輪：人物擺拍姿勢（Jerry 要求：支援人物各種擺拍姿勢；已批准 10 姿勢含 🧘/🫡/💪/😉）
 
-> 📌 **接手筆記**（11-07 更新）：**第十五輪全部完成**（e1 繪製層 10 姿勢＋坐姿/啾咪/前層手臂、e2 狀態機 P 鍵/📷 鈕、e3 拍照 C 鍵/📸 鈕、e4 29 項專測、e5 十套件回歸＋README）。字型 1036 字。等 Jerry 新回饋；地圖場景擺拍為加分項未做（之後要再加 mapP.pose）。另見 TERMINATED-ANALYSIS.md §6。
+> 📌 **接手筆記**（11-07 更新）：**第十五輪全部完成**（e1 繪製層 10 姿勢＋坐姿/啾咪/前層手臂、e2 狀態機 P 鍵/📷 鈕、e3 拍照 C 鍵/📸 鈕、e4 29 項專測、e5 十套件回歸＋README）。字型 1036 字。等 Jerry 新回饋；地圖場景擺拍為加分項未做（→已於第十六輪 16a 實作 ✅）。另見 TERMINATED-ANALYSIS.md §6。
 
 ### 功能設計（已批准）
 - **10 種擺拍姿勢**（character.js `POSES` 表＋`drawCharacter` 新增 `o.pose = { id, t }` 參數）：
@@ -804,4 +804,6 @@ Jerry 需求三點：
 - 16a ✅：地圖擺拍（mapscene.js pose 參數＋game.js map case tick/取消＋startPose/takePhoto/setSub 放寬 map）＋peek-pose 地圖段
 - 16b ✅：牆飾同槽疊掛（world.js sizeH＋wallSlotValid(h,excludeIdx)＋game.js 呼叫點+wallAdj 驗證）＋peek-build 新段
 - 16c ✅：封面圖（index.html＋css＋刪「封面製作中」備註）
-- 16d 📋：十套件回歸＋README（操作說明/建造表/測試表）＋PROGRESS 收尾＋報告
+- 16d ✅：十套件回歸 10/10 全過（分兩段 5+5 跑）＋README 6 處（操作說明/建造表×2/擺拍 bullet/第十六輪 bullet/測試表 peek-build 138 項、peek-pose 35 項）＋截圖 121 張重拍（含新封面 01-cover）；字型維持 1042 字
+
+> 📌 **接手筆記**（11-07 更新）：**第十六輪全部完成** ✅（16a b02c338、16b b2cfe14、16c ac741cb、16d 本 commit；另 30a26ff 為 Jerry 自加的 README 版權條款）。三點需求皆交付：① 地圖場景擺拍＋拍照 ② 牆飾同槽多件（上下錯開）③ 正式封面海報。字型 1042 字。等 Jerry 新回饋 → 開新輪章節（照 P2 工作流）。
