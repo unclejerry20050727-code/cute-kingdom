@@ -131,12 +131,12 @@ check('拍照 toast', (await G(() => $('#toast').textContent)).includes('拍照�
 /* 擺姿中點 📸 鈕 */
 await page.keyboard.press('p');
 await ms(300);
-const [dl2] = await Promise.all([
-  page.waitForEvent('download', { timeout: 10000 }),
-  page.click('#photo-btn'),
-]);
-check('📸 鈕下載 PNG（擺姿中）', /^cute-kingdom-\d+\.png$/.test(dl2.suggestedFilename()));
+const dl2Promise = page.waitForEvent('download', { timeout: 10000 });
+await page.click('#photo-btn');
+await ms(50); /* e3：toBlob 是異步，download 事件會延遲；pose 檢查要點完立即做（takePhoto 同步段不該碰 pose） */
 check('拍照不中斷姿勢', !!(await G(() => Game.player.pose)));
+const dl2 = await dl2Promise;
+check('📸 鈕下載 PNG（擺姿中）', /^cute-kingdom-\d+\.png$/.test(dl2.suggestedFilename()));
 await G(() => { Game.player.pose = null; });
 
 /* ── 7. 十姿勢遊戲內截圖（目視 QA）── */

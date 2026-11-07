@@ -626,12 +626,20 @@ function startPose() {
 function takePhoto() {
   if (Game.sub !== 'free' && Game.sub !== 'map') return; /* 16a：地圖也可拍照 */
   sfx('blip');
-  const url = Game.canvas.toDataURL('image/png');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `cute-kingdom-${Date.now()}.png`;
-  a.click();
-  showToast('📸 拍照完成！');
+  /* e3：iOS Safari 打不開 ~2MB+ 的 dataURL（canvas 1280x720 PNG base64 會超）
+     → 改 Blob + objectURL；iOS 13+ 對 blob 下載會正常彈出儲存/共用選單 */
+  Game.canvas.toBlob((blob) => {
+    if (!blob) { showToast('⚠️ 拍照失敗，再試一次～'); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cute-kingdom-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000); /* 留時間給 iOS 讀 blob */
+    showToast('📸 拍照完成！');
+  }, 'image/png');
 }
 
 function updateMovement(dt) {
