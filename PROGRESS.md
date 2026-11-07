@@ -856,3 +856,38 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - e3 ✅：iPhone 拍照下載修（c70a333）：toDataURL→toBlob+objectURL（iOS 13+ blob 下載正常）；peek-pose「拍照不中斷姿勢」改點擊後立即檢查（toBlob 異步延遲會讓 1.8s 姿勢到期）
 - e4 ✅：卷卷頭正面加捲（ba7fb59）：新增 drawCurlyBangsCap＝上半圓 9 顆扇貝捲外緣＋下緣 4 段深 U 捲瀏海＋3 個旋渦捲紋；正面/側面都有捲，跟背面風格一致（QA 截圖 /tmp/curly-front-qa.png 確認）
 - e5 ✅：十套件回歸 10/10 全過（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose；peek-build 與 peek-map 首跑各 flaky 一次（機器忙碌 timeout / Work.customer 計時 race），重跑皆過）；截圖 121 張因字型重新渲染全部更新，隨本 commit 提交
+
+## 第十八輪：作者署名＋3D 遊樂園（Jerry 要求 11-08）
+
+需求：
+1. ✅ 第十七輪字型問題 iPhone 實測**已修好**（Jerry 確認）
+2. **18a 首頁署名**：遊戲首頁（封面）標注作者為 **Rainbow**
+3. **18b~18j 3D 遊樂園**：出門後地圖新增「遊樂園」地點；進去用 **Three.js** 變成 3D 遊戲；設計幾個有趣的遊樂園遊戲，**指定要有雲霄飛車**
+
+### 設計決策（11-08）
+- **Three.js**：UMD 版 r128（`build/three.min.js`，全局 `THREE`）下載到 `lib/three.min.js`（~600KB），保持無建構工具；**延遲載入**（第一次進遊樂園才 `loadScript`，不拖慢首屏）
+- **進入動線**：2D 地圖路左側新建築「遊樂園」（摩天輪＋雲霄飛車剪影＋大門口）＋路上脈衝點 PK(490,250)；點/走進 → `sub='park3d'` 全屏 WebGL
+- **3D 玩家**：重用現有 `drawCharacter` 畫 4 方向 canvas → `THREE.CanvasTexture` billboard（Sprite），維持美術風格一致
+- **控制**：鍵盤 WASD/方向鍵＋既有觸控 `.dpad` 同邏輯（讀 `Game.dpadDir`）；動作鈕（上車/踩踏板/接）新增觸控大按鈕（桌面用 Space/E）
+- **三個遊戲**：
+  1. **雲霄飛車**（指定）：CatmullRom 軌道（起伏＋1 個迴環）→ 車廂沿軌道；物理＝重力投影到軌道切線＋阻力＋踩踏板加速（Space/🦶 鈕）；收集星星；過終點結算；車速過低停住要重踩
+  2. **甜甜圈接接樂**：3D 廣場，左移右移（A/D 或 dpad）拿著籃子接 30 秒內掉下的甜甜圈（torus），計分
+  3. **摩天輪**：坐上座艙，輪子慢轉一輪；沿途星星點一下（tap/click 射線）收集；輕鬆向
+- **獎勵**：每遊戲星星換硬幣（1★=2🪙）直接加 `Game.money`；`Game.park={stars,best:{coaster,catch,wheel}}` 存檔（fullSave 加欄位，舊檔缺欄位時補預設）
+- **離開**：Esc / 「離開遊樂園」鈕 → 回地圖（sub='map'，玩家站回 PK 附近）
+- **WebGL 測試**：Playwright headless Chromium 預設有 SwiftShader WebGL；`test/peek-park.mjs` 驗證：three 載入、進園、移動、進雲霄飛車、車廂位移、星星收集、離開無 pageerror
+- 音效：复用 `sfx()` 既有音（pop/blip/win 等）
+
+### 子任務
+- 18a 📋：封面署名「作者：Rainbow」（index.html .cover-credit）
+- 18b 📋：下載 lib/three.min.js＋`loadScript()` 延遲載入工具
+- 18c 📋：2D 地圖畫遊樂園＋脈衝點＋進入口（sub 切換框架）
+- 18d 📋：3D 基礎（js/park3d.js）：場景/天空/霧/地面/裝飾摩天輪＋雲霄飛車軌道/玩家 billboard/移動/離開
+- 18e 📋：雲霄飛車小遊戲（js/park-coaster.js）
+- 18f 📋：甜甜圈接接樂（js/park-catch.js）
+- 18g 📋：摩天輪小遊戲（js/park-wheel.js）
+- 18h 📋：存檔＋獎勵＋觸控動作鈕＋音效
+- 18i 📋：test/peek-park.mjs
+- 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
+
+> 📌 **接手筆記**（11-08）：計畫已定，從 18a 開始。每個子任務一個 commit＋更新本節 📋→✅。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
