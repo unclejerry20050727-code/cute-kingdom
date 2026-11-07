@@ -9,6 +9,7 @@ const ROAD = { x: 490, halfW: 95, top: 128, bot: 660 };
 const ROAD_L = ROAD.x - ROAD.halfW, ROAD_R = ROAD.x + ROAD.halfW;
 const MC = { x: 490, y: 432 };      /* 麥當勞的點 */
 const MC_SHOP = { x0: 612, y0: 332 }; /* 小舖 */
+const PK = { x: 490, y: 300 };        /* 第十八輪：遊樂園脈衝點（路中，麥當勞上方） */
 
 let mapCanvas = null;
 
@@ -101,9 +102,12 @@ function ensureMap() {
   handEllipse(ctx, 659, 462, 3, 3, { fill: '#FFD98A', lw: 2, seed: 451 });
 
   /* ── 樹 ── */
-  drawMapTree(ctx, 150, 250, 1);
   drawMapTree(ctx, 838, 540, 1.15);
   drawMapTree(ctx, 128, 565, 0.9);
+  drawMapTree(ctx, 95, 470, 0.9); /* 第十八輪：原 (150,250) 移來，避開遊樂園 */
+
+  /* ── 第十八輪：遊樂園（路左側）── */
+  drawPark(ctx);
 
   /* ── 小花 ── */
   const frnd = mulberry32(57);
@@ -146,6 +150,98 @@ function drawMapTree(ctx, x, y, s) {
   handEllipse(ctx, x, y - 78 * s, 26 * s, 22 * s, { fill: '#6FA85E', stroke: null, seed: Math.round(x) + 2 });
 }
 
+/* 第十八輪：遊樂園（路左側：摩天輪＋雲霄飛車＋大門口） */
+function drawPark(ctx) {
+  /* 地影 */
+  ctx.fillStyle = 'rgba(90,62,43,0.15)';
+  ctx.beginPath(); ctx.ellipse(155, 378, 88, 13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(315, 338, 80, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+  /* ── 摩天輪（中心 155,270 R=70）── */
+  const W = { x: 155, y: 270, r: 70 };
+  /* 支架 A 字 */
+  ctx.strokeStyle = '#B98A5F'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(W.x - 32, 375); ctx.lineTo(W.x, W.y); ctx.lineTo(W.x + 32, 375); ctx.stroke();
+  /* 外環 */
+  ctx.strokeStyle = '#E2574C'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(W.x, W.y, W.r, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(W.x, W.y, W.r - 6, 0, Math.PI * 2); ctx.stroke();
+  /* 輻條 8 根＋座艙 6 個 */
+  const gondolaCols = ['#FF9EC4', '#7FC8F8', '#B6E388', '#F7C948', '#C9A6F0', '#FFB27A'];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.3;
+    ctx.strokeStyle = 'rgba(255,247,234,0.9)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W.x, W.y);
+    ctx.lineTo(W.x + Math.cos(a) * W.r, W.y + Math.sin(a) * W.r); ctx.stroke();
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.5;
+    const gx = W.x + Math.cos(a) * W.r, gy = W.y + Math.sin(a) * W.r;
+    ctx.fillStyle = gondolaCols[i];
+    handShape(ctx, [[gx - 8, gy], [gx + 8, gy], [gx + 8, gy + 14], [gx - 8, gy + 14]], { fill: gondolaCols[i], seed: 70 + i, amp: 1 });
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(gx - 8, gy, 16, 14);
+  }
+  /* 軸心＋頂端小旗 */
+  handEllipse(ctx, W.x, W.y, 8, 8, { fill: '#FFF8EC', lw: 3, seed: 71 });
+  ctx.strokeStyle = '#B98A5F'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(W.x, W.y - W.r); ctx.lineTo(W.x, W.y - W.r - 18); ctx.stroke();
+  ctx.fillStyle = '#E2574C';
+  ctx.beginPath(); ctx.moveTo(W.x, W.y - W.r - 18); ctx.lineTo(W.x + 16, W.y - W.r - 13); ctx.lineTo(W.x, W.y - W.r - 8); ctx.closePath(); ctx.fill();
+
+  /* ── 雲霄飛車（x 245~388, y 200~335）── */
+  /* 支柱 */
+  ctx.strokeStyle = '#C9A27C'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  const posts = [[258, 330, 320], [283, 245, 320], [305, 205, 320], [330, 285, 320], [355, 300, 320], [378, 230, 320]];
+  for (const [px, py, py2] of posts) {
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py2); ctx.stroke();
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(px - 8, py2); ctx.lineTo(px + 8, py); ctx.moveTo(px + 8, py2); ctx.lineTo(px - 8, py); ctx.stroke();
+    ctx.lineWidth = 4;
+  }
+  /* 軌道（兩條鐵軌） */
+  const track = (off) => {
+    ctx.beginPath();
+    ctx.moveTo(245, 330 - off);
+    ctx.bezierCurveTo(262, 218 - off, 288, 200 - off, 305, 205 - off);
+    ctx.bezierCurveTo(322, 210 - off, 330, 300 - off, 352, 300 - off);
+    ctx.bezierCurveTo(368, 300 - off, 372, 228 - off, 388, 232 - off);
+    ctx.stroke();
+  };
+  ctx.strokeStyle = INK; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+  track(0);
+  ctx.strokeStyle = '#E2574C'; ctx.lineWidth = 2;
+  track(7);
+  /* 小列車（停在頂峰） */
+  ctx.fillStyle = '#7FC8F8';
+  handShape(ctx, [[292, 188], [318, 188], [318, 202], [292, 202]], { fill: '#7FC8F8', seed: 72, amp: 1 });
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(292, 188, 26, 14);
+  ctx.fillStyle = '#F7C948';
+  handShape(ctx, [[320, 190], [338, 194], [336, 207], [319, 203]], { fill: '#F7C948', seed: 73, amp: 1 });
+  ctx.strokeRect(320, 190, 18, 13);
+
+  /* ── 大門口（310~370）── */
+  /* 兩根柱＋拱頂 */
+  handShape(ctx, [[310, 340], [320, 340], [320, 408], [310, 408]], { fill: '#E2574C', seed: 74 });
+  handShape(ctx, [[360, 340], [370, 340], [370, 408], [360, 408]], { fill: '#E2574C', seed: 75 });
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(315, 342); ctx.quadraticCurveTo(340, 318, 365, 342); ctx.stroke();
+  ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(315, 338); ctx.quadraticCurveTo(340, 314, 365, 338); ctx.stroke();
+  /* 招牌「遊樂園」 */
+  handShape(ctx, [[296, 344], [384, 344], [384, 372], [296, 372]], { fill: '#FFF8EC', seed: 76, amp: 2 });
+  ctx.fillStyle = '#E2574C';
+  ctx.font = '900 26px RHR';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('遊樂園', 340, 359);
+  /* 門口小氣球 */
+  for (const [bx, by, bc] of [[300, 396, '#FF9EC4'], [380, 392, '#7FC8F8']]) {
+    ctx.strokeStyle = 'rgba(90,62,43,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx, by + 10); ctx.lineTo(bx, by + 22); ctx.stroke();
+    handEllipse(ctx, bx, by, 7, 8, { fill: bc, lw: 2, seed: bx });
+  }
+}
+
 /* 黃色 M 拱（麥當勞風，純圖形） */
 function drawMLogo(ctx, x, y, s) {
   ctx.save();
@@ -183,6 +279,20 @@ function renderMap(ctx, t, player) {
   }
   handEllipse(ctx, MC.x, MC.y, 13, 13, { fill: INK, lw: 3, seed: 61 });
   handEllipse(ctx, MC.x, MC.y, 5, 5, { fill: '#FFF8EC', stroke: null, seed: 62 });
+
+  /* 第十八輪：遊樂園脈衝圈（粉紅系，區分麥當勞） */
+  for (let i = 0; i < 2; i++) {
+    const pr = ((t * 0.5) + i * 0.5) % 1;
+    ctx.strokeStyle = `rgba(226,87,164,${(0.55 * (1 - pr)).toFixed(3)})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(PK.x, PK.y, 14 + pr * 26, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  handEllipse(ctx, PK.x, PK.y, 11, 11, { fill: '#E2574C', lw: 3, seed: 65 });
+  ctx.fillStyle = '#FFF8EC';
+  ctx.font = '900 13px RHR'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('玩', PK.x, PK.y + 1);
 
   /* 招牌（輕輕上下浮動） */
   const bob = Math.sin(t * 1.8) * 4;
