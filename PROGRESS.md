@@ -817,6 +817,9 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 線上版：https://unclejerry20050727-code.github.io/cute-kingdom/
 - 注意：push 前確認 `git log origin/main..main` 的 diff 是預期內容（避免把半成品推上去）
 
+### 發布紀錄
+- **11-08 第 2 次發布**（第十七輪 3 bug 修復）：`b5b1d3f..37c7f92`（5 commit：9999779 字型、c70a333 iOS 下載、ba7fb59 卷卷頭、625de19 AGENTS、37c7f92 e5）；Pages build `built/37c7f92`；驗證：rhr-500/700/900.woff2 皆 200、舊 rhr.woff2 404、CSS 三權重皆 `?v=17`、game.js 有 toBlob、character.js 有 drawCurlyBangsCap。待 Jerry iPhone 實測確認①攻擊②拍照③卷卷頭。
+
 ## 第十七輪：Jerry 回報 3 個 bug（11-08）
 
 需求：
