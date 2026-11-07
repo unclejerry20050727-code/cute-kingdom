@@ -825,7 +825,7 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 3. **e4 卷卷頭正面沒有捲**（背面有捲，正面變光頭圓球）
 4. **e5 回歸＋報告**
 
-> 📌 **接手筆記**（11-08）：e1 調查完成、e2 字型重建完成（見下）。剩 e3 iOS 下載、e4 卷卷頭正面、e5 回歸。
+> 📌 **接手筆記**（11-08 更新）：**第十七輪全部完成** ✅（e2 9999779、e3 c70a333、e4 ba7fb59、e5 本 commit）。三個 bug 皆修：① 拍照按鈕偶發「攻擊」→ CFF2 VF 改靜態 glyf 三權重 woff2 ② iPhone 拍照看不到圖 → toBlob+objectURL ③ 卷卷頭正面無捲 → drawCurlyBangsCap 扇貝捲＋捲瀏海＋旋渦紋。**待 Jerry 在 iPhone 實測確認**（尤其①②，需 iOS 實機）；若①還出現請回報 iOS 版本。
 
 ### e1 調查記錄
 - `fonts/rhr.woff2` cmap 驗證正確：拍 U+62CD→uni62CD、照 U+7167→uni7167、擊 U+64CA→uni64CA、攻 U+653B 不在字庫（遊戲從沒用過）
@@ -849,7 +849,7 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 
 ## 第十七輪子任務
 - e1 ✅：調查（見上）
-- e2 ✅：字型重建（本 commit）
-- e3 📋：iPhone 拍照下載修（toBlob + objectURL 取代 toDataURL）
-- e4 📋：卷卷頭正面加捲
-- e5 📋：十套件回歸＋README/PROGRESS＋報告
+- e2 ✅：字型重建（9999779）
+- e3 ✅：iPhone 拍照下載修（c70a333）：toDataURL→toBlob+objectURL（iOS 13+ blob 下載正常）；peek-pose「拍照不中斷姿勢」改點擊後立即檢查（toBlob 異步延遲會讓 1.8s 姿勢到期）
+- e4 ✅：卷卷頭正面加捲（ba7fb59）：新增 drawCurlyBangsCap＝上半圓 9 顆扇貝捲外緣＋下緣 4 段深 U 捲瀏海＋3 個旋渦捲紋；正面/側面都有捲，跟背面風格一致（QA 截圖 /tmp/curly-front-qa.png 確認）
+- e5 ✅：十套件回歸 10/10 全過（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose；peek-build 與 peek-map 首跑各 flaky 一次（機器忙碌 timeout / Work.customer 計時 race），重跑皆過）；截圖 121 張因字型重新渲染全部更新，隨本 commit 提交
