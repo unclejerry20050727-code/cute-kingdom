@@ -807,3 +807,12 @@ Jerry 需求三點：
 - 16d ✅：十套件回歸 10/10 全過（分兩段 5+5 跑）＋README 6 處（操作說明/建造表×2/擺拍 bullet/第十六輪 bullet/測試表 peek-build 138 項、peek-pose 35 項）＋截圖 121 張重拍（含新封面 01-cover）；字型維持 1042 字
 
 > 📌 **接手筆記**（11-07 更新）：**第十六輪全部完成** ✅（16a b02c338、16b b2cfe14、16c ac741cb、16d 本 commit；另 30a26ff 為 Jerry 自加的 README 版權條款）。三點需求皆交付：① 地圖場景擺拍＋拍照 ② 牆飾同槽多件（上下錯開）③ 正式封面海報。字型 1042 字。等 Jerry 新回饋 → 開新輪章節（照 P2 工作流）。
+
+## 發布上線（GitHub Pages）流程（11-07 建立）
+Jerry 一句「把這版可愛國發布上線」＝執行以下：
+1. 前提：git 樹乾淨（先 commit 完所有改動）、`gh auth status` 已登入
+2. `git push -u origin main --force`（origin = https://github.com/unclejerry20050727-code/cute-kingdom.git；本地 main 是唯一 source of truth，遠端舊歷史是 11-07 前手動推的 2 個 commit，已不相關，故 force）
+3. Pages 自動從 main 分支 root 重新部署 → 約 1 分鐘後生效
+4. 驗證：`gh api repos/unclejerry20050727-code/cute-kingdom/pages` 看 status=built；再 `curl -s https://unclejerry20050727-code.github.io/cute-kingdom/ | head` 確認 200
+- 線上版：https://unclejerry20050727-code.github.io/cute-kingdom/
+- 注意：push 前確認 `git log origin/main..main` 的 diff 是預期內容（避免把半成品推上去）
