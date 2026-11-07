@@ -816,3 +816,40 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 4. 驗證：`gh api repos/unclejerry20050727-code/cute-kingdom/pages` 看 status=built；再 `curl -s https://unclejerry20050727-code.github.io/cute-kingdom/ | head` 確認 200
 - 線上版：https://unclejerry20050727-code.github.io/cute-kingdom/
 - 注意：push 前確認 `git log origin/main..main` 的 diff 是預期內容（避免把半成品推上去）
+
+## 第十七輪：Jerry 回報 3 個 bug（11-08）
+
+需求：
+1. **e1/e2 拍照按鈕偶發顯示成「攻擊」**（ Jerry 猜是英文翻譯問題）
+2. **e3 iPhone 拍照後「檢視或下載」提示出來但看不到圖**
+3. **e4 卷卷頭正面沒有捲**（背面有捲，正面變光頭圓球）
+4. **e5 回歸＋報告**
+
+> 📌 **接手筆記**（11-08）：e1 調查完成、e2 字型重建完成（見下）。剩 e3 iOS 下載、e4 卷卷頭正面、e5 回歸。
+
+### e1 調查記錄
+- `fonts/rhr.woff2` cmap 驗證正確：拍 U+62CD→uni62CD、照 U+7167→uni7167、擊 U+64CA→uni64CA、攻 U+653B 不在字庫（遊戲從沒用過）
+- git 歷史 8 個版本 rhr.woff2 的 cmap 全部正確
+- 全 repo grep「攻擊/attack」無此文字（只有 audio.js 音訊包絡的 `attack` 參數）
+- index.html 按鈕是靜態 `<span>拍照</span>`，不是動態產生
+- Chromium 全部正常（Playwright 截圖從沒出過錯字）→ 只可能出在 Jerry iPhone 的 WebKit
+- 網路線索：google/fonts#7196（WOFF/WOFF2 在 iOS 17 之前的 Apple 裝置渲染錯字）＋ WebKit 對 CFF2/VF 的已知處理問題
+- **結論**：舊版 iOS WebKit 誤渲染 **CFF2 變體字** woff2（glyph 錯位），「有時」與字型快取狀態有關
+- 本地 WebKit 裝不起來（缺 libflite/libWPE 等系統庫＋無 sudo）→ 改走「相容性最大化」修復
+
+### e2 字型重建（修 e1）
+- 新格式：**靜態 TrueType(glyf) 輪廓 woff2 × 3 字重（500/700/900）**——一次消除 CFF2＋VF 兩個風險點
+- 新工具 `tools/cff2_to_glyf.py`：cu2qu 三次貝茲→二次貝茲（max_err=1.0）
+- `tools/make-font.py` 重寫：子集 VF（去 layout features）→ instancer 固定 500/700/900（ROND=100 預設圓度）→ glyf → woff2
+- 字數 1042 不變；總量 652KB（219884+222628+209352）< 舊單一 VF 727KB
+- CSS：3 個 @font-face（同 family 'RHR'，各 font-weight 500/700/900）＋`?v=17` cache-buster（強迫手機重下載，順帶排掉舊快取）
+- 瀏覽器字重捨入：canvas 600→700、800→900；CSS 200 那處只是舊 @font-face 範圍宣告已移除
+- Chromium A/B 對照截圖：舊 VF vs 新 glyf 字形/粗細/圓潤度幾乎無差 ✅
+- ⚠️ 以後重跑 make-font.py 記得把 CSS 的 ?v= 加一
+
+## 第十七輪子任務
+- e1 ✅：調查（見上）
+- e2 ✅：字型重建（本 commit）
+- e3 📋：iPhone 拍照下載修（toBlob + objectURL 取代 toDataURL）
+- e4 📋：卷卷頭正面加捲
+- e5 📋：十套件回歸＋README/PROGRESS＋報告
