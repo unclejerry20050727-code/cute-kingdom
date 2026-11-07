@@ -84,3 +84,18 @@ function loadGame() {
 function clearGame() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
 }
+
+/* 第十八輪18b：延遲載入外部 script（回傳 Promise，重複載入回同一個） */
+const _scriptPromises = new Map();
+function loadScript(url) {
+  if (_scriptPromises.has(url)) return _scriptPromises.get(url);
+  const p = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => resolve(url);
+    s.onerror = () => { _scriptPromises.delete(url); reject(new Error('載入失敗：' + url)); };
+    document.head.appendChild(s);
+  });
+  _scriptPromises.set(url, p);
+  return p;
+}

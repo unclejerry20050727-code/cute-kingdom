@@ -880,7 +880,7 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 
 ### 子任務
 - 18a ✅：封面署名「作者：Rainbow」（index.html .cover-credit）＋字型 1042→1054 重建＋?v=18
-- 18b 📋：下載 lib/three.min.js＋`loadScript()` 延遲載入工具
+- 18b ✅：lib/three.min.js（r128 UMD 603KB，REVISION=128 驗證）＋util.js `loadScript()` 延遲載入（Promise 快取）
 - 18c 📋：2D 地圖畫遊樂園＋脈衝點＋進入口（sub 切換框架）
 - 18d 📋：3D 基礎（js/park3d.js）：場景/天空/霧/地面/裝飾摩天輪＋雲霄飛車軌道/玩家 billboard/移動/離開
 - 18e 📋：雲霄飛車小遊戲（js/park-coaster.js）
