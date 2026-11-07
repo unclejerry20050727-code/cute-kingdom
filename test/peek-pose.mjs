@@ -149,6 +149,27 @@ for (const id of ORDER) {
 await G(() => { Game.player.pose = null; });
 await ms(100);
 
+/* ── 8. 地圖擺拍（16a）── */
+console.log('── 8. 地圖擺拍 ──');
+await page.click('#out-btn');
+await page.waitForFunction(() => Game.sub === 'map', undefined, { timeout: 8000 }); /* 含 3.2s loading 過場 */
+check('地圖 📷 擺拍鈕顯示', await G(() => !$('#pose-btn').classList.contains('hidden')));
+check('地圖 📸 拍照鈕顯示', await G(() => !$('#photo-btn').classList.contains('hidden')));
+await page.keyboard.press('p');
+await ms(150);
+check('P 在地圖可擺拍（mapP.pose）', (await G(() => Game.mapP.pose && Game.mapP.pose.id)) === 'peace');
+check('地圖擺拍朝向轉正面', (await G(() => Game.mapP.facing)) === 'down');
+await shot('map-pose-peace', '地圖擺拍 peace');
+await page.keyboard.down('w');
+await ms(200);
+await page.keyboard.up('w');
+check('地圖移動取消擺拍', (await G(() => Game.mapP.pose)) === null);
+const [dl3] = await Promise.all([
+  page.waitForEvent('download', { timeout: 10000 }),
+  page.keyboard.press('c'),
+]);
+check('地圖 C 鍵拍照下載', /^cute-kingdom-\d+\.png$/.test(dl3.suggestedFilename()));
+
 /* ── 結果 ── */
 check('全程 0 pageerror', pageErrors === 0);
 console.log(fails === 0 ? '\n✅ 擺拍系統測試全過' : `\n❌ ${fails} 項失敗`);

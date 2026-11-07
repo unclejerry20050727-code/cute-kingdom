@@ -215,8 +215,9 @@ function setSub(sub) {
   if (sub === 'free' || sub === 'map') showDpad();
   else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
-  $('#pose-btn').classList.toggle('hidden', sub !== 'free'); /* 第十五輪：擺拍鈕只在自由狀態 */
-  $('#photo-btn').classList.toggle('hidden', sub !== 'free'); /* 第十五輪：拍照鈕同上 */
+  const canPose = sub === 'free' || sub === 'map'; /* 16a：地圖也顯示擺拍/拍照鈕 */
+  $('#pose-btn').classList.toggle('hidden', !canPose); /* 第十五輪：擺拍鈕；16a：地圖也支援 */
+  $('#photo-btn').classList.toggle('hidden', !canPose); /* 第十五輪：拍照鈕同上 */
   updatePlaceActions(); /* 第十一輪d：放置操作鈕跟隨子狀態 */
   syncMoneyUI();
 }
@@ -295,6 +296,11 @@ function updateGame(dt) {
     case 'map': {
       /* 地圖走路：WASD / 點地面 / D-pad，限道路上 */
       const m = Game.mapP, k = Game.keys;
+      /* 16a：擺拍 1.8s 自動恢復 */
+      if (m.pose) {
+        m.pose.t += dt;
+        if (m.pose.t >= 1.8) m.pose = null;
+      }
       let dx = 0, dy = 0;
       if (k.has('up')) dy -= 1;
       if (k.has('down')) dy += 1;
@@ -302,6 +308,7 @@ function updateGame(dt) {
       if (k.has('right')) dx += 1;
       if (!dx && !dy && Game.dpadDir) { dx = Game.dpadDir[0]; dy = Game.dpadDir[1]; }
       const len = Math.hypot(dx, dy);
+      if (len > 0 || Game.mapTarget) m.pose = null; /* 16a：移動即取消擺拍 */
       if (len > 0) {
         Game.mapTarget = null;
         m.x = clamp(m.x + (dx / len) * 235 * dt, ROAD_L + 10, ROAD_R - 10);
@@ -590,8 +597,10 @@ function tileBlocked(tx, ty) {
 const POSE_ORDER = ['peace', 'wave', 'cheer', 'dance', 'hug', 'pray', 'salute', 'flex', 'meditate', 'wink'];
 
 function startPose() {
-  const p = Game.player;
-  if (Game.sub !== 'free' || p.getup < 1 || Dialogue.active) return;
+  const p = Game.sub === 'map' ? Game.mapP : Game.player; /* 16a：地圖也可擺拍 */
+  if (Game.sub !== 'free' && Game.sub !== 'map') return;
+  if (Dialogue.active) return;
+  if (Game.sub === 'free' && p.getup < 1) return;
   if (!$('#build-panel').classList.contains('hidden')) return; /* 建造面板開啟中不擺拍（第十五輪） */
   sfx('pop');
   p.poseIdx = p.poseIdx == null ? 0 : (p.poseIdx + 1) % POSE_ORDER.length;
@@ -605,7 +614,7 @@ function startPose() {
 
 /* 第十五輪：拍照（C 鍵/📸 鈕）——全程序化繪製無跨域，toDataURL 安全 */
 function takePhoto() {
-  if (Game.sub !== 'free') return;
+  if (Game.sub !== 'free' && Game.sub !== 'map') return; /* 16a：地圖也可拍照 */
   sfx('blip');
   const url = Game.canvas.toDataURL('image/png');
   const a = document.createElement('a');
@@ -882,13 +891,13 @@ function setupInput() {
       e.preventDefault();
     }
     /* 第十五輪：P = 擺拍（10 姿勢輪流） */
-    if ((e.key === 'p' || e.key === 'P') && Game.sub === 'free' && !Dialogue.active) {
+    if ((e.key === 'p' || e.key === 'P') && (Game.sub === 'free' || Game.sub === 'map') && !Dialogue.active) {
       startPose();
       e.preventDefault();
       return;
     }
     /* 第十五輪：C = 拍照（下載 PNG） */
-    if ((e.key === 'c' || e.key === 'C') && Game.sub === 'free' && !Dialogue.active) {
+    if ((e.key === 'c' || e.key === 'C') && (Game.sub === 'free' || Game.sub === 'map') && !Dialogue.active) {
       takePhoto();
       e.preventDefault();
       return;

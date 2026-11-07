@@ -202,5 +202,6 @@ function renderMap(ctx, t, player) {
     facing: m.facing, t: m.walkT,
     walking: m.walking,
     scale: 1,
+    pose: m.pose || undefined, /* 16a：地圖擺拍 */
   });
 }

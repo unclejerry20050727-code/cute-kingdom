@@ -776,3 +776,32 @@ index.html 263 / css/style.css 670 / js/game.js 1521 / js/world.js 1293 / js/min
 - player state：`Game.player = { x, y, facing, walkT, walking, gaze, eyesClosed, getup }`（game.js:13）
 - peek-build.mjs 的 done 存檔注入法可照抄給 peek-pose（localStorage `cute-kingdom-save-v1`）
 - capsule/ellipse/roundRectPath/shade 等 helper 都在 character.js 同檔可用
+
+---
+
+# 第十六輪（11-07 開工）：地圖擺拍＋牆飾同槽疊掛＋封面圖
+
+Jerry 需求三點：
+1. 地圖場景也支援擺拍
+2. 建造的牆飾支援同槽多個（上下錯開即可，垂直範圍不重疊就 OK）
+3. art/game-cover.png 作為遊戲封面
+
+## 預查備忘
+- **地圖角色**：`Game.mapP = { x, y, facing, walkT, walking }`（game.js:35，loading 結束重置 :352）；draw 點 `js/mapscene.js:200` `drawCharacter(ctx, Game.playerCfg, { x, y, facing, t, walking, scale: 1 })`——加 `pose: m.pose || undefined` 即可
+- **地圖移動**：game.js 'map' case（~:297）：WASD/dpad 直移＋mapTarget 滑動；取消姿勢在「有方向鍵或 mapTarget 時」清 m.pose
+- **startPose**（game.js:592）：目前 `if (Game.sub !== 'free' || p.getup < 1 || Dialogue.active) return;`——mapP 沒有 getup 屬性（undefined<1 會誤殺），要拆條件；takePhoto（:607）`Game.sub !== 'free'` 同要放寬
+- **setSub**（:205）：pose-btn/photo-btn 目前 `sub !== 'free'` 隱藏→改成 free/map 都顯示；map 子狀態已有 map-home 鈕（bottom:26）＋dpad，pose(194)/photo(270) 不衝突
+- **P/C 鍵綁定**：已直接呼叫 startPose()/takePhoto()，不用改
+- **牆飾驗證**：`wallSlotValid(id, wall, pos)`（world.js:1706）目前同槽有品即拒（`w.pos === p`）→ 改垂直範圍檢查：加 `sizeH` 欄（量自各 draw 函數 local y 範圍）＋簽名加 `(h, excludeIdx)`
+- **sizeH 量測**（wallSpace local 座標、原點=中心 h）：heartFrame ±23→46、starFrame ±22→44、clock r17→34、poster -24..21→46、wallShelf -19..11→30、garland -10..12→24、couplet -33..33→66、fuChar 菱 ±14.8→30、wreath 環+蝴蝶結→36、lights -10..14→26、cobweb →32、numBalloon -13.5..17→32
+- **碰撞公式**：slot 有交疊 且 `|h1-h2| < (sizeH1+sizeH2)/2 + 2` → 拒（留 2px 縫）
+- **wallSlotValid 呼叫點**：game.js:341（mousemove，mode 'wall' 分支）；:1371（startWallPlacement 初始 valid:false 不用改）；**wallAdj 目前 mousemove 沒有 valid 分支、確認段（:1033）直接寫 h 不驗證**→要加 wallAdj 分支＋確認時檢查（excludeIdx=pl.idx）
+- **封面**：`#screen-cover`（index.html:17-23）`.cover-card` 內有 hearts/title/note「（封面製作中）」/credit/enter 鈕→加 `<img class="cover-art" src="art/game-cover.png">`＋刪 note；css `.cover-art { height:min(58vh,...); object-fit:contain; border-radius }`；圖 1086×1448 直式 3.35MB（離線本地遊戲可接受）
+- **測試**：peek-pose.mjs 加地圖段（#out-btn→等 sub==='map'→P/mapP.pose/按鈕顯示/C 下載/移動取消）；peek-build.mjs 加同槽疊掛段（同 pos 不同 h 可掛、垂直重疊拒、wallAdj 拖入重疊拒）
+- **commit 拆細**：16a 地圖擺拍→16b 牆飾疊掛→16c 封面圖→16d 回歸+README+報告
+
+## 子任務
+- 16a ✅：地圖擺拍（mapscene.js pose 參數＋game.js map case tick/取消＋startPose/takePhoto/setSub 放寬 map）＋peek-pose 地圖段
+- 16b 📋：牆飾同槽疊掛（world.js sizeH＋wallSlotValid(h,excludeIdx)＋game.js 呼叫點+wallAdj 驗證）＋peek-build 新段
+- 16c 📋：封面圖（index.html＋css＋刪「封面製作中」備註）
+- 16d 📋：十套件回歸＋README（操作說明/建造表/測試表）＋PROGRESS 收尾＋報告
