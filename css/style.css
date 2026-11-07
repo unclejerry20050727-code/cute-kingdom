@@ -3,19 +3,19 @@
 /* 第十七輪 e2：VF(CFF2)→靜態 glyf 三權重，修 iOS 舊版 WebKit 對 CFF2/VF woff2 渲染怪異（拍照偶發顯示成攻擊）；?v= 每重跑一次加一強迫重下載 */
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-500.woff2?v=17') format('woff2');
+  src: url('../fonts/rhr-500.woff2?v=18') format('woff2');
   font-weight: 500;
   font-style: normal;
 }
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-700.woff2?v=17') format('woff2');
+  src: url('../fonts/rhr-700.woff2?v=18') format('woff2');
   font-weight: 700;
   font-style: normal;
 }
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-900.woff2?v=17') format('woff2');
+  src: url('../fonts/rhr-900.woff2?v=18') format('woff2');
   font-weight: 900;
   font-style: normal;
 }
