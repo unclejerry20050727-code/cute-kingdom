@@ -892,6 +892,40 @@ function drawShortBangsCap(ctx, c, x, y, R, r) {
   ctx.restore();
 }
 
+/* ── 卷卷頭瀏海帽（前面/側面）：外緣扇貝捲＋下緣深 U 捲瀏海＋旋渦捲紋 ── */
+function drawCurlyBangsCap(ctx, c, x, y, R, r, fx) {
+  /* 1) 上半圓改成 9 顆扇貝捲（往外凸） */
+  const n = 9, bump = r * 0.17;
+  ctx.beginPath();
+  ctx.moveTo(x - r, y);
+  for (let i = 0; i < n; i++) {
+    const a0 = Math.PI + (i / n) * Math.PI;
+    const a1 = Math.PI + ((i + 1) / n) * Math.PI;
+    const am = (a0 + a1) / 2;
+    ctx.quadraticCurveTo(x + Math.cos(am) * (r + bump), y + Math.sin(am) * (r + bump),
+                         x + Math.cos(a1) * r, y + Math.sin(a1) * r);
+  }
+  /* 2) 下緣：右→左 4 段深 U 捲瀏海 */
+  const pts = bangPoints('curly', R, fx).map(p => [x + p[0], y + p[1]]);
+  for (let i = 0; i < 4; i++) {
+    const p0 = pts[pts.length - 1 - i], p1 = pts[pts.length - 2 - i];
+    ctx.quadraticCurveTo((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + r * 0.3, p1[0], p1[1]);
+  }
+  ctx.closePath();
+  ctx.fill();
+  /* 3) 旋渦捲紋（3 個 270° 開口弧，深一階色） */
+  ctx.save();
+  ctx.strokeStyle = shade(c.hairColor, -0.25);
+  ctx.lineWidth = Math.max(1.6, R * 0.07);
+  ctx.lineCap = 'round';
+  for (const [dx, dy, sr] of [[-0.45, -0.55, 0.16], [0.08, -0.75, 0.14], [0.5, -0.45, 0.15]]) {
+    ctx.beginPath();
+    ctx.arc(x + dx * R, y + dy * R, sr * R, Math.PI * 0.15, Math.PI * 1.75);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /* ── 瀏海帽（前面/側面） ── */
 function drawBangs(ctx, c, x, y, R, fx) {
   ctx.fillStyle = c.hairColor;
@@ -902,24 +936,16 @@ function drawBangs(ctx, c, x, y, R, fx) {
   } else if (c.hairStyle === 'short') {
     /* 蓬蓬短髮：底＋耳朵＋瀏海帽＋髮片＋碎刺（對應小島男版） */
     drawShortBangsCap(ctx, c, x, y, R, r);
+  } else if (c.hairStyle === 'curly') {
+    /* 卷卷頭：扇貝捲外緣＋捲瀏海＋旋渦紋（e4：正面也要有捲） */
+    drawCurlyBangsCap(ctx, c, x, y, R, r, fx);
   } else {
     ctx.beginPath();
     /* 上半圓（從左端點繞頂端至右端點） */
     ctx.arc(x, y, r, Math.PI, Math.PI * 2);
     /* 瀏海下緣（由右往左回到起點）；座標需加上頭中心偏移 */
     const pts = bangPoints(c.hairStyle, R, fx).map(p => [x + p[0], y + p[1]]);
-    if (c.hairStyle === 'curly') {
-      /* 波浪邊 */
-      const n = 4;
-      for (let i = 0; i < n; i++) {
-        const p0 = pts[pts.length - 1 - i];
-        const p1 = pts[pts.length - 2 - i];
-        const mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2 + R * 0.12;
-        ctx.quadraticCurveTo(mx, my, p1[0], p1[1]);
-      }
-    } else {
-      for (let i = pts.length - 1; i >= 1; i--) ctx.lineTo(pts[i][0], pts[i][1]);
-    }
+    for (let i = pts.length - 1; i >= 1; i--) ctx.lineTo(pts[i][0], pts[i][1]);
     ctx.closePath();
     ctx.fill();
   }
