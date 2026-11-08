@@ -1102,3 +1102,23 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 **清理**：刪除 18d~18h 六個 dotfile 測試（.park-18d/.coaster-18e/.catch-18f/.catch-verify/.wheel-18g/.reward-18h.mjs；功能已整合進 peek-park.mjs）
 
 **發布**：git clean → force push origin main → Pages build → live 驗證
+
+## 第十九輪：雲霄飛車升級（Jerry 要求 11-08）
+
+需求：路線要長一點；最初爬升後要有令人加跳加速的大俯衝；中間要有 360 度旋轉（垂直迴環）。
+
+### 設計決策（11-08）
+- **新路線**（~100u，舊 ~40u，2.5 倍長）：站點(6,0.6,4)→爬坡(峰 y≈10.5~11)→**大俯衝**(Δh≈10，底速≈17)→平直段→**垂直 360° 迴環**(R=3，x≈24.5，底 y0.8 頂 y6.8)→起伏山丘×2→回到站點旁結束(3,0.8,4)
+- **物理調整**：FRICTION 0.25→0.18（比例阻力吃速太狠，18e 調太硬）；G/BOOST/V_MAX 不變
+- **迴環門檻**：v≥~15 入環可過（√(4gR)+損耗）；大俯衝底速 17.3 扣除平直段 10u 後 ≈15.5 → 不踩也能過、踩了更猛（V_MAX 24）
+- **失敗行為**（保留）：低速入環→過不了頂→車往回溜出迴環（v 下限 -4）→踩踏板重試；環頂停住（tan.y=0 觸發停住條件）也能踩踏板再衝
+- **車廂視覺**：迴環區（t∈LOOP_T）車廂/玩家改朝環心偏置（掛在軌道內側），其餘區段世界 up；parkedTrain 從 t0.18（爬坡段）搬到 t0.02（站點平段）
+- **星星**：STAR_TS 重設——俯衝中 1 顆、環頂 1 顆、後段山丘 2 顆（依弧長實測定 t）
+- 無新中文文字 → 不用重跑字型
+
+### 子任務
+- 19a 📋：新軌道幾何（park3d.js buildCoasterTrack 新點列+管 220 段+支柱 28+parkedTrain 搬站點）＋迴環車廂偏置（park-coaster.js _updateVisual）＋QA 截圖
+- 19b 📋：FRICTION/STAR_TS 調整＋QA 騎行模擬（爬坡→俯衝→迴環過/失敗回溜→結算）
+- 19c 📋：peek-park.mjs 更新＋11 套件回歸＋README/PROGRESS＋發布
+
+> 📌 **接手筆記**（11-08）：19a~19c 待做。軌道點列與物理計算見上；先用 Node 跑 three.min.js UMD 量弧長定 STAR_TS（`require('./lib/three.min.js')` 可用）。QA 截圖放 /tmp。
