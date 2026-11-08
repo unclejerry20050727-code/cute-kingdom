@@ -75,6 +75,7 @@ const Park3D = {
 
   resetPlayer() {
     this.player.position.set(0, 1.5, 6); /* 18d-fix：平面高 3，中心 y=1.5 才站在地面 */
+    this.player.rotation.y = 0;
     this.shadow.position.set(0, 0.03, 6);
     this.facing = 'down';
     this.walkT = 0;
@@ -155,7 +156,7 @@ const Park3D = {
     this.facing = 'down';
     this.player = new THREE.Mesh(
       new THREE.PlaneGeometry(2.4, 3.0),
-      new THREE.MeshBasicMaterial({ map: this.playerTex.down, transparent: true })
+      new THREE.MeshBasicMaterial({ map: this.playerTex.down, transparent: true, side: THREE.DoubleSide })
     );
     this.player.position.set(0, 1.5, 6);
     this.scene.add(this.player);
@@ -243,6 +244,7 @@ const Park3D = {
       new THREE.Vector3(30, 0.8, -2),
     ];
     const curve = new THREE.CatmullRomCurve3(cp, false, 'catmullrom', 0.5);
+    this.coasterCurve = curve; /* 18e 雲霄飛車遊玩用 */
     this.scene.add(this.mkMesh(THREE, new THREE.TubeGeometry(curve, 90, 0.3, 8, false), 0xe2574c));
     /* 支柱 */
     const postMat = new THREE.MeshLambertMaterial({ color: 0xc9a27c });
@@ -253,7 +255,8 @@ const Park3D = {
       post.position.set(p.x, p.y / 2, p.z);
       this.scene.add(post);
     }
-    /* 靜止小列車（2 節） */
+    /* 靜止小列車（2 節；18e 遊玩時隱藏） */
+    this.parkedTrain = [];
     const p1 = curve.getPoint(0.18), p2 = curve.getPoint(0.2);
     for (let i = 0; i < 2; i++) {
       const car = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 1.5),
@@ -261,6 +264,7 @@ const Park3D = {
       car.position.copy(p1).addScaledVector(p2.clone().sub(p1).normalize(), -i * 1.7);
       car.lookAt(p2);
       this.scene.add(car);
+      this.parkedTrain.push(car);
     }
   },
 

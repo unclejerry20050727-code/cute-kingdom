@@ -883,14 +883,14 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18b ✅：lib/three.min.js（r128 UMD 603KB，REVISION=128 驗證）＋util.js `loadScript()` 延遲載入（Promise 快取）（`0e3c7ab`）
 - 18c ✅：2D 地圖畫遊樂園（摩天輪＋雲霄飛車鐵軌＋大門口「遊樂園」招牌）＋粉紅「玩」脈衝點 PK(490,300)＋移樹（`26538bc`）
 - 18d ✅：3D 基礎（js/park3d.js）：場景/天空霧/廣場/裝飾摩天輪＋雲霄飛車軌道/3 站點/玩家 billboard/移動/離開/HUD
-- 18e 📋：雲霄飛車小遊戲（js/park-coaster.js）
+- 18e ✅：雲霄飛車小遊戲（js/park-coaster.js）：軌道物理/踏板加速/4 星星/結算/相機跟車
 - 18f 📋：甜甜圈接接樂（js/park-catch.js）
 - 18g 📋：摩天輪小遊戲（js/park-wheel.js）
 - 18h 📋：存檔＋獎勵＋觸控動作鈕＋音效
 - 18i 📋：test/peek-park.mjs
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
-> 📌 **接手筆記**（11-08）：18a~18d 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎）。下一個：18e 雲霄飛車小遊戲（js/park-coaster.js，ParkCoaster.start(park) 接口）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+> 📌 **接手筆記**（11-08）：18a~18e 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車小遊戲）。下一個：18f 甜甜圈接接樂（js/park-catch.js，ParkCatch.start(park) 接口，同 ParkCoaster 模式）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
 
 ### 18a 封面署名 ✅（11-08，`d8135ad`）
 
@@ -949,3 +949,33 @@ Esc→sub=map＋mapP(490,330)＋park 層隱藏、0 pageerror
 2. 摩天輪頂端出畫面→降高（hub 9、R7.5）＋後移 z-14；相機 (0,15,27)fov48→(0,19,34)fov52；雲霄飛車峰頂 7.5→6.5
 3. 氣球高 4.6 像棒棒糖→降 3.4
 **回歸**：peek-map、peek-mobile 全過（dpad 搬家無影響）
+
+### 第十八輪 18e：雲霄飛車小遊戲 ✅
+
+**設計**：複用公園裝飾軌道＝你看到的車就是你坐的車（`Park3D.coasterCurve`）。車廂沿
+CatmullRom 軌道（`getPointAt`/`getTangentAt` 弧長參數化），物理：`v += -g·tangent.y·dt - v·f·dt`
+（g=18 arcade、阻力 0.25、v≤24），Space/E/⚡ 踩踏板 +7；停住（v<0.25 且非下坡）提示「再踩一下」。
+軌道 4 顆金色 octahedron 星星（t=0.33/0.5/0.68/0.88，`|t-車|<0.025` 收集→`Park3D.addStar(1)`）；
+t≥1 到站→3 秒結算提示（「🎉 完美！收齊 4 顆星星！」或「到站！收集 n/4 ★」）→cleanup：玩家回站點(5,0,6)、
+停靠列車復原、相機回全景(0,19,34)、`Park3D.best.coaster` 更新。相機跟車：`carPos - tangent*6 + (0,4,0)`
+lookAt `carPos + tangent*5`（指數平滑 lerp）。玩家 billboard 坐在車上（p+(0,1.9,0)、`rotation.y=atan2(dx,dz)`
+面向相機）。
+
+**檔案**：
+- `js/park-coaster.js` 新增（~200 行）：`ParkCoaster={start(park),update(dt),action(),abort(),_updateVisual,_cleanup}`；
+  `start` 隱藏停靠列車＋建車廂（紅 body＋白 stripe）＋4 星＋提示「🦶 踩踏板衝坡！」；`_cleanup(awarded)` 復原一切＋
+  `park.ride=null`＋best 更新
+- `js/park3d.js`：`buildCoasterTrack` 存 `this.coasterCurve`（18e 遊玩用）＋停靠車存 `this.parkedTrain`；
+  玩家 material 加 `side: THREE.DoubleSide`（騎車時相機在車後方）；`resetPlayer` 加 `rotation.y=0`
+- `index.html`：park3d.js 後加 `<script src="js/park-coaster.js">`
+
+**QA（test/.coaster-18e.mjs）**：上車→ride/active/parkedHidden 全 true、提示正確；真實時間騎行（踩踏板×14）→
+到站 t=1.000、4/4 星、Park3D.stars=4、提示「🎉 完美！」；cleanup→ride=false、玩家(5,1.5,6)、列車復原、
+提示隱藏、car 移除、相機(0,19,34)、best={coaster:4}、0 pageerror
+**截圖**（/tmp/coaster-18e-riding2.png）：玩家坐在車上面向相機、星星在前、提示條＋⚡高亮
+**bug 修復（QA 抓到）**：
+1. finished 分支 `_cleanup(true)` 後仍呼叫 `_updateVisual`→car=null 崩潰→cleanup 後直接 return
+2. 玩家 billboard 單面→騎車時相機在後方看不到→`rotation.y=atan2` 面向相機＋DoubleSide；cleanup 歸零 rotation
+**headless 注意**：SwiftShader 慢渲染（~200ms/frame）＋dt clamp→遊戲時間只有真實 1/5；測試用
+`waitForFunction` 等 finished＋快轉 `finishTimer`（真實裝置 3 秒自然到期）；勿在 evaluate 同步灌 >100 幟
+`Park3D.update`（SwiftShader 會撐爆、截圖 timeout）
