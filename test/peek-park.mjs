@@ -56,8 +56,8 @@ await p.tap('#park-action');
 await p.waitForTimeout(300);
 const v1 = await p.evaluate(() => ParkCoaster.v);
 ok(v1 > 4, `⚡ 觸控動作鈕踩踏板再啟動（停住後 v=${v1.toFixed(1)}）`);
-/* 收集 1 號星（t=0.31→星 0.33，v=12 避免中途停住） */
-await p.evaluate(() => { ParkCoaster.t = 0.31; ParkCoaster.v = 12; ParkCoaster.stopped = false; });
+/* 收集 1 號星（19c：星 t 動態讀——新 113u 軌道 1 號星在俯衝中 t=0.27；v=12 避免中途停住） */
+await p.evaluate(() => { ParkCoaster.t = ParkCoaster.stars[0].t; ParkCoaster.v = 12; ParkCoaster.stopped = false; });
 await p.waitForFunction(() => ParkCoaster.collected >= 1, null, { timeout: 30000 });
 console.log('ok: 雲霄飛車收集星星');
 /* 到站（跳 t≈1） */

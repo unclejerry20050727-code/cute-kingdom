@@ -1119,7 +1119,7 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 ### 子任務
 - 19a ✅：新軌道幾何（park3d.js buildCoasterTrack 新點列+管 220 段+支柱 28+parkedTrain 搬站點）＋迴環車廂偏置（park-coaster.js _updateVisual）＋QA 截圖（本 commit）
 - 19b ✅：FRICTION 0.25→0.18、STAR_TS [0.27,0.585,0.766,0.89]（俯衝中/環頂/丘1/丘2）＋QA 騎行模擬（本 commit）
-- 19c 📋：peek-park.mjs 更新＋11 套件回歸＋README/PROGRESS＋發布
+- 19c ✅：peek-park.mjs 星星步驟改動態讀星 t＋11 套件回歸全 PASS＋README 更新（本 commit）；發布見下
 
 ### 19a 完成細節（11-08）
 - **軌道**：25 點 cp、L=113.2u；關鍵 t：峰 0.197（y10.7）、俯衝底 0.351（y0.7）、環底入口 0.502、環頂 0.585（y6.8）、環底出口 0.668、丘1 0.766（y5.0）、丘2 0.890（y6.0）
@@ -1135,4 +1135,10 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - **失敗行為修正**（實測 vs 設計文件）：低速入環**不會回溜**（v 下限 -4 是防禦死碼）——停住條件 `v<0.25 && tan.y>=-0.05` 在環牆上坡段必然先觸發→車**停在環牆**（t≈0.513，環底 v3.35 只爬得動 Δh≈0.28u）＋「停住了」提示；踩踏板重試每次爬 ~2.8u 弧，~4 踩可破環（每踩 v=7→7²=49 能量 vs 環頂需 36Δh）——比回溜直覺性更好，保留現行為、不修物理
 - 量測：環底入口 v≈3.35（t0.47 v4 純物理）→停 t=0.513；踩後 t→0.523 繼續爬 ✓
 
-> 📌 **接手筆記**（11-08）：19a/19b 完成。剩 19c：① peek-park.mjs 雲霄星星步驟現用 t=0.31 v=12 注入——新 STAR_TS[0]=0.27 會 miss，改動態讀 `ParkCoaster.stars[0].t`（或設 t=0.27 v=12）；② 11 套件回歸；③ README 3D 遊樂園章節改「大俯衝＋360° 迴環」；④ PROGRESS 收尾＋commit＋push＋Pages＋live smoke test＋報告。
+### 19c 完成細節（11-08）
+- **peek-park.mjs**：雲霄星星步驟 t=0.31 固定注入→改動態讀 `ParkCoaster.stars[0].t`（新軌道 1 號星在 0.27 俯衝中，舊值會 miss）
+- **11 套件回歸全 PASS**（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）
+- **README**：3D 遊樂園章節雲霄飛車項目改「113u 長線/大俯衝/360° 垂直迴環環頂倒掛/低速入環停環牆重試」
+- 無新中文 UI 文字→字型不動
+
+> 📌 **接手筆記**（11-08）：第十九輪 19a/19b/19c 全數完成 ✅。待：force push→Pages build→live smoke test→PROGRESS 補發布狀態→報告 Jerry。
