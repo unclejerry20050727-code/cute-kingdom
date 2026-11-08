@@ -888,9 +888,9 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18g ✅：摩天輪小遊戲（js/park-wheel.js）：坐 0 號座艙慢轉一圈／4 星星自動收集／相機跟座艙
 - 18h ✅：存檔＋獎勵（星星換硬幣 1★=2🪙 加 Game.money、Game.park 進存檔、舊檔補預設、離開時存檔）
 - 18i ✅：test/peek-park.mjs 正式回歸測試（進園/全景/移動/雲霄飛車含⚡觸控/接接樂/摩天輪/獎勵/存檔/離開，18 項全過）
-- 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
+- 18j ✅：十+1 套件全回歸＋README＋PROGRESS 收尾＋shots 重跑 commit＋發布
 
-> 📌 **接手筆記**（11-08 更新）：18a~18i 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/接接樂/摩天輪/存檔獎勵/peek-park 回歸測試；三座設施全部可玩＋星星換硬幣＋存檔）。下一個：**18j 收尾**——十+1 套件全回歸、shots/m* 舊 diff 重跑 commit、README 更新、PROGRESS 收尾、報告、發布（push→Pages）。context 128k 提醒：回歸套件一次跑一個、截圖一次看不過 3 張。
+> 📌 **接手筆記**（11-08 更新）：**第十八輪全部完成** ✅（18a d8135ad、18b 0e3c7ab、18c 26538bc、18d 20edb4e、18e 5d55dd0、18f 5b5fc34、18g 6a0cb73、18h fe60485、18i 1400c47、18j 本 commit）。署名＋3D 遊樂園（三座設施可玩＋星星換硬幣＋存檔）＋11 套件全回歸＋README 更新。已發布上線。等 Jerry 新回饋（尤其 iPhone 實測 3D 遊樂園：WebGL 效能、觸控操作）。
 
 ### 18a 封面署名 ✅（11-08，`d8135ad`）
 
@@ -1080,3 +1080,25 @@ reload+startGame→stars/best/money 全部還原、0 pageerror
 - 3D 截圖不進 shots/ 基線（渲染有幟計時抖動），存 /tmp 同 18d~18h 慣例
 
 **截圖**：/tmp/pk01-park3d-pano.png（全景）、/tmp/pk02-park3d-catch.png（接接樂）、/tmp/pk03-park3d-wheel.png（座艙）
+
+### 第十八輪 18j：回歸＋文件＋發布 ✅
+
+**十+1 套件全回歸（11-08，全部 PASS）**：
+flow（32 步全流程）、peek-build（138 項）、peek-recover（3 種自愈）、peek-bgm-filefix（雙情境）、
+peek-character（造型對照）、peek-map（地圖→打工→回家）、peek-work（18 項）、peek-fest（21 項）、
+peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，新）**——全部 0 pageerror。
+
+**shots/ 重跑 commit（122 張）**：
+- 全部小幅 pixel diff（最大 22-map 約 1%）＝字型 1108 重建的 sub-pixel 渲染噪聲＋地圖角色/PK 脈衝動畫相位
+- 驗證 22-map diff 圖：遊樂園（摩天輪/軌道/大門口）在新舊圖都在（非缺功能）
+- 含舊 session（11:35）遺留的 m* mobile 回歸 diff，這次一併 commit
+
+**README 更新**：
+- 玩法第 3 點加遊樂園入口
+- 新增「3D 遊樂園（第十八輪）」章節（操作/三遊戲/獎勵/存檔/封面署名）
+- 專案結構加 park3d 四檔＋lib/three.min.js；util.js 說明加 loadScript
+- 測試表加 peek-park.mjs（18 項）
+
+**清理**：刪除 18d~18h 六個 dotfile 測試（.park-18d/.coaster-18e/.catch-18f/.catch-verify/.wheel-18g/.reward-18h.mjs；功能已整合進 peek-park.mjs）
+
+**發布**：git clean → force push origin main → Pages build → live 驗證
