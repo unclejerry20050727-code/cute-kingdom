@@ -16,6 +16,7 @@ const Park3D = {
   ride: null,          // 目前進行中的小遊戲模組（{ start, abort, action, update }）
   nearStation: null,
   wheelAngle: 0,
+  wheelSpeed: 0.25, /* 18g：遊玩時加速 */
 
   /* ── 進入 ── */
   async enter() {
@@ -350,7 +351,7 @@ const Park3D = {
 
     /* 摩天輪轉動（座艙反向保持直立） */
     if (this.ferris) {
-      this.wheelAngle += dt * 0.25;
+      this.wheelAngle += dt * this.wheelSpeed; /* 18g：遊玩時可調 speed */
       this.ferris.wheel.rotation.z = this.wheelAngle;
       for (const g of this.ferris.gondolas) {
         g.mesh.rotation.z = -(this.wheelAngle + g.angle);

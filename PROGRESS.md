@@ -885,12 +885,12 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18d ✅：3D 基礎（js/park3d.js）：場景/天空霧/廣場/裝飾摩天輪＋雲霄飛車軌道/3 站點/玩家 billboard/移動/離開/HUD
 - 18e ✅：雲霄飛車小遊戲（js/park-coaster.js）：軌道物理/踏板加速/4 星星/結算/相機跟車
 - 18f ✅：甜甜圈接接樂（js/park-catch.js）：30 秒接 torus（糖霜）／左右移動／難度漸進／結算
-- 18g 📋：摩天輪小遊戲（js/park-wheel.js）
-- 18h 📋：存檔＋獎勵＋觸控動作鈕＋音效
+- 18g ✅：摩天輪小遊戲（js/park-wheel.js）：坐 0 號座艙慢轉一圈／4 星星自動收集／相機跟座艙
+- 18h 📋：存檔＋獎勵（星星換硬幣）＋觸控動作鈕確認＋音效收尾
 - 18i 📋：test/peek-park.mjs
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
-> 📌 **接手筆記**（11-08）：18a~18f 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/甜甜圈接接樂）。下一個：18g 摩天輪小遊戲（js/park-wheel.js，ParkWheel.start(park) 接口；坐座艙慢轉一輪＋星星收集；站點在 (-16,0,-2)、摩天輪 base (-20,0,-14)）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+> 📌 **接手筆記**（11-08）：18a~18g 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/接接樂/摩天輪；三座設施全部可玩）。下一個：18h 存檔＋獎勵（星星換硬幣 1★=2🪙 加 Game.money、Game.park={stars,best} 進 fullSave、舊檔補預設）＋音效收尾。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
 
 ### 18a 封面署名 ✅（11-08，`d8135ad`）
 
@@ -1000,3 +1000,26 @@ ride=false、玩家(0,1.5,-6)、相機(0,19,34)、best.catch 更新、0 pageerro
 **bug 修復（QA 抓到）**：
 1. `park.keys` 不存在（keys 在 `Game.keys`）→每幟 TypeError 殺 rAF 迴圈→改用 `Game.keys`
 2. catch 站點原在 (−11,9) 與遊戲區 (0,-6) 不一致→站點移到遊戲區
+
+### 第十八輪 18g：摩天輪小遊戲 ✅
+
+**設計**：坐 0 號座艙（`Park3D.ferris.gondolas[0]`，a_0=0.5），`Park3D.wheelSpeed` 0.25→0.5 rad/s
+（~12.6 秒一圈）；4 顆星星固定在座艙軌道外側 r=8.6（世界角度 0.25+k·π/2），座艙角度
+（a_0+wheelAngle）與星角度差 <0.25 rad 時自動收集＋`Park3D.addStar(1)`；一圈（wheelAngle 累積 2π）→
+3 秒結算提示（暫存 `park.ride={update,abort,action}` 模式同 ParkCatch）→cleanup：玩家回站點(−16,1.5,−2)、
+wheelSpeed 還原 0.25、相機回全景、`best.wheel` 更新。相機跟座艙：`pos+(0,3,13)` lookAt `pos+(0,1.2,0)`
+（指數平滑）；玩家 billboard 在座艙中心 +2.0、**z 偏離輪面 +0.8**（避免被紅色環管 z=−14±0.4 遮住）、
+`rotation.y=atan2` 面向相機。輕鬆向：不需要任何操作。
+
+**檔案**：
+- `js/park-wheel.js` 新增（~170 行）：`ParkWheel={start,update,action,no-op,abort,_finish,_cleanup}`
+- `js/park3d.js`：加 `wheelSpeed: 0.25`（init 值）、update 改用 `dt * this.wheelSpeed`
+- `index.html`：park-catch.js 後加 `<script src="js/park-wheel.js">`
+
+**QA（test/.wheel-18g.mjs）**：上座艙→ride/active/prompt「🎡 慢慢轉動中…收集 0/4 ★」、shadow 隱藏；
+測試加速 wheelSpeed=4 跑完一圈→4/4 星、提示「🎡 完美一圈！收齊 4 顆星星！」；cleanup→ride=false、
+wheelSpeed=0.25、玩家(−16,1.5,−2)、best={wheel:4}、相機(0,19,34)、0 pageerror；18d 回歸全過
+**截圖**（/tmp/wheel-18g-still.png）：玩家坐在粉色座艙、整輪視野、星星浮在軌道外側
+**bug 修復（QA 抓到）**：
+1. billboard 與輪面同 z（−14）→下半身被紅色環管（z=−13.6 外緣）遮住→billboard z 偏 +0.8、相機拉遠 z+13
+2. 測試注意：wheelSpeed 開到 4 時座艙 30u/s 超相機 lerp（真實 0.5 沒問題）——截圖 QA 要先 `wheelSpeed=0` 凍結等收斂
