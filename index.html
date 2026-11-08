@@ -151,15 +151,8 @@
     <span class="hud-emoji">📸</span><span>拍照</span>
   </button>
 
-  <!-- 方向鍵（觸控/滑鼠） -->
-  <div class="dpad hidden" id="dpad">
-    <button data-d="-1,-1">↑</button>
-    <div class="dpad-mid">
-      <button data-d="-1,1">←</button>
-      <button data-d="1,-1">→</button>
-    </div>
-    <button data-d="1,1">↓</button>
-  </div>
+  <!-- 方向鍵（觸控/滑鼠）——第十八輪18d：移出 #screen-game 改為頂層（3D 遊樂園覆蓋層也要用） -->
+  <!-- (dpad 已移至 #screen-game 之後) -->
 
   <!-- 第十一輪d：放置操作鈕（觸控支援：等同 R / ↑↓ / Esc） -->
   <div class="place-actions hidden" id="place-actions">
@@ -194,6 +187,25 @@
 
   <!-- 淡入淡出 -->
   <div class="fade hidden" id="fade"></div>
+</div>
+
+<!-- ══════════ 第十八輪：3D 遊樂園（Three.js，全屏覆蓋層） ══════════ -->
+<div id="screen-park3d" class="hidden">
+  <canvas id="park-canvas"></canvas>
+  <button class="park-exit-btn" id="park-exit" title="離開遊樂園（Esc）">🏠 離開遊樂園</button>
+  <div class="park-star" id="park-star">🌟 0</div>
+  <div class="park-prompt hidden" id="park-prompt"></div>
+  <button class="park-action-btn" id="park-action" title="動作（Space）">⚡</button>
+</div>
+
+<!-- 方向鍵（觸控/滑鼠）——18d：頂層，公園與地圖共用 -->
+<div class="dpad hidden" id="dpad">
+  <button data-d="-1,-1">↑</button>
+  <div class="dpad-mid">
+    <button data-d="-1,1">←</button>
+    <button data-d="1,-1">→</button>
+  </div>
+  <button data-d="1,1">↓</button>
 </div>
 
 <!-- ══════════ Loading（手寫風・棕色系） ══════════ -->
@@ -264,6 +276,7 @@
 <script src="js/world.js"></script>
 <script src="js/pano.js"></script>
 <script src="js/mapscene.js"></script>
+<script src="js/park3d.js"></script>
 <script src="js/mini.js"></script>
 <script src="js/dialogue.js"></script>
 <script src="js/audio.js"></script>

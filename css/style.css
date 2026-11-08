@@ -330,7 +330,8 @@ body {
 
 /* 方向鍵 */
 .dpad {
-  position: absolute; left: 20px; bottom: 24px;
+  position: fixed; left: 20px; bottom: 24px; /* 第十八輪18d：absolute→fixed（已移出 #screen-game，3D 公園覆蓋層也要用） */
+  z-index: 60; pointer-events: auto;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   opacity: .85;
 }
@@ -713,3 +714,61 @@ body {
   .level-card { flex: 1 1 30%; min-width: 96px; }
   .shop-panel { max-height: calc(100dvh - 16px); overflow-y: auto; }
 }
+
+/* ══════════ 第十八輪：3D 遊樂園 HUD ══════════ */
+#screen-park3d {
+  position: fixed; inset: 0; z-index: 50;
+  background: #9FD8EF; /* 天空色（WebGL 背景同源） */
+}
+#park-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.park-exit-btn {
+  position: absolute; top: 14px; left: 14px;
+  font-family: var(--font);
+  font-size: 19px; font-weight: 700; color: var(--ink);
+  background: var(--panel);
+  border: 4px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform .12s cubic-bezier(.34,1.56,.64,1);
+}
+.park-exit-btn:hover { transform: translateY(-3px) scale(1.04); }
+.park-exit-btn:active { transform: scale(.95); }
+.park-star {
+  position: absolute; top: 16px; right: 16px;
+  font-family: var(--font);
+  font-size: 20px; font-weight: 900; color: var(--ink);
+  background: var(--panel);
+  border: 4px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 10px 18px;
+  box-shadow: var(--shadow);
+}
+.park-prompt {
+  position: absolute; bottom: 118px; left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font);
+  font-size: 19px; font-weight: 700; color: var(--ink);
+  background: var(--panel);
+  border: 3px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 10px 20px;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+.park-action-btn {
+  position: absolute; bottom: 26px; right: 24px;
+  width: 76px; height: 76px;
+  font-size: 34px; line-height: 1;
+  font-family: var(--font);
+  background: var(--panel);
+  border: 4px solid var(--panel-border);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform .12s cubic-bezier(.34,1.56,.64,1);
+}
+.park-action-btn:hover { transform: scale(1.06); }
+.park-action-btn:active { transform: scale(.92); }
+.park-action-btn.near { background: #FFE9F2; border-color: var(--pink-deep); }

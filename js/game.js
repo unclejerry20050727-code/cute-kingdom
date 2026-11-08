@@ -212,8 +212,10 @@ function setSub(sub) {
   $('#out-btn').classList.toggle('hidden', !roomSub);
   $('#build-btn').classList.toggle('hidden', !roomSub);
   if (!roomSub) closeBuildPanel();
-  if (sub === 'free' || sub === 'map') showDpad();
+  if (sub === 'free' || sub === 'map' || sub === 'park3d') showDpad(); /* 第十八輪18d：公園也用 dpad */
   else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
+  if (sub === 'park3d') $('#screen-park3d').classList.remove('hidden');
+  else $('#screen-park3d').classList.add('hidden'); /* 第十八輪18d：3D 公園全屏層 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
   const canPose = sub === 'free' || sub === 'map'; /* 16a：地圖也顯示擺拍/拍照鈕 */
   $('#pose-btn').classList.toggle('hidden', !canPose); /* 第十五輪：擺拍鈕；16a：地圖也支援 */
@@ -291,6 +293,10 @@ function updateGame(dt) {
         Game.player.pose.t += dt;
         if (Game.player.pose.t >= 1.8) Game.player.pose = null;
       }
+      break;
+    }
+    case 'park3d': { /* 第十八輪18d：3D 遊樂園 */
+      if (window.Park3D) Park3D.update(dt);
       break;
     }
     case 'map': {
@@ -501,6 +507,21 @@ function openShop() {
 function closeShop() {
   $('#screen-shop').classList.add('hidden');
   if (Game.sub !== 'work') setSub('map');
+}
+
+/* ══════════ 第十八輪18d：3D 遊樂園（延遲載入 Three.js） ══════════ */
+async function enterPark() {
+  sfx('pop');
+  showToast('🎡 進入遊樂園…');
+  try {
+    await Park3D.enter();
+  } catch (e) {
+    console.warn('Park3D enter 失敗', e);
+    $('#screen-park3d').classList.add('hidden');
+    showToast('⚠️ 進不了遊樂園（這台裝置可能不支援 3D）');
+    return;
+  }
+  setSub('park3d');
 }
 
 function fillShopUI() {
@@ -729,6 +750,8 @@ function renderGame() {
     return;
   }
 
+  if (Game.sub === 'park3d') return; /* 第十八輪18d：3D 全屏層在上，2D canvas 不用畫 */
+
   if (Game.sub === 'work') {
     ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
     renderWork(ctx, Game.t);
@@ -908,6 +931,16 @@ function setupInput() {
       Game.keys.add(keyMap[e.key]);
       e.preventDefault();
     }
+    /* 第十八輪18d：公園移動（WASD/方向鍵） */
+    if (Game.sub === 'park3d' && keyMap[e.key]) {
+      Game.keys.add(keyMap[e.key]);
+      e.preventDefault();
+    }
+    /* 第十八輪18d：Space/E = 上車/動作 */
+    if (Game.sub === 'park3d' && (e.key === ' ' || e.key === 'e' || e.key === 'E')) {
+      if (window.Park3D) { Park3D.action(); e.preventDefault(); }
+      return;
+    }
     /* 第十五輪：P = 擺拍（10 姿勢輪流） */
     if ((e.key === 'p' || e.key === 'P') && (Game.sub === 'free' || Game.sub === 'map') && !Dialogue.active) {
       startPose();
@@ -951,6 +984,7 @@ function setupInput() {
       if (up || down) { nudgeWallH(up ? 6 : -6); e.preventDefault(); }
     }
     if (e.key === 'Escape') {
+      if (Game.sub === 'park3d' && window.Park3D) { Park3D.exit(); return; } /* 第十八輪18d */
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
     }
@@ -1080,8 +1114,9 @@ function setupInput() {
         break;
       }
       case 'map': {
-        /* 點麥當勞 → 商店；點道路 → 走過去 */
+        /* 點麥當勞 → 商店；點遊樂園 → 3D 公園；點道路 → 走過去 */
         if (Math.hypot(wx - MC.x, wy - MC.y) < 34) { openShop(); break; }
+        if (Math.hypot(wx - PK.x, wy - PK.y) < 34) { enterPark(); break; } /* 第十八輪18d */
         if (wx > ROAD_L && wx < ROAD_R && wy > 175 && wy < 645) {
           Game.mapTarget = { x: clamp(wx, ROAD_L + 10, ROAD_R - 10), y: clamp(wy, 182, 640) };
         }

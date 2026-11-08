@@ -879,10 +879,10 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 音效：复用 `sfx()` 既有音（pop/blip/win 等）
 
 ### 子任務
-- 18a ✅：封面署名「作者：Rainbow」（index.html .cover-credit）＋字型 1042→1054 重建＋?v=18
-- 18b ✅：lib/three.min.js（r128 UMD 603KB，REVISION=128 驗證）＋util.js `loadScript()` 延遲載入（Promise 快取）
-- 18c 📋：2D 地圖畫遊樂園＋脈衝點＋進入口（sub 切換框架）
-- 18d 📋：3D 基礎（js/park3d.js）：場景/天空/霧/地面/裝飾摩天輪＋雲霄飛車軌道/玩家 billboard/移動/離開
+- 18a ✅：封面署名「作者：Rainbow」（index.html .cover-credit）＋字型 1042→1054 重建＋?v=18（`d8135ad`）
+- 18b ✅：lib/three.min.js（r128 UMD 603KB，REVISION=128 驗證）＋util.js `loadScript()` 延遲載入（Promise 快取）（`0e3c7ab`）
+- 18c ✅：2D 地圖畫遊樂園（摩天輪＋雲霄飛車鐵軌＋大門口「遊樂園」招牌）＋粉紅「玩」脈衝點 PK(490,300)＋移樹（`26538bc`）
+- 18d ✅：3D 基礎（js/park3d.js）：場景/天空霧/廣場/裝飾摩天輪＋雲霄飛車軌道/3 站點/玩家 billboard/移動/離開/HUD
 - 18e 📋：雲霄飛車小遊戲（js/park-coaster.js）
 - 18f 📋：甜甜圈接接樂（js/park-catch.js）
 - 18g 📋：摩天輪小遊戲（js/park-wheel.js）
@@ -890,4 +890,62 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18i 📋：test/peek-park.mjs
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
-> 📌 **接手筆記**（11-08）：計畫已定，從 18a 開始。每個子任務一個 commit＋更新本節 📋→✅。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+> 📌 **接手筆記**（11-08）：18a~18d 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎）。下一個：18e 雲霄飛車小遊戲（js/park-coaster.js，ParkCoaster.start(park) 接口）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+
+### 18a 封面署名 ✅（11-08，`d8135ad`）
+
+- `index.html` `.cover-credit`：`作者：Rainbow ・ BGM：Daystar ・ Lukrembo`
+- 重跑 make-font.py（1042→1054 字，含「作者」）；CSS ?v=17→18；封面截圖 QA 署名顯示正常
+
+### 18b Three.js ✅（11-08，`0e3c7ab`）
+
+- 下載 `lib/three.min.js`（r128 UMD，603,445 bytes，MIT，驗證 REVISION=128/Scene/CatmullRomCurve3）
+- `js/util.js` 新增 `loadScript(url)`：Promise 化＋`_scriptPromises` Map 快取（重複載入回同一個）＋onerror 移除快取可重試
+
+### 18c 2D 地圖遊樂園 ✅（11-08，`26538bc`）
+
+- `js/mapscene.js` 新增 `drawPark(ctx)`：地影、摩天輪（中心 155,270 R=70、A 字支架、外環紅內環黃、8 輻條、6 彩色座艙、軸心、頂端小旗）、
+  雲霄飛車（x245~388 y200~335、支柱+X 撐、兩條 bezier 鐵軌、2 車廂小列車）、大門口（310~370、雙紅柱、黃拱頂、
+  招牌「遊樂園」RHR 900 26px、門口小氣球）；`renderMap` 加粉紅 PK 脈衝圈（中心紅「玩」字）
+- `const PK = { x: 490, y: 300 }`；原樹 (150,250) 移到 (95,470) 避開摩天輪
+- 字型 1054→1064（+遊樂園）；CSS ?v=18→19；QA 全圖＋放大截圖確認手繪風格一致
+- 手滑修正 2 處（誤刪 drawMLogo 的 save、誤寫怪三元式）已還原
+
+### 18d 3D 基礎 ✅（11-08）
+
+**新增 `js/park3d.js`**（`window.Park3D`，Three.js r128，~430 行）：
+- `enter()`：loadScript('lib/three.min.js') → init（一次）→ size → 顯示 `#screen-park3d`；`exit()`：回地圖（mapP 放 490,330）
+- 場景：天空/霧 0x9fd8ef、草地、奶油廣場、6 棵樹、3 氣球（上下浮）
+- 裝飾摩天輪（-20,0,-14）：A 字支架、紅環 R7.5＋黃內環、8 輻條、6 座艙（`rotation.z = -(wheelAngle+a)` 反向保持直立）、頂端小旗
+- 裝飾雲霄飛車軌道：CatmullRomCurve3（6 控制點、峰頂 y6.5）＋TubeGeometry 紅軌＋支柱＋2 車廂靜止小列車
+- 3 站點（圓墊＋立杆＋canvas 招牌 emoji+文字）：🎢 雲霄飛車 (5,0,6)、🍩 甜甜圈接接樂 (-11,0,9)、🎡 摩天輪 (-16,0,-2)
+- 玩家：4 方向 160×200 canvas（drawCharacter scale 1.6、baseline y188）→ PlaneGeometry(2.4,3) billboard；
+  固定相機（0,19,34）fov52 面向 -z→平面永遠朝相機、走路 4 幀換姿重繪 texture；半透明圓影
+- 移動：Game.keys＋Game.dpadDir（與 2D 地圖同一套數字對應）、速度 9/s、邊界 x[-27,27] z[-18,23]、出生 (0,0,6)
+- 站點接近 <4.5 → 提示條＋⚡按鈕 pink 高亮；`action()`：dispatch `window.ParkCoaster/ParkCatch/ParkWheel`（18e~g 實作），
+  未實作 → toast「🚧 這座設施還在建造中～換一座試試！」；遊戲中 `ride.action/update` 優先
+- `addStar(n)`：星星計數＋sfx blip（18h 接換硬幣）
+
+**index.html**：`#screen-park3d`（canvas#park-canvas＋#park-exit「🏠 離開遊樂園」＋#park-star「🌟 0」＋#park-prompt＋#park-action「⚡」）；
+**`#dpad` 移出 `#screen-game` 成為頂層 sibling**（stacking context：#screen-game z5 會把 dpad 關在 3D 層 z50 下面；JS 綁定用全局選擇器，搬 DOM 不受影響）；
+script 順序：mapscene.js 後、mini.js 前加 `js/park3d.js`
+
+**css/style.css**：`.dpad` absolute→**fixed＋z-index 60＋pointer-events auto**（跨 2D/3D 可用）；park HUD 樣式
+（#screen-park3d z50、.park-exit-btn/.park-star/.park-prompt/.park-action-btn 圓角奶油風、.near 粉紅高亮）
+
+**js/game.js**：
+- `setSub`：park3d 也 showDpad；#screen-park3d 顯示/隱藏隨 sub（enter/exit 雙保險）
+- `updateGame` 加 `case 'park3d': Park3D.update(dt)`
+- `renderGame`：park3d 提前 return（2D canvas 停最後一幟、被覆蓋）
+- keydown：park3d 加 WASD/方向鍵→Game.keys；Space/E→`Park3D.action()`；Esc→`Park3D.exit()`
+- 地圖 click：點 PK（<34px）→ `enterPark()`（async：sfx＋toast→await Park3D.enter()→setSub('park3d')；失敗 toast 不支援 3D）
+
+**QA（test/.park-18d.mjs，18i 升級為 peek-park.mjs）**：進園→THREE.REVISION=128、running=true、WebGL 渲染成功、
+D 鍵移動 px 0→1.35＋facing right、傳送到雲霄飛車站→nearStation=coaster＋提示條＋⚡near 高亮、Space→toast 建造中、
+Esc→sub=map＋mapP(490,330)＋park 層隱藏、0 pageerror
+**截圖**（/tmp/park3d-18d*.png）：全景（摩天輪完整、雲霄飛車、玩家站立影子、3 招牌）＋站點提示特寫，風格與 2D 一致
+**bug 修復（QA 抓到）**：
+1. `resetPlayer` 寫成 y=0（應 1.5）→ 角色沉地只露頭（量 bbox：texture 角色佔 canvas y27~199，平面中心 y1.5 才落地）
+2. 摩天輪頂端出畫面→降高（hub 9、R7.5）＋後移 z-14；相機 (0,15,27)fov48→(0,19,34)fov52；雲霄飛車峰頂 7.5→6.5
+3. 氣球高 4.6 像棒棒糖→降 3.4
+**回歸**：peek-map、peek-mobile 全過（dpad 搬家無影響）
