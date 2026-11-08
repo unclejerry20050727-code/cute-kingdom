@@ -150,15 +150,19 @@ const ParkCoaster = {
     const u = Math.min(Math.max(this.t, 0), 1);
     const p = curve.getPointAt(u);
     const tan = curve.getTangentAt(Math.min(u, 0.999));
-    this.car.position.copy(p);
+    /* 19a 迴環區（t 0.50~0.67）：車廂/玩家朝環心偏置（掛在軌道內側，環頂倒掛）；
+       環底處環心正好在正上方，與世界 up 無縫接軌 */
+    const up = (u >= 0.50 && u <= 0.67)
+      ? new THREE.Vector3(24.5, 3.8, 9).sub(p).normalize()
+      : new THREE.Vector3(0, 1, 0);
+    this.car.position.copy(p).addScaledVector(up, 0.55); /* 坐在軌道上 */
     const ahead = p.clone().addScaledVector(tan, 1);
     this.car.lookAt(ahead);
-    this.car.position.y += 0.55; /* 坐在軌道上 */
 
     /* 玩家坐在車上（面向相機，避免看到平面背面） */
     const dx = park.camera.position.x - p.x, dz = park.camera.position.z - p.z;
     this.rideBill.rotation.y = Math.atan2(dx, dz);
-    this.rideBill.position.copy(p).add(new THREE.Vector3(0, 1.9, 0));
+    this.rideBill.position.copy(p).addScaledVector(up, 1.9);
 
     /* 星星旋轉漂浮 */
     for (const s of this.stars) {

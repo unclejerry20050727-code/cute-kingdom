@@ -1117,8 +1117,16 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - 無新中文文字 → 不用重跑字型
 
 ### 子任務
-- 19a 📋：新軌道幾何（park3d.js buildCoasterTrack 新點列+管 220 段+支柱 28+parkedTrain 搬站點）＋迴環車廂偏置（park-coaster.js _updateVisual）＋QA 截圖
+- 19a ✅：新軌道幾何（park3d.js buildCoasterTrack 新點列+管 220 段+支柱 28+parkedTrain 搬站點）＋迴環車廂偏置（park-coaster.js _updateVisual）＋QA 截圖（本 commit）
 - 19b 📋：FRICTION/STAR_TS 調整＋QA 騎行模擬（爬坡→俯衝→迴環過/失敗回溜→結算）
 - 19c 📋：peek-park.mjs 更新＋11 套件回歸＋README/PROGRESS＋發布
 
-> 📌 **接手筆記**（11-08）：19a~19c 待做。軌道點列與物理計算見上；先用 Node 跑 three.min.js UMD 量弧長定 STAR_TS（`require('./lib/three.min.js')` 可用）。QA 截圖放 /tmp。
+### 19a 完成細節（11-08）
+- **軌道**：25 點 cp、L=113.2u；關鍵 t：峰 0.197（y10.7）、俯衝底 0.351（y0.7）、環底入口 0.502、環頂 0.585（y6.8）、環底出口 0.668、丘1 0.766（y5.0）、丘2 0.890（y6.0）
+- **迴環視覺**（park-coaster.js _updateVisual）：t∈[0.50,0.67] 時 car/rideBill 改朝環心 (24.5,3.8,9) 偏置（car +0.55、bill +1.9），其餘段世界 up；量測 carY=6.25（環頂軌道 6.8 下方）✓
+- **樹位移**：[24,8]（擋迴環）→ [28,4]（全景仍疊環右上角）→ 最終 **[-18,8]**（左側空草地，全景迴環完全露出）
+- **QA**（dotfile 已刪）：L=113.2 ✓、非融合區最小距離 0.67u（環底入口/出口相連點，正常）✓、環頂倒掛截圖 ✓、0 pageerror ✓；截圖 /tmp/qa19a-{pano,looptop,loopside}.png
+- **已知視覺**（共平面迴環幾何不避免）：入口平直段在環近側牆下、出口平直段在環遠側牆下，兩側各 ~1.5u 管面交疊（max 0.4u）——在軌道實際相連處，全景距離下約幾 px，可接受；不升環底（升 1.7 會使入環速 14.2→10.7 破不踩過環）
+- **QA 截圖技巧**（19c 可參考）：靜態截圖前 monkey-patch `ParkCoaster._updateVisual=()=>{}` 凍結跟車相機＋手動相機 (33,6.5,9) lookAt(24.5,4.2,9)（環側視）＋`rideBill.rotation.y=Math.PI/2` 強制朝相機（正常遊戲 rotation 隨跟車相機、無此問題）＋隱藏 #park-prompt
+
+> 📌 **接手筆記**（11-08）：19a 完成。19b：park-coaster.js FRICTION 0.25→0.18、STAR_TS [0.33,0.5,0.68,0.88]→[0.27,0.585,0.766,0.89]（依上表實測 t），QA 騎行模擬（dotfile）：自動踩→俯衝→入環→環頂（v≈2.4 可過）→山丘→到站；注意低速入環會回溜（v 下限 -4）是設計行為。19c：peek-park.mjs 雲霄星星步驟現用 t=0.31 v=12 注入——新 STAR_TS[0]=0.27 會 miss，改動態讀 `ParkCoaster.stars[0].t`。
