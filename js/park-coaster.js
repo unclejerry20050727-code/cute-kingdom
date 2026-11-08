@@ -23,12 +23,12 @@ const ParkCoaster = {
   park: null,
 
   G: 18,            /* 重力（arcade 感） */
-  FRICTION: 0.25,   /* 阻力係數 */
+  FRICTION: 0.18,   /* 阻力係數（19b：調低才能不踩也過迴環） */
   BOOST: 7,         /* 踩踏板加速 */
   V_MAX: 24,
 
-  /* 軌道上星星位置（t 參數） */
-  STAR_TS: [0.33, 0.5, 0.68, 0.88],
+  /* 軌道上星星位置（t 參數）——19b 依 113u 新軌道弧長實測：俯衝中/環頂/丘1/丘2 */
+  STAR_TS: [0.27, 0.585, 0.766, 0.89],
 
   start(park) {
     const THREE = window.THREE;
