@@ -1139,6 +1139,8 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - **peek-park.mjs**：雲霄星星步驟 t=0.31 固定注入→改動態讀 `ParkCoaster.stars[0].t`（新軌道 1 號星在 0.27 俯衝中，舊值會 miss）
 - **11 套件回歸全 PASS**（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）
 - **README**：3D 遊樂園章節雲霄飛車項目改「113u 長線/大俯衝/360° 垂直迴環環頂倒掛/低速入環停環牆重試」
+- **回歸重跑 shots/ 113 檔**：逐檔無 fuzz compare 全 0px（純 PNG 重新編碼位元組差異，像素零改變）→ git checkout 還原，不進 commit
 - 無新中文 UI 文字→字型不動
+- **發布**：push 3adb686→Pages `built`→live smoke PASS（線上 L=113.2/FRICTION 0.18/新 STAR_TS/0 pageerror）
 
-> 📌 **接手筆記**（11-08）：第十九輪 19a/19b/19c 全數完成 ✅。待：force push→Pages build→live smoke test→PROGRESS 補發布狀態→報告 Jerry。
+> 📌 **接手筆記**（11-08 更新）：**第十九輪全部完成並發布上線** ✅（19a 8022af0、19b 137ade0、19c 3adb686、發布確認本 commit）。線上版 https://unclejerry20050727-code.github.io/cute-kingdom/ 已可玩新版雲霄飛車（113u 長線/大俯衝/360° 垂直迴環）。等 Jerry 新回饋（尤其實測：迴環倒掛手感、踩踏板節奏、iOS 效能）。
