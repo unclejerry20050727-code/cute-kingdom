@@ -139,7 +139,7 @@ const Park3D = {
     /* ── 三個站點 ── */
     this.stations = [
       { kind: 'coaster', label: '雲霄飛車', emoji: '🎢', pos: new THREE.Vector3(5, 0, 6) },
-      { kind: 'catch', label: '甜甜圈接接樂', emoji: '🍩', pos: new THREE.Vector3(-11, 0, 9) },
+      { kind: 'catch', label: '甜甜圈接接樂', emoji: '🍩', pos: new THREE.Vector3(0, 0, -6) }, /* 18f：搬到廣場上（接圈舞台） */
       { kind: 'wheel', label: '摩天輪', emoji: '🎡', pos: new THREE.Vector3(-16, 0, -2) },
     ];
     for (const st of this.stations) this.scene.add(this.buildStation(THREE, st));

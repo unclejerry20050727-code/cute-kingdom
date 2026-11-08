@@ -884,13 +884,13 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18c ✅：2D 地圖畫遊樂園（摩天輪＋雲霄飛車鐵軌＋大門口「遊樂園」招牌）＋粉紅「玩」脈衝點 PK(490,300)＋移樹（`26538bc`）
 - 18d ✅：3D 基礎（js/park3d.js）：場景/天空霧/廣場/裝飾摩天輪＋雲霄飛車軌道/3 站點/玩家 billboard/移動/離開/HUD
 - 18e ✅：雲霄飛車小遊戲（js/park-coaster.js）：軌道物理/踏板加速/4 星星/結算/相機跟車
-- 18f 📋：甜甜圈接接樂（js/park-catch.js）
+- 18f ✅：甜甜圈接接樂（js/park-catch.js）：30 秒接 torus（糖霜）／左右移動／難度漸進／結算
 - 18g 📋：摩天輪小遊戲（js/park-wheel.js）
 - 18h 📋：存檔＋獎勵＋觸控動作鈕＋音效
 - 18i 📋：test/peek-park.mjs
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
-> 📌 **接手筆記**（11-08）：18a~18e 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車小遊戲）。下一個：18f 甜甜圈接接樂（js/park-catch.js，ParkCatch.start(park) 接口，同 ParkCoaster 模式）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+> 📌 **接手筆記**（11-08）：18a~18f 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/甜甜圈接接樂）。下一個：18g 摩天輪小遊戲（js/park-wheel.js，ParkWheel.start(park) 接口；坐座艙慢轉一輪＋星星收集；站點在 (-16,0,-2)、摩天輪 base (-20,0,-14)）。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
 
 ### 18a 封面署名 ✅（11-08，`d8135ad`）
 
@@ -979,3 +979,24 @@ lookAt `carPos + tangent*5`（指數平滑 lerp）。玩家 billboard 坐在車�
 **headless 注意**：SwiftShader 慢渲染（~200ms/frame）＋dt clamp→遊戲時間只有真實 1/5；測試用
 `waitForFunction` 等 finished＋快轉 `finishTimer`（真實裝置 3 秒自然到期）；勿在 evaluate 同步灌 >100 幟
 `Park3D.update`（SwiftShader 會撐爆、截圖 timeout）
+
+### 第十八輪 18f：甜甜圈接接樂 ✅
+
+**設計**：30 秒接住天上掉下來的甜甜圈（TorusGeometry 0.7/0.34 五色＋白色糖霜小圈）；玩家站廣場上
+（0,-6，氣球站點）左右移動（A/D/方向鍵/dpad，x∈[-11,11]，speed 9）；接到（y∈[0.6,1.9] 且 |dx|<1.7）→+1 星＋score；
+漏掉→buzz；出圈間隔 1.0s→0.55s 難度漸進（同屏≤8）；時間到→3 秒結算提示→cleanup（玩家回站、相機回全景）；
+`Park3D.best.catch` 記錄。計時/分數顯示在 #park-prompt（每幟更新）。
+
+**檔案**：
+- `js/park-catch.js` 新增（~200 行）：`ParkCatch={start,update,action,no-op,abort,_finish,_cleanup,_spawn,_setPrompt}`；
+  走路動畫複用 `park.redrawPlayer('down', t, true)` 4 幟循環；時間到用暫存 `park.ride={update,abort,action}` 跑 3 秒結算
+- `js/park3d.js`：catch 站點 (−11,0,9)→(0,0,−6)（廣場中央＝接圈舞台，背景有摩天輪＋雲霄飛車軌道）
+- `index.html`：park-coaster.js 後加 `<script src="js/park-catch.js">`
+
+**QA（test/.catch-18f.mjs＋.catch-verify.mjs）**：開始→ride/active/prompt「⏰ 30s｜🍩 分數：0」、
+D 鍵移動 px 0→1.4（billboard＋影子同步）、甜甜圈生成＋接住（score 1 stars 1）、時間到 cleanup→
+ride=false、玩家(0,1.5,-6)、相機(0,19,34)、best.catch 更新、0 pageerror
+**截圖**（/tmp/catch-18f-play.png）：甜甜圈下落中（糖霜）、分數條、廣場舞台完整
+**bug 修復（QA 抓到）**：
+1. `park.keys` 不存在（keys 在 `Game.keys`）→每幟 TypeError 殺 rAF 迴圈→改用 `Game.keys`
+2. catch 站點原在 (−11,9) 與遊戲區 (0,-6) 不一致→站點移到遊戲區
