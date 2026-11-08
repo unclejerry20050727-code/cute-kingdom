@@ -887,10 +887,10 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18f ✅：甜甜圈接接樂（js/park-catch.js）：30 秒接 torus（糖霜）／左右移動／難度漸進／結算
 - 18g ✅：摩天輪小遊戲（js/park-wheel.js）：坐 0 號座艙慢轉一圈／4 星星自動收集／相機跟座艙
 - 18h ✅：存檔＋獎勵（星星換硬幣 1★=2🪙 加 Game.money、Game.park 進存檔、舊檔補預設、離開時存檔）
-- 18i 📋：test/peek-park.mjs
+- 18i ✅：test/peek-park.mjs 正式回歸測試（進園/全景/移動/雲霄飛車含⚡觸控/接接樂/摩天輪/獎勵/存檔/離開，18 項全過）
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
-> 📌 **接手筆記**（11-08）：18a~18g 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/接接樂/摩天輪；三座設施全部可玩）。下一個：18h 存檔＋獎勵（星星換硬幣 1★=2🪙 加 Game.money、Game.park={stars,best} 進 fullSave、舊檔補預設）＋音效收尾。context 128k 提醒：park3d 系列檔案一次只讀一個、精確行號 edit。
+> 📌 **接手筆記**（11-08 更新）：18a~18i 完成（署名/Three.js/2D 地圖遊樂園/3D 基礎/雲霄飛車/接接樂/摩天輪/存檔獎勵/peek-park 回歸測試；三座設施全部可玩＋星星換硬幣＋存檔）。下一個：**18j 收尾**——十+1 套件全回歸、shots/m* 舊 diff 重跑 commit、README 更新、PROGRESS 收尾、報告、發布（push→Pages）。context 128k 提醒：回歸套件一次跑一個、截圖一次看不過 3 張。
 
 ### 18a 封面署名 ✅（11-08，`d8135ad`）
 
@@ -1045,3 +1045,38 @@ best.wheel=4；exit→career stars=4、存檔 park={stars:4,best:{wheel:4}}、mo
 reload+startGame→stars/best/money 全部還原、0 pageerror
 
 **注意**：shots/m* 有舊 session（11:35）mobile 回歸重新生成的 pixel diff，留 18j 全回歸時一併重跑 commit
+
+### 第十八輪 18i：test/peek-park.mjs 正式回歸測試 ✅
+
+由 18d~18h 的五個 dotfile 測試（.park-18d/.coaster-18e/.catch-18f/.wheel-18g/.reward-18h）升級整合為正式
+回歸套件 `test/peek-park.mjs`（dotfile 保留待 18j 清理）。18 項檢查全過：
+
+1. 3D 場景初始化（THREE r128＋玩家）
+2. pk01 全景截圖（凍結 wheelAngle/t）
+3. D 鍵往右移動（px 0→0.90）
+4. 雲霄飛車上車
+5. **⚡ 觸控動作鈕**（hasTouch context＋`p.tap('#park-action')`）：車停住後 tap 踩踏板重新啟動（v 0→5.7）
+6. 雲霄飛車收集星星（t 跳到 0.31、v=12 過 1 號星）
+7. 雲霄飛車結算（1★→🪙+2、best.coaster=1）
+8. 甜甜圈開始
+9. pk02 接接樂截圖（甜甜圈定點 (1.5,8.5,−6)、vy 放慢、凍結輪角/時間）
+10. 強接甜甜圈（移到玩家 px/Z 高度 1.2→score 1）
+11. 接接樂結算（1★→🪙+2）
+12. 摩天輪上座艙
+13. pk03 摩天輪截圖（凍結 wheelAngle=1.2 等相機收斂）
+14. 摩天輪一圈 4★（🪙+8、best.wheel=4）
+15. 本次遊玩星星累計 6（雲霄 1＋接接 1＋摩天輪 4）
+16. 離開回地圖（玩家站回 PK 下方 490,330）
+17. 生涯星星存檔（6★ 進 cute-kingdom-save-v1）
+18. 0 pageerror
+
+**測試技巧（新學到）**：
+- hasTouch context：`b.newContext({ viewport, hasTouch: true })` 才能 `p.tap`（預設 context 不支援）
+- `THREE.REVISION` 是**字串** "128" 非數字（比對用 `String(x)==='128'`）
+- 雲霄飛車起步坡陡（t≈0 上坡 tan.y≈0.5）：v=5 約 1 遊戲秒就停住（v 被 stop 條件歸零）——⚡ 測試改為
+  「先停住再 tap 重新啟動」（設定 v=0/stopped=true 後 tap，v 應回到 ~5.7）；星星/終點跳 t 時 v 給 12 避免中途停
+- 甜甜圈物件是 `{mesh, vy, spin}`（位置在 `d.mesh.position`）；強接前 vy 放慢避免截圖期間掉出界
+- page.evaluate 內讀不到 Node 端變數（money0）→ 用參數傳入
+- 3D 截圖不進 shots/ 基線（渲染有幟計時抖動），存 /tmp 同 18d~18h 慣例
+
+**截圖**：/tmp/pk01-park3d-pano.png（全景）、/tmp/pk02-park3d-catch.png（接接樂）、/tmp/pk03-park3d-wheel.png（座艙）
