@@ -208,10 +208,7 @@ const ParkCoaster = {
     park.nearStation = null;
     park.hidePrompt();
     $('#park-action').classList.remove('near');
-    if (awarded) {
-      const best = (park.best = park.best || {});
-      best.coaster = Math.max(best.coaster || 0, this.collected);
-    }
+    if (awarded) park.awardStars('coaster', this.collected);
   },
 };
 

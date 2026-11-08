@@ -886,7 +886,7 @@ Jerry 一句「把這版可愛國發布上線」＝執行以下：
 - 18e ✅：雲霄飛車小遊戲（js/park-coaster.js）：軌道物理/踏板加速/4 星星/結算/相機跟車
 - 18f ✅：甜甜圈接接樂（js/park-catch.js）：30 秒接 torus（糖霜）／左右移動／難度漸進／結算
 - 18g ✅：摩天輪小遊戲（js/park-wheel.js）：坐 0 號座艙慢轉一圈／4 星星自動收集／相機跟座艙
-- 18h 📋：存檔＋獎勵（星星換硬幣）＋觸控動作鈕確認＋音效收尾
+- 18h ✅：存檔＋獎勵（星星換硬幣 1★=2🪙 加 Game.money、Game.park 進存檔、舊檔補預設、離開時存檔）
 - 18i 📋：test/peek-park.mjs
 - 18j 📋：十+1 套件回歸＋README＋PROGRESS＋報告
 
@@ -1023,3 +1023,25 @@ wheelSpeed=0.25、玩家(−16,1.5,−2)、best={wheel:4}、相機(0,19,34)、0 
 **bug 修復（QA 抓到）**：
 1. billboard 與輪面同 z（−14）→下半身被紅色環管（z=−13.6 外緣）遮住→billboard z 偏 +0.8、相機拉遠 z+13
 2. 測試注意：wheelSpeed 開到 4 時座艙 30u/s 超相機 lerp（真實 0.5 沒問題）——截圖 QA 要先 `wheelSpeed=0` 凍結等收斂
+
+### 第十八輪 18h：存檔＋獎勵 ✅
+
+**設計**：每局結束（_cleanup(awarded)）統一走 `Park3D.awardStars(kind, n)`：
+`Game.money += n*2`（1★=2🪙）、更新 `#hud-money-val`、toast「收到 N 顆🌟，換成 🪙+X！」、sfx('coin')、
+`Game.park.best[kind] = max(...)`。離開遊樂園（exit）：`Game.park.stars += 本次星星`、
+`saveGame(fullSave(...))`、有星則 toast「🌟 本次遊樂園共 N 顆星星」。存檔：`fullSave` 加 `park` 欄位；
+載入時舊存檔補預設（`Object.assign({coaster:0,catch:0,wheel:0}, save.park?.best)`）。`Park3D.enter` 每次
+進園 `stars=0`（本次遊玩計數）、`this.best = Game.park.best`（同一物件引用）。
+觸控動作鈕：`#park-action` 18d 已綁 pointerdown（觸控可用，18i 實測確認）。
+
+**檔案**：
+- `js/game.js`：Game 加 `park: { stars: 0, best: {...} }`；fullSave 加 `park: Game.park`；載入補預設
+- `js/park3d.js`：enter 重置+連結 best；新增 `awardStars(kind,n)`；exit 累計生涯星＋存檔＋toast
+- `js/park-coaster.js` / `park-catch.js` / `park-wheel.js`：_cleanup(awarded) 改 `park.awardStars(...)`
+- **字型重建 1064→1108**（+44：18d~18g 所有遊玩提示文字從未收進字型，這次一次補齊）、CSS ?v=19→20
+
+**QA（test/.reward-18h.mjs）**：摩天輪 4 星→money 100→108、toast「收到 4 顆🌟，換成 🪙+8！」、
+best.wheel=4；exit→career stars=4、存檔 park={stars:4,best:{wheel:4}}、moneyInSave=108；
+reload+startGame→stars/best/money 全部還原、0 pageerror
+
+**注意**：shots/m* 有舊 session（11:35）mobile 回歸重新生成的 pixel diff，留 18j 全回歸時一併重跑 commit

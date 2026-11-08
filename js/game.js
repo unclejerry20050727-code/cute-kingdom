@@ -31,6 +31,8 @@ const Game = {
   gear: { uniform: false, hat: false },
   /* 第十三輪b：打工關卡進度 */
   work: { unlocked: 1, best: {} },
+  /* 第十八輪：遊樂園星星與最佳紀錄（1★=2🪙） */
+  park: { stars: 0, best: { coaster: 0, catch: 0, wheel: 0 } },
   /* 地圖 */
   mapP: { x: 490, y: 195, facing: 'down', walkT: 0, walking: false },
   mouse: { wx: 0, wy: 0, tx: 0, ty: 0 },
@@ -153,6 +155,11 @@ function beginGame(save, skipIntro) {
   Game.work = {
     unlocked: Math.max(1, Math.min(WORK_LEVELS.length, (save.work && save.work.unlocked) || 1)),
     best: (save.work && save.work.best) || {},
+  };
+  /* 第十八輪：遊樂園（舊存檔補預設值） */
+  Game.park = {
+    stars: (save.park && save.park.stars) || 0,
+    best: Object.assign({ coaster: 0, catch: 0, wheel: 0 }, save.park && save.park.best),
   };
 
   const p = Game.player;
@@ -1477,6 +1484,7 @@ function fullSave(stage) {
     money: Game.money ?? 100,
     gear: Game.gear ?? { uniform: false, hat: false },
     work: Game.work, /* 第十三輪b：關卡進度 */
+    park: Game.park, /* 第十八輪：遊樂園星星與紀錄（載入時舊存檔補預設） */
   };
 }
 

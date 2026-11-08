@@ -199,10 +199,7 @@ const ParkCatch = {
     park.nearStation = null;
     park.hidePrompt();
     $('#park-action').classList.remove('near');
-    if (awarded) {
-      const best = (park.best = park.best || {});
-      best.catch = Math.max(best.catch || 0, this.score);
-    }
+    if (awarded) park.awardStars('catch', this.score);
   },
 };
 

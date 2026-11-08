@@ -154,10 +154,7 @@ const ParkWheel = {
     park.nearStation = null;
     park.hidePrompt();
     $('#park-action').classList.remove('near');
-    if (awarded) {
-      const best = (park.best = park.best || {});
-      best.wheel = Math.max(best.wheel || 0, this.collected);
-    }
+    if (awarded) park.awardStars('wheel', this.collected);
   },
 };
 

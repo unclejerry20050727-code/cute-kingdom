@@ -26,6 +26,9 @@ const Park3D = {
     if (!this.inited) this.init();
     this.size();
     this.running = true;
+    /* 18h：本次遊玩星星歸零、best 連結到存檔 */
+    this.stars = 0;
+    this.best = Game.park.best;
     this.resetPlayer();
     this.syncHUD();
   },
@@ -46,6 +49,10 @@ const Park3D = {
       Game.mapP.x = 490; Game.mapP.y = 330;
       Game.mapP.facing = 'down'; Game.mapP.walking = false;
     }
+    /* 18h：本次星星累計進生涯＋存檔 */
+    Game.park.stars += this.stars;
+    saveGame(fullSave(Game.stage));
+    if (this.stars > 0) showToast(`🌟 本次遊樂園共 ${this.stars} 顆星星`);
     sfx('pop');
     setSub('map');
   },
@@ -72,6 +79,20 @@ const Park3D = {
     this.stars += n;
     $('#park-star').textContent = `🌟 ${this.stars}`;
     sfx('blip');
+  },
+
+  /* 18h：獎勵結算（1★=2🪙，直接加 Game.money＋存檔 best） */
+  awardStars(kind, n) {
+    const best = (this.best = this.best || {});
+    best[kind] = Math.max(best[kind] || 0, n);
+    if (n > 0) {
+      const coins = n * 2;
+      Game.money += coins;
+      const el = document.getElementById('hud-money-val');
+      if (el) el.textContent = Game.money;
+      showToast(`收到 ${n} 顆🌟，換成 🪙+${coins}！`);
+      sfx('coin');
+    }
   },
 
   resetPlayer() {
