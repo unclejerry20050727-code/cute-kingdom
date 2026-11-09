@@ -1144,3 +1144,27 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - **發布**：push 3adb686→Pages `built`→live smoke PASS（線上 L=113.2/FRICTION 0.18/新 STAR_TS/0 pageerror）
 
 > 📌 **接手筆記**（11-08 更新）：**第十九輪全部完成並發布上線** ✅（19a 8022af0、19b 137ade0、19c 3adb686、發布確認本 commit）。線上版 https://unclejerry20050727-code.github.io/cute-kingdom/ 已可玩新版雲霄飛車（113u 長線/大俯衝/360° 垂直迴環）。等 Jerry 新回饋（尤其實測：迴環倒掛手感、踩踏板節奏、iOS 效能）。
+
+## 第二十輪：雲霄飛車再加長＋重量感＋4 迴環＋地底隧道（Jerry 要求 11-08）
+
+需求原文：「雲霄飛車長度加長 2 倍、速度慢一點才有重量感，太快又沒慣性像假的，360° 的圈圈要有 4 個，還要有個洞鑽進地底再出來，朝上衝出地面來的時候眼睛過曝看到太陽刺眼光芒，在俯衝或刺激的時候有尖叫聲，俯衝時畫面有加速線條」
+
+### 設計決策（11-08）
+- **新路線**（目標 ~220-240u＝113u 的 2 倍）：站點→爬坡（峰 y≈11）→**大俯衝#1**（Δh≈10）→**迴環1**→連接段→**迴環2**→**鑽入地底**（軌道沉到 y<0，地面 240×240 平面自然遮住）→地底段 ~15u→**陡坡衝出地面**（EMERGE 點）→俯衝#2→**迴環3**→連接段（踩踏板保勢）→**迴環4**→起伏山丘×2→回站點
+- **4 個 360° 垂直迴環**：R≈2.5-3，交替 y-z / y-x 平面；cp 用輔助函數生成（迴環每 30° 取點），不再手寫 25 點
+- **物理重量感**（20b 調）：G 18→10、FRICTION 0.18→0.13、BOOST 7→5.5、V_MAX 24→16——加速慢/頂速低/慣性大；Node 模擬驗證：自動踩（v<9 踩）可走完全程、4 環皆可過（環頂 v>0.5）；全 ride 目標 ~35-50s
+- **迴環視覺泛化**：park-coaster.js 單 LOOP_T/CENTER→`LOOPS` 陣列（每環 {t0,t1,cx,cy,cz}，t 範圍量測後填），_updateVisual 找 t 所屬環算 up
+- **隧道視覺**（20a）：入口/出口各一個圓環拱門（TorusGeometry）＋地底段每 ~2u 一顆自發光小燈（emissive 橘）；**地底暗模式**：t 在隧道區時 scene.background/fog lerp 到暗色 (0x2a2320)、Hemisphere 0.95→0.25、sun 0.75→0.05（出洞還原）
+- **太陽過曝**（20c）：index.html 加 `#park-sunflash`（白色徑向漸層、pointer-events none）；t 跨越 EMERGE_T（y 由負轉正）觸發一次：opacity 1→0（~1s CSS transition）＝眼睛過曝刺眼感
+- **加速線條**（20c）：`#park-speedlines`（repeating-conic-gradient 放射線＋徑向 mask 只留外緣）；俯衝（tan.y<-0.45）加 .on（opacity/scale transition），離俯衝移除
+- **尖叫聲**（20c）：audio.js 加 `sfx('scream')`（合成：saw 880→520 0.3s＋square 1180→700 0.22s＋短 yelp 1400→900；走既有 tone() 模式）；觸發：陡俯衝 tan.y<-0.45 或入環瞬間（t 跨環入口），cool-down 1.8s 防連發
+- **星星**：維持 4 顆（文字/字體不動）：俯衝#1 中/迴環2 環頂/出洞後/最後山丘——t 值 20a 量測後填 STAR_TS
+- **無新中文 UI 文字**→不用重跑字型、不改 ?v=（style.css 加新規則即可，index.html 本就不加版本號）
+
+### 子任務
+- 20a 📋：新軌道幾何（輔助函數生成 cp、4 環＋隧道＋山丘、L~220-240u、Tube 段數/支柱/停列車調整）＋Node 量測（L/每環 t 範圍/EMERGE_T/自相交檢查）＋隧道靜態視覺（拱門/地底燈/暗模式）＋QA 截圖（全景/地底/出洞/環）
+- 20b 📋：物理重量感常數＋LOOPS 泛化 up 向量＋Node 全 ride 模擬＋瀏覽器騎行 QA
+- 20c 📋：太陽過曝 flash＋加速線條＋尖叫聲＋STAR_TS 量測填入＋瀏覽器 QA（flash/speedlines class 觸發、scream 呼叫計數）
+- 20d 📋：peek-park.mjs 回歸確認＋11 套件＋README/PROGRESS 收尾＋發布
+
+> 📌 **接手筆記**（11-08）：第二十輪開工。軌道輔助函數放 park3d.js buildCoasterTrack 內（`loopPts(cx,cz,y0,R,plane)` 產生 12 點）；量測用 Node require three.min.js（同 19a）；自相交檢查排除共平面迴環融合區（19a 手法）；QA 截圖放 /tmp；地底截圖相機跟車即可（暗模式自帶氛圍）。
