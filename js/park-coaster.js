@@ -1,7 +1,8 @@
 /* ════════════════════════════════════════════════════════════════
    第十八輪18e：雲霄飛車小遊戲（ParkCoaster）
    - 複用公園的裝飾軌道（CatmullRomCurve3）＝你看到的車就是你坐的車
-   - 物理：v += -g·tangent.y·dt（重力投影切線）－阻力；Space/E/⚡ 踩踏板 +7 速度
+   - 物理：v += -g·tangent.y·dt（重力投影切線）－阻力－20b軟速上限；Space/E/⚡ 踩踏板 +5.5
+   - 20b 重量感（G8/F0.12/BOOST5.5/V_MAX16/DRAG1.5）＋20c 特效（出洞過曝/俯衝加速線/尖叫/地底暗模式）
    - 4 顆星星沿軌道；t≥1 過終點 → 結算（星星入 Park3D.stars）
    - 車速過低會停住 → 提示「再踩一下！」
    - 相機跟車（切線後方），玩家 billboard 坐在車上
@@ -22,13 +23,14 @@ const ParkCoaster = {
   rideBill: null,
   park: null,
 
-  G: 18,            /* 重力（arcade 感） */
-  FRICTION: 0.18,   /* 阻力係數（19b：調低才能不踩也過迴環） */
-  BOOST: 7,         /* 踩踏板加速 */
-  V_MAX: 24,
+  G: 8,             /* 重力（20b：重量感——慢加速） */
+  FRICTION: 0.12,   /* 阻力係數（20b：再調低，長線程） */
+  BOOST: 5.5,       /* 踩踏板加速 */
+  V_MAX: 16,        /* 軟速度上限 */
+  DRAG: 1.5,        /* 20b：超過 V_MAX 的額外拖曳（指數回落，保留慣性） */
 
-  /* 軌道上星星位置（t 參數）——19b 依 113u 新軌道弧長實測：俯衝中/環頂/丘1/丘2 */
-  STAR_TS: [0.27, 0.585, 0.766, 0.89],
+  /* 軌道上星星位置（t 參數）——20b 依 221u 新軌道實測：俯衝#1中/L2環頂/出洞/丘2頂 */
+  STAR_TS: [0.140, 0.385, 0.545, 0.908],
 
   start(park) {
     const THREE = window.THREE;
@@ -40,6 +42,10 @@ const ParkCoaster = {
     this.collected = 0;
     this.finished = false;
     this.finishTimer = 0;
+    this.prevT = 0;            /* 20c：前一幀 t（偵測出洞/入環跨越） */
+    this.emerged = false;      /* 20c：太陽過曝閃光（只一次） */
+    this.lastScream = -9;      /* 20c：上次尖叫時間（1.8s 冷卻） */
+    this.speedOn = false;      /* 20c：加速線狀態 */
 
     /* 隱藏停靠列車 */
     if (park.parkedTrain) for (const c of park.parkedTrain) c.visible = false;
@@ -101,9 +107,10 @@ const ParkCoaster = {
       return;
     }
 
-    /* 物理：重力沿切線投影＋阻力 */
+    /* 物理：重力沿切線投影＋阻力＋20b 軟速上限 */
     const tan = curve.getTangentAt(Math.min(this.t, 0.999));
     this.v += -this.G * tan.y * dt - this.v * this.FRICTION * dt;
+    if (this.v > this.V_MAX) this.v -= (this.v - this.V_MAX) * this.DRAG * dt; /* 20b 軟上限 */
     if (this.v < 0) this.v = Math.max(this.v, -4); /* 允許略微往回溜 */
     if (this.v < 0.25 && tan.y >= -0.05) {
       this.v = 0;
@@ -115,6 +122,23 @@ const ParkCoaster = {
     }
     this.t += (this.v * dt) / len;
     if (this.t <= 0) this.t = 0;
+
+    /* 20c：跨越事件（prevT→t）：出洞太陽過曝＋尖叫（陡俯衝/入環） */
+    const tt = park.tunnelT;
+    if (tt && !this.emerged && this.prevT < tt.exit && this.t >= tt.exit) {
+      this.emerged = true;
+      this._sunFlash(); /* 衝出隧道朝太陽→過曝閃光 */
+    }
+    let loopEntry = false;
+    const loops = park.coasterLoops;
+    if (loops) for (const Lp of loops) {
+      if (this.prevT < Lp.t0 && this.t >= Lp.t0) { loopEntry = true; break; }
+    }
+    if ((tan.y < -0.45 || loopEntry) && park.t - this.lastScream > 1.8) {
+      this.lastScream = park.t;
+      sfx('scream');
+    }
+    this.prevT = this.t;
 
     /* 星星收集 */
     for (const s of this.stars) {
@@ -150,11 +174,16 @@ const ParkCoaster = {
     const u = Math.min(Math.max(this.t, 0), 1);
     const p = curve.getPointAt(u);
     const tan = curve.getTangentAt(Math.min(u, 0.999));
-    /* 19a 迴環區（t 0.50~0.67）：車廂/玩家朝環心偏置（掛在軌道內側，環頂倒掛）；
-       環底處環心正好在正上方，與世界 up 無縫接軌 */
-    const up = (u >= 0.50 && u <= 0.67)
-      ? new THREE.Vector3(24.5, 3.8, 9).sub(p).normalize()
-      : new THREE.Vector3(0, 1, 0);
+    /* 20b：4 迴環（t 範圍/環心由 Park3D.coasterLoops 量測）：環內車廂/玩家朝環心偏置
+       （掛在軌道內側，環頂倒掛）；環底處環心在正上方，與世界 up 無縫接軌 */
+    let up = new THREE.Vector3(0, 1, 0);
+    const loops = park.coasterLoops;
+    if (loops) for (const Lp of loops) {
+      if (u >= Lp.t0 && u <= Lp.t1) {
+        up = new THREE.Vector3(Lp.cx, Lp.cy, Lp.cz).sub(p).normalize();
+        break;
+      }
+    }
     this.car.position.copy(p).addScaledVector(up, 0.55); /* 坐在軌道上 */
     const ahead = p.clone().addScaledVector(tan, 1);
     this.car.lookAt(ahead);
@@ -171,12 +200,36 @@ const ParkCoaster = {
       s.mesh.position.y += Math.sin(park.t * 2 + s.t * 20) * 0.004;
     }
 
-    /* 相機跟車（切線後方） */
-    const camT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, 4, 0));
+    /* 20c：加速線條（陡俯衝） */
+    const speedNow = tan.y < -0.45;
+    if (speedNow !== this.speedOn) {
+      this.speedOn = speedNow;
+      const slEl = document.getElementById('park-speedlines');
+      if (slEl) slEl.classList.toggle('on', speedNow);
+    }
+
+    /* 相機跟車（切線後方）；20b：車在地底時相機高度壓在地面下（跟車鑽進山洞） */
+    const under = p.y < -0.15;
+    park.underground = under; /* 20c：Park3D.update 地底暗模式 */
+    const camUp = under ? Math.min(4, Math.max(0.15, -0.35 - p.y)) : 4;
+    const camT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, camUp, 0));
     const look = p.clone().addScaledVector(tan, 5).add(new THREE.Vector3(0, 1, 0));
     const k = 1 - Math.exp(-5 * dt);
     park.camera.position.lerp(camT, k);
     park.camera.lookAt(look);
+  },
+
+  /* 20c：太陽過曝閃光（出洞：白閃快速淡出） */
+  _sunFlash() {
+    const el = document.getElementById('park-sunflash');
+    if (el) {
+      el.style.transition = 'none';
+      el.style.opacity = '1';
+      void el.offsetWidth; /* 強迫 reflow，讓下方淡出 transition 生效 */
+      el.style.transition = 'opacity 1.1s ease-out';
+      el.style.opacity = '0';
+    }
+    sfx('whoosh'); /* 出洞風聲 */
   },
 
   abort() {
@@ -208,6 +261,13 @@ const ParkCoaster = {
     this.active = false;
     this.finished = false;
     this.stopped = false;
+    /* 20c：清特效（地底暗模式恢復、移除加速線/過曝殘留） */
+    park.underground = false;
+    this.speedOn = false;
+    const slEl = document.getElementById('park-speedlines');
+    if (slEl) slEl.classList.remove('on');
+    const sfEl = document.getElementById('park-sunflash');
+    if (sfEl) sfEl.style.opacity = '0';
     park.ride = null;
     park.nearStation = null;
     park.hidePrompt();

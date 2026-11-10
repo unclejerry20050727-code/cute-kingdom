@@ -124,6 +124,11 @@ function sfx(name) {
     case 'fly':
       tone(320, t, 0.18, { type: 'sine', vol: 0.05, release: 0.16, slideTo: 880 });
       break;
+    case 'scream': /* 20c 雲霄飛車尖叫（鋸波下滑＋高音短喊） */
+      tone(880, t, 0.3, { type: 'sawtooth', vol: 0.14, release: 0.08, slideTo: 520 });
+      tone(1180, t + 0.02, 0.22, { type: 'square', vol: 0.06, release: 0.06, slideTo: 700 });
+      tone(1400, t + 0.3, 0.12, { type: 'sawtooth', vol: 0.08, release: 0.05, slideTo: 950 });
+      break;
   }
 }
 

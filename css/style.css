@@ -772,3 +772,22 @@ body {
 .park-action-btn:hover { transform: scale(1.06); }
 .park-action-btn:active { transform: scale(.92); }
 .park-action-btn.near { background: #FFE9F2; border-color: var(--pink-deep); }
+
+/* ═══ 第二十輪：雲霄飛車特效（出洞太陽過曝 / 俯衝加速線） ═══ */
+#park-sunflash {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 56% 30%, #ffffff 0%, rgba(255, 248, 214, .92) 30%, rgba(255, 224, 130, .45) 62%, rgba(255, 200, 90, .12) 80%, transparent 95%);
+}
+#park-speedlines {
+  position: absolute; inset: -25%;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.18);
+  background: repeating-conic-gradient(rgba(255,255,255,0) 0deg 5deg, rgba(255,255,255,.55) 5deg 6.2deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 34%, #000 82%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 34%, #000 82%);
+  transition: opacity .18s ease-out, transform .4s ease-out;
+}
+#park-speedlines.on { opacity: .75; transform: scale(1); }

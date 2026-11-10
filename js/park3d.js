@@ -117,16 +117,22 @@ const Park3D = {
     this.camera.position.set(0, 19, 34);
     this.camera.lookAt(0, 4, -5);
 
-    /* 燈 */
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8fc47e, 0.95));
-    const sun = new THREE.DirectionalLight(0xfff2d8, 0.75);
-    sun.position.set(25, 40, 18);
-    this.scene.add(sun);
+    /* 燈（20a：留參考；20c 地底暗模式調強度） */
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x8fc47e, 0.95);
+    this.scene.add(this.hemi);
+    this.sun = new THREE.DirectionalLight(0xfff2d8, 0.75);
+    this.sun.position.set(25, 40, 18);
+    this.scene.add(this.sun);
+    /* 20c：地底暗模式（白天/洞穴色 + 過渡係數） */
+    this.C_DAY = new THREE.Color(0x9fd8ef);
+    this.C_NIGHT = new THREE.Color(0x1a1410);
+    this.darkK = 0;
+    this.underground = false;
 
     /* 地面＋廣場 */
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshLambertMaterial({ color: 0x8fc47e })
+      new THREE.MeshLambertMaterial({ color: 0x8fc47e, side: THREE.DoubleSide }) /* 20a：地底看得到草地下面 */
     );
     ground.rotation.x = -Math.PI / 2;
     this.scene.add(ground);
@@ -413,6 +419,22 @@ const Park3D = {
       this.ride.update(dt);
     } else {
       this.movePlayer(dt);
+    }
+
+    /* 20c：地底暗模式（車在地底→天空漸暗成洞穴；出洞漸亮回白天） */
+    const dkTarget = this.underground ? 1 : 0;
+    this.darkK += (dkTarget - this.darkK) * (1 - Math.exp(-3 * dt));
+    if (this.darkK > 0.003) {
+      this.scene.background.copy(this.C_DAY).lerp(this.C_NIGHT, this.darkK);
+      this.scene.fog.color.copy(this.scene.background);
+      this.hemi.intensity = 0.95 * (1 - 0.78 * this.darkK);
+      this.sun.intensity = 0.75 * (1 - 0.93 * this.darkK);
+    } else if (this.darkK !== 0) {
+      this.darkK = 0;
+      this.scene.background.copy(this.C_DAY);
+      this.scene.fog.color.copy(this.C_DAY);
+      this.hemi.intensity = 0.95;
+      this.sun.intensity = 0.75;
     }
 
     this.renderer.render(this.scene, this.camera);
