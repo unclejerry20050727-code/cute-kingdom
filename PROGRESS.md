@@ -1167,4 +1167,33 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - 20c 📋：太陽過曝 flash＋加速線條＋尖叫聲＋STAR_TS 量測填入＋瀏覽器 QA（flash/speedlines class 觸發、scream 呼叫計數）
 - 20d 📋：peek-park.mjs 回歸確認＋11 套件＋README/PROGRESS 收尾＋發布
 
-> 📌 **接手筆記**（11-08）：第二十輪開工。軌道輔助函數放 park3d.js buildCoasterTrack 內（`loopPts(cx,cz,y0,R,plane)` 產生 12 點）；量測用 Node require three.min.js（同 19a）；自相交檢查排除共平面迴環融合區（19a 手法）；QA 截圖放 /tmp；地底截圖相機跟車即可（暗模式自帶氛圍）。
+> 📌 **接手筆記**（11-08）：第二十輪開工。軌道輔助函數放 park3d.js buildCoasterTrack 內（`loop()` 產生 12 點）；量測用 Node require three.min.js（同 19a）；自相交檢查排除共平面迴環融合區（19a 手法）；QA 截圖放 /tmp；地底截圖相機跟車即可（暗模式自帶氛圍）。
+
+### 20 進行中 checkpoint＋terminated 對策細切（11-10）
+
+**terminated 原因分析**：128k context window＋Playwright 長跑（SwiftShader ~200ms/frame）＋一次大量讀檔 → 會話中斷。**對策**：
+1. 狀態即時寫檔（本節）✅——任何時候 terminated 都能從這裡接上
+2. 剩餘工作切 ≤8 個小步，每步＝單 edit/單 script→驗證→commit
+3. QA script：waitForFunction 帶 timeout、一次 ≤3 張截圖、不同步灌 >100 幀
+4. 讀檔用精確 grep/sed 抽取，不整檔讀
+5. dotfiles（.route20/.m20/.sim20）20 輪收尾後刪
+
+**精確現況**（20a-20c 代碼已完成大半，只剩 park3d.js buildCoasterTrack 未重寫）：
+- ✅ `test/.route20.mjs` 路線定案：L=221.0、峰 y10.9@0.104、隧道底 y-4.5@0.498、入洞 0.453/出洞(EMERGE) 0.545（地底 20.5u）、L1 0.190→0.283(top .237)/L2 0.338→0.433(top .385)/L3 0.583→0.676(top .629)/L4 0.740→0.825(top .782)、自相交 0；隧道加深到 -4.5（跟車相機能鑽地底）、返程改繞 L4 環東側
+- ✅ `test/.sim20.mjs` 物理全過：G8/F0.12/BOOST5.5/VMAX16/DRAG1.5，thresh8/10/12 三檔自動踩皆 done、0 stops、maxV 15.4-17.6、minInLoop ≥8.0、ride 15.4-18.8s
+- ✅ STAR_TS 實測：[0.140, 0.385, 0.545, 0.908]（俯衝#1中 y5.43/L2環頂 y6.40/出洞 y0.17/丘2頂 y5.54）
+- ✅ `js/park3d.js`（部分）：init 存 hemi/sun 參考＋C_DAY/C_NIGHT/darkK/underground；ground DoubleSide（地底草地天花板）；update() 地底暗模式 lerp（bg/fog/hemi 0.95→0.21/sun 0.75→0.05）
+- ✅ `js/park-coaster.js`（全）：新常數＋STAR_TS＋軟上限＋跨越事件（出洞→_sunFlash、入環/陡俯衝→scream cd1.8s）＋多環 up（讀 park.coasterLoops）＋相機地底 clamp（p.y<-0.15→camUp=min(4,max(0.15,-0.35-p.y))、park.underground flag）＋speedlines（tan.y<-0.45 toggle .on）＋_sunFlash（白閃 1.1s+whoosh）＋_cleanup 清特效
+- ✅ `js/audio.js`：sfx('scream')（saw 880→520/square 1180→700/yelp 1400→950）
+- ✅ `index.html`＋`css/style.css`：#park-sunflash（徑向白閃）＋#park-speedlines（conic 放射線+mask，.on opacity .75）
+- ⚠️ 中間狀態安全：park-coaster.js 讀 park.coasterLoops/tunnelT 都有 if 保護，park3d.js 未重寫前不會崩（只是暫時沒多環 up/沒隧道特效）
+
+**剩餘小步**（每步做完即 commit）：
+- 20-1 📋：park3d.js buildCoasterTrack 重寫（cp 抄 .route20.mjs＋loop() helper＋Tube 400＋52 支柱＋coasterLoops/tunnelT 量測＋隧道拱門×2＋地底燈×~19）
+- 20-2 📋：node --check 4 檔 JS＋瀏覽器靜態 smoke（載入 0 error、coasterLoops 4 環、tunnelT 存在、L≈221）＋commit
+- 20-3 📋：瀏覽器靜態 QA 截圖 /tmp（全景/地底/出洞 ≤3 張）
+- 20-4 📋：瀏覽器騎行 QA（dt×3、自動踩 thresh10）：4/4 星、maxV~16、4 環頂可過、underground flag/暗模式、flash 觸發 1 次、scream ≥5 次、0 pageerror
+- 20-5 📋：commit（20a+20b+20c 全部代碼）＋PROGRESS 更新
+- 20-6 📋：20d 回歸（peek-park＋11 套件）
+- 20-7 📋：README/PROGRESS 收尾＋刪 dotfiles
+- 20-8 📋：發布（push→Pages→live smoke）＋報告 Jerry
