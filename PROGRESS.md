@@ -97,19 +97,21 @@
 - 20-7 📋：README/PROGRESS 收尾＋刪 dotfiles
 - 20-8 📋：發布（push→Pages→live smoke）＋報告 Jerry
 
-### terminated 事故分析＋解法（11-10，Jerry 回報「edit park3d.js 又 terminated」）
+### terminated 事故诊断（11-12 修正版，已用 session JSONL＋server 實證完成）
 
-**原因**：128k context window 被打爆 → auto-compaction 失敗 → session 中斷。
-證據鏈：
-1. PROGRESS.md 長到 1199 行（~45KB），每 session 開頭整檔讀＝~20k+ tokens
-2. `cat PROGRESS.md; cat README.md` 單條 bash 輸出撞 50KB 上限
-3. `edit park3d.js`（oldText ~36 行＋newText ~100 行）＝該 session 最大單次輸出 ~4k tokens
-4. 加上下個 tool 輸出破 128k → compaction 在臨界狀態失敗 → terminated
-→ **不是 edit 壞掉，是做大 edit 的那一刻 context 剛好爆掉**。PROGRESS 每輪只增不減→越來越容易爆。
+**先前「context 爆掉」的推測不準——真兇是模型生不成大 tool call：**
+1. 中斷 session 檔 21MB/1858 行；最後模式＝assistant(edit) → context_edit(replacement:null 刪訊息) ×3 → 死
+2. 三個 edit toolCall 的 arguments **只有 `path`、缺 `edits`**＝輸出在巨大 tool call 剛開始時就結束
+3. 三次嘗試各跑 6~6.5 分鐘（server 實測 10.6 tok/s）≈3800~4100 output tokens（含 thinking）後被切
+4. 對 server 做受控實驗：裸 4600-token 串流**正常完成**（478s、HTTP 200、finish_reason=length）→ server 串流健康、maxTokens 32768 也沒問題
+5. 小 tool call（bash/短 edit）全部成功
+→ 結論：**27B 小模型對超長結構化輸出（~100 行 JS 的 edits JSON）提前收尾/JSON 破損**，pi 缺參數→刪訊息重試→再失敗×3→terminated
 
-**解法（本輪起強制）**：
-1. ✅ PROGRESS.md 瘦身：第 1~18 輪移 `PROGRESS-archive.md`（主檔只留 19~20 輪＋接手筆記）
-2. 大檔禁止整檔 cat——grep/sed 精確抽取（含 PROGRESS/README）
-3. 大 edit 拆小：20-1 軌道重寫拆 2 個小 edit（oldText 各 <40 行）
-4. 每小步完成即 commit；QA script 輸出只印關鍵數字不印大 JSON
-5. session 開頭讀 PROGRESS 用 `tail -n 150`（只讀最近章節）＋必要時 grep 特定輪
+**強制規則（20-1 起執行，已驗證有效）**：
+1. 單一 edit 的 oldText+newText ≤ ~4KB（超了就拆多個小 edit）
+2. tool call 前文字極簡（1~2 行），不寫長解釋
+3. 大 write 拆成多次 append；QA 輸出只留關鍵數字
+4. 每小步即 commit（斷了可續）
+
+**建議 Jerry（可選）**：pi 改用 `--thinking low`（thinking 吃 token 又吃時間）；45 分鐘 compaction 產出 92KB 垃圾摘要（27B 不擅長長摘要）
+**server 實測**：vLLM 0.28.0 @192.168.220.201:18080、10.6 tok/s、max_model_len 131072、串流健康

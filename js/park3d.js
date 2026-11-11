@@ -263,50 +263,123 @@ const Park3D = {
   },
 
   buildCoasterTrack(THREE) {
-    /* 19a 新路線（~113u，舊 40u 的 2.8 倍）：
-       站點旁起步 → 爬坡（峰 y10.7 @ t≈0.20）→ 大俯衝（Δh≈10，底速 ~17）
-       → 平直段 → 垂直 360° 迴環（center(24.5,3.8,9) R=3，環頂 t≈0.585）
-       → 起伏山丘×2 → 回到站點旁結束 */
+    /* 20a 新路線（~221u，19a 113u 的 2 倍）：站點旁起步→爬坡(峰 y10.8)→大俯衝#1→迴環1→平→迴環2
+       →鑽地底(隧道底 y-4.5)→陡坡衝出地面(EMERGE)→俯衝#2→迴環3→踏板丘→迴環4→山丘×2→回站點
+       4×360° 垂直迴環（每 30° 取 12 點）；幾何與 test/.route20.mjs 同源 */
+    const v = (x, y, z) => new THREE.Vector3(x, y, z);
+    /* 360° 垂直迴環：plane 'yz'=x 固定(圈在 y-z) / 'xy'=z 固定(圈在 y-x)；side=前半圈往哪側(=行進方向) */
+    const loop = (cx, cz, y0, R, plane, side) => {
+      const pts = [];
+      for (let a = 1; a <= 12; a++) {
+        const th = a * (Math.PI / 6);
+        const y = y0 + R - R * Math.cos(th);
+        const off = R * Math.sin(th) * side;
+        pts.push(plane === 'yz' ? v(cx, y, cz + off) : v(cx + off, y, cz));
+      }
+      return pts;
+    };
     const cp = [
-      new THREE.Vector3(6, 0.6, 4),      /* 站點旁起步 */
-      new THREE.Vector3(11, 3.5, -2),
-      new THREE.Vector3(15, 8.5, -8),    /* 爬坡 */
-      new THREE.Vector3(17, 10.5, -13),  /* 峰頂 */
-      new THREE.Vector3(19, 4.5, -15),   /* 大俯衝起 */
-      new THREE.Vector3(22, 1.0, -10),   /* 俯衝底 */
-      new THREE.Vector3(25, 0.8, -3),
-      /* 垂直迴環（每 30° 取點，φ -90°~240°） */
-      new THREE.Vector3(24.5, 0.8, 9),
-      new THREE.Vector3(24.5, 1.2, 10.5),
-      new THREE.Vector3(24.5, 2.3, 11.6),
-      new THREE.Vector3(24.5, 3.8, 12),
-      new THREE.Vector3(24.5, 5.3, 11.6),
-      new THREE.Vector3(24.5, 6.4, 10.5),
-      new THREE.Vector3(24.5, 6.8, 9),   /* 環頂 */
-      new THREE.Vector3(24.5, 6.4, 7.5),
-      new THREE.Vector3(24.5, 5.3, 6.4),
-      new THREE.Vector3(24.5, 3.8, 6),
-      new THREE.Vector3(24.5, 2.3, 6.4),
-      new THREE.Vector3(24.5, 1.2, 7.5),
-      /* 後段起伏山丘 */
-      new THREE.Vector3(24, 1.5, 14),
-      new THREE.Vector3(20, 5, 16),
-      new THREE.Vector3(15, 1.5, 15),
-      new THREE.Vector3(10, 6, 12),
-      new THREE.Vector3(6, 2, 9),
-      new THREE.Vector3(3, 0.8, 4),      /* 回到站點旁 */
+      v(6, 0.6, 4),             /* 站點旁起步 */
+      v(11, 3.5, -1),
+      v(17, 8.5, -6),           /* 爬坡 */
+      v(22, 10.8, -10),         /* 峰頂 y10.8 */
+      v(26, 5.5, -12),          /* 大俯衝#1 */
+      v(28, 0.8, -8),           /* 俯衝底 */
+      v(25, 0.8, -6.5),
+      v(25, 0.8, -9),           /* L1 底 */
+      ...loop(25, -9, 0.8, 2.8, 'yz', -1),    /* 迴環1（far wall -z） */
+      v(25, 0.9, -13),
+      v(19, 0.9, -14.5),
+      v(16.5, 0.9, -14.5),
+      v(14, 0.8, -14.5),        /* L2 底 */
+      ...loop(14, -14.5, 0.8, 2.8, 'xy', -1),/* 迴環2（far wall -x） */
+      v(9.5, 0.9, -14),
+      v(7.5, -1.5, -13),        /* 鑽入地底 */
+      v(4.5, -3.8, -11),        /* 地底 */
+      v(1.0, -4.5, -9),         /* 隧道底 */
+      v(-2.5, -3.8, -6.5),      /* 地底 */
+      v(-4.5, -1.5, -4),        /* 隧道口 */
+      v(-5.5, 2.6, -2),         /* 陡坡衝出地面（EMERGE） */
+      v(-7, 0.9, 0),            /* 俯衝#2 底 */
+      v(-10, 0.9, 1.5),
+      v(-10, 0.8, 2),           /* L3 底 */
+      ...loop(-10, 2, 0.8, 2.8, 'yz', 1),     /* 迴環3（far wall +z） */
+      v(-10, 1.0, 6.5),
+      v(-6, 1.6, 8.5),          /* 踏板丘 */
+      v(-2, 0.8, 9),
+      v(0, 0.9, 9),
+      v(2, 0.8, 9),             /* L4 底 */
+      ...loop(2, 9, 0.8, 2.5, 'xy', 1),       /* 迴環4（far wall +x） */
+      v(6.5, 1.2, 10.5),
+      v(8, 4.2, 12.5),          /* 山丘1 */
+      v(10, 0.9, 14.5),         /* 低谷 */
+      v(5, 5.5, 15.5),          /* 山丘2 */
+      v(2, 3.0, 14.5),
+      v(4.5, 1.0, 12.5),        /* 返程：從 L4 環東側繞過（不切 L4 進環線） */
+      v(7.5, 0.7, 9),
+      v(7, 0.7, 5.5),
+      v(3, 0.8, 4.5),           /* 回到站點旁 */
     ];
     const curve = new THREE.CatmullRomCurve3(cp, false, 'catmullrom', 0.5);
     this.coasterCurve = curve; /* 18e 雲霄飛車遊玩用 */
-    this.scene.add(this.mkMesh(THREE, new THREE.TubeGeometry(curve, 220, 0.3, 8, false), 0xe2574c));
-    /* 支柱 */
+    this.scene.add(this.mkMesh(THREE, new THREE.TubeGeometry(curve, 400, 0.3, 8, false), 0xe2574c));
+    /* 20b/20c 量測：迴環 t 範圍（多迴環 up vector）＋隧道 t 範圍（暗模式/出口閃白） */
+    const N = 1200, pts = [];
+    for (let i = 0; i <= N; i++) pts.push(curve.getPointAt(i / N));
+    const LOOPS_DEF = [
+      { cx: 25, cz: -9, y0: 0.8, R: 2.8, plane: 'yz' },
+      { cx: 14, cz: -14.5, y0: 0.8, R: 2.8, plane: 'xy' },
+      { cx: -10, cz: 2, y0: 0.8, R: 2.8, plane: 'yz' },
+      { cx: 2, cz: 9, y0: 0.8, R: 2.5, plane: 'xy' },
+    ];
+    this.coasterLoops = LOOPS_DEF.map((lp) => {
+      const cy = lp.y0 + lp.R;
+      let t0 = 1, t1 = 0;
+      for (let i = 0; i <= N; i++) {
+        const p = pts[i], t = i / N;
+        const inPlane = lp.plane === 'yz' ? Math.abs(p.x - lp.cx) < 0.9 : Math.abs(p.z - lp.cz) < 0.9;
+        const a = lp.plane === 'yz' ? p.z - lp.cz : p.x - lp.cx;
+        if (inPlane && Math.hypot(p.y - cy, a) < lp.R + 0.45) { if (t < t0) t0 = t; if (t > t1) t1 = t; }
+      }
+      return { t0, t1, cx: lp.cx, cy, cz: lp.cz };
+    });
+    let entryT = null, exitT = null;
+    for (let i = 1; i <= N; i++) {
+      const a = pts[i - 1], b = pts[i];
+      if (a.y >= 0 && b.y < 0 && entryT === null) entryT = i / N;
+      if (a.y < 0 && b.y >= 0 && exitT === null) exitT = i / N;
+    }
+    this.tunnelT = { enter: entryT, exit: exitT };
+    /* 支柱（20a：221u 長線用 52 根；地底 y<0 自動跳過） */
     const postMat = new THREE.MeshLambertMaterial({ color: 0xc9a27c });
-    for (let i = 1; i <= 27; i++) {
-      const p = curve.getPointAt(i / 28);
+    for (let i = 1; i <= 51; i++) {
+      const p = curve.getPointAt(i / 52);
       if (p.y < 0.6) continue;
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, p.y, 6), postMat);
       post.position.set(p.x, p.y / 2, p.z);
       this.scene.add(post);
+    }
+    /* 20a：隧道口拱環×2（y=0 交叉點，朝向切線） */
+    for (const tArch of [entryT, exitT]) {
+      if (tArch === null) continue;
+      const p = curve.getPointAt(tArch);
+      const tan = curve.getTangentAt(Math.min(tArch, 0.999));
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.22, 8, 24),
+        new THREE.MeshLambertMaterial({ color: 0xf7c948 }));
+      arch.position.copy(p);
+      arch.lookAt(p.clone().add(tan));
+      this.scene.add(arch);
+    }
+    /* 20a：地底燈×19（暖橘自發光；basic material 不受暗模式影響） */
+    if (entryT !== null && exitT !== null) {
+      const lampMat = new THREE.MeshBasicMaterial({ color: 0xffa544 });
+      for (let i = 0; i < 19; i++) {
+        const t = entryT + ((i + 0.5) / 19) * (exitT - entryT);
+        const p = curve.getPointAt(t);
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), lampMat);
+        lamp.position.set(p.x, Math.min(p.y + 1.15, -0.25), p.z);
+        this.scene.add(lamp);
+      }
     }
     /* 靜止小列車（2 節；18e 遊玩時隱藏；19a 搬到站點旁平段） */
     this.parkedTrain = [];
