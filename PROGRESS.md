@@ -1197,3 +1197,20 @@ peek-mobile（21 步 40 項）、peek-pose（35 項）、**peek-park（18 項，
 - 20-6 📋：20d 回歸（peek-park＋11 套件）
 - 20-7 📋：README/PROGRESS 收尾＋刪 dotfiles
 - 20-8 📋：發布（push→Pages→live smoke）＋報告 Jerry
+
+### terminated 事故分析＋解法（11-10，Jerry 回報「edit park3d.js 又 terminated」）
+
+**原因**：128k context window 被打爆 → auto-compaction 失敗 → session 中斷。
+證據鏈：
+1. PROGRESS.md 長到 1199 行（~45KB），每 session 開頭整檔讀＝~20k+ tokens
+2. `cat PROGRESS.md; cat README.md` 單條 bash 輸出撞 50KB 上限
+3. `edit park3d.js`（oldText ~36 行＋newText ~100 行）＝該 session 最大單次輸出 ~4k tokens
+4. 加上下個 tool 輸出破 128k → compaction 在臨界狀態失敗 → terminated
+→ **不是 edit 壞掉，是做大 edit 的那一刻 context 剛好爆掉**。PROGRESS 每輪只增不減→越來越容易爆。
+
+**解法（本輪起強制）**：
+1. ✅ PROGRESS.md 瘦身：第 1~18 輪移 `PROGRESS-archive.md`（主檔只留 19~20 輪＋接手筆記）
+2. 大檔禁止整檔 cat——grep/sed 精確抽取（含 PROGRESS/README）
+3. 大 edit 拆小：20-1 軌道重寫拆 2 個小 edit（oldText 各 <40 行）
+4. 每小步完成即 commit；QA script 輸出只印關鍵數字不印大 JSON
+5. session 開頭讀 PROGRESS 用 `tail -n 150`（只讀最近章節）＋必要時 grep 特定輪
