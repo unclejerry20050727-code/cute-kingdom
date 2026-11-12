@@ -92,9 +92,9 @@
 - 20-2 ✅：node --check 通過＋瀏覽器靜態 smoke（L=221、coasterLoops 4 環、tunnelT e0.453/x0.545、0 error）→ commit cd8dfd6
 - 20-3 ✅：靜態 QA 截圖 3 張（/tmp/r20-01-pano / r20-02-underground / r20-03-emerge）：全景 4 環＋支柱＋站台正常；地底=綠草地天花板＋橘燈串＋黃拱環
 - 20-4 ✅：騎行 QA（dt×3、自動踩 thresh10，test/.ride20.mjs）：**4/4 星、maxV 16.07、minY -4.5、maxT 1（全程）、underTime 1.34s、maxDarkK 0.98、flash 1、whoosh 1、scream 6、loopDone [T,T,T,T]、pageerror 0**——全數達標
-- 20-5 📋：commit（20a+20b+20c 全部代碼）＋PROGRESS 更新
-- 20-6 📋：20d 回歸（peek-park＋11 套件）
-- 20-7 📋：README/PROGRESS 收尾＋刪 dotfiles
+- 20-5 ✅：commit（代碼 cd8dfd6＋QA/PROGRESS 6c95517）
+- 20-6 ✅：20d 回歸 **11/11 全 PASS**（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）
+- 20-7 ✅：README 雲霄條目改 20（221u/4環/隧道/過曝/尖叫/加速線）＋PROGRESS 收尾＋dotfiles（.m20/.route20/.sim20/.ride20）已刪
 - 20-8 📋：發布（push→Pages→live smoke）＋報告 Jerry
 
 ### terminated 事故诊断（11-12 修正版，已用 session JSONL＋server 實證完成）
