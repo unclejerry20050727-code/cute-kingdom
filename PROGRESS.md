@@ -77,7 +77,7 @@
 4. 讀檔用精確 grep/sed 抽取，不整檔讀
 5. dotfiles（.route20/.m20/.sim20）20 輪收尾後刪
 
-**精確現況**（20a-20c 代碼已完成大半，只剩 park3d.js buildCoasterTrack 未重寫）：
+**精確現況**（20a-20c 代碼全部完成＋瀏覽器靜態/騎行 QA 通過，見下方 20-1~20-4 實測）：
 - ✅ `test/.route20.mjs` 路線定案：L=221.0、峰 y10.9@0.104、隧道底 y-4.5@0.498、入洞 0.453/出洞(EMERGE) 0.545（地底 20.5u）、L1 0.190→0.283(top .237)/L2 0.338→0.433(top .385)/L3 0.583→0.676(top .629)/L4 0.740→0.825(top .782)、自相交 0；隧道加深到 -4.5（跟車相機能鑽地底）、返程改繞 L4 環東側
 - ✅ `test/.sim20.mjs` 物理全過：G8/F0.12/BOOST5.5/VMAX16/DRAG1.5，thresh8/10/12 三檔自動踩皆 done、0 stops、maxV 15.4-17.6、minInLoop ≥8.0、ride 15.4-18.8s
 - ✅ STAR_TS 實測：[0.140, 0.385, 0.545, 0.908]（俯衝#1中 y5.43/L2環頂 y6.40/出洞 y0.17/丘2頂 y5.54）
@@ -88,10 +88,10 @@
 - ⚠️ 中間狀態安全：park-coaster.js 讀 park.coasterLoops/tunnelT 都有 if 保護，park3d.js 未重寫前不會崩（只是暫時沒多環 up/沒隧道特效）
 
 **剩餘小步**（每步做完即 commit）：
-- 20-1 📋：park3d.js buildCoasterTrack 重寫（cp 抄 .route20.mjs＋loop() helper＋Tube 400＋52 支柱＋coasterLoops/tunnelT 量測＋隧道拱門×2＋地底燈×~19）
-- 20-2 📋：node --check 4 檔 JS＋瀏覽器靜態 smoke（載入 0 error、coasterLoops 4 環、tunnelT 存在、L≈221）＋commit
-- 20-3 📋：瀏覽器靜態 QA 截圖 /tmp（全景/地底/出洞 ≤3 張）
-- 20-4 📋：瀏覽器騎行 QA（dt×3、自動踩 thresh10）：4/4 星、maxV~16、4 環頂可過、underground flag/暗模式、flash 觸發 1 次、scream ≥5 次、0 pageerror
+- 20-1 ✅：park3d.js buildCoasterTrack 重寫（cp 抄 .route20.mjs＋loop() helper＋Tube 400＋52 支柱＋coasterLoops/tunnelT 量測＋隧道拱門×2＋地底燈×19）
+- 20-2 ✅：node --check 通過＋瀏覽器靜態 smoke（L=221、coasterLoops 4 環、tunnelT e0.453/x0.545、0 error）→ commit cd8dfd6
+- 20-3 ✅：靜態 QA 截圖 3 張（/tmp/r20-01-pano / r20-02-underground / r20-03-emerge）：全景 4 環＋支柱＋站台正常；地底=綠草地天花板＋橘燈串＋黃拱環
+- 20-4 ✅：騎行 QA（dt×3、自動踩 thresh10，test/.ride20.mjs）：**4/4 星、maxV 16.07、minY -4.5、maxT 1（全程）、underTime 1.34s、maxDarkK 0.98、flash 1、whoosh 1、scream 6、loopDone [T,T,T,T]、pageerror 0**——全數達標
 - 20-5 📋：commit（20a+20b+20c 全部代碼）＋PROGRESS 更新
 - 20-6 📋：20d 回歸（peek-park＋11 套件）
 - 20-7 📋：README/PROGRESS 收尾＋刪 dotfiles
