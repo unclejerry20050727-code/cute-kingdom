@@ -95,7 +95,7 @@
 - 20-5 ✅：commit（代碼 cd8dfd6＋QA/PROGRESS 6c95517）
 - 20-6 ✅：20d 回歸 **11/11 全 PASS**（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）
 - 20-7 ✅：README 雲霄條目改 20（221u/4環/隧道/過曝/尖叫/加速線）＋PROGRESS 收尾＋dotfiles（.m20/.route20/.sim20/.ride20）已刪
-- 20-8 📋：發布（push→Pages→live smoke）＋報告 Jerry
+- 20-8 ✅：push 8f25404→Pages 部署完成；live smoke（https://unclejerry20050727-code.github.io/cute-kingdom/）：L=221、4 環 t 全對、tunnelT 0.453/0.545、#park-sunflash/#park-speedlines 存在、0 pageerror——**第二十輪完工** 🎉
 
 ### terminated 事故诊断（11-12 修正版，已用 session JSONL＋server 實證完成）
 
