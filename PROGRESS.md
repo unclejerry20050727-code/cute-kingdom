@@ -115,3 +115,26 @@
 
 **建議 Jerry（可選）**：pi 改用 `--thinking low`（thinking 吃 token 又吃時間）；45 分鐘 compaction 產出 92KB 垃圾摘要（27B 不擅長長摘要）
 **server 實測**：vLLM 0.28.0 @192.168.220.201:18080、10.6 tok/s、max_model_len 131072、串流健康
+
+## 第二十一輪：雲霄飛車手感修正（Jerry 要求 11-13）
+
+6 項需求：
+1. **速度降一半**（太快太假玩具）：V_MAX 16→8、BOOST 5.5→2.75、初速 5→2.5（G 不變）
+2. **主角坐姿面朝前**（背朝後跟車），**偶爾回頭看螢幕**（隨機+尖叫時回看一下）
+3. **360° 環起終點錯開**（現在重疊）：環前後 cp 抬高→入環下坡/出環上坡，坡道分歧
+4. **L3/L4 拉近**→720 雙連環感
+5. **加速線條更明顯**（style.css #park-speedlines 強化）
+6. **左右彎道畫面水平傾斜**（相機 bank：∝v²·水平曲率，上限 ~25°，平滑 lerp；出遊玩還原 up）
+
+### 子任務（每步 ≤4KB edit＋commit）
+- 21-0 📋：PROGRESS 計畫＋commit
+- 21-1 📋：讀 park3d.js cp 陣列＋loop() 現狀（診斷重疊/L3-L4 間距）
+- 21-2 📋：test/.route21.mjs 新路線（環坡錯開＋L4 拉近 L3）＋Node 量測（L/環 t/tunnelT/星 t/自相交）
+- 21-3 📋：park3d.js 更新 cp＋loop()（照 21-2 量測值）
+- 21-4 📋：park-coaster.js 速度半速常數＋test/.sim21.mjs 模擬驗證（auto-pedal 可完賽 4/4、停滯次數）＋STAR_TS 若變則更新
+- 21-5 📋：park-coaster.js 相機 bank（item6）＋主角面朝前/偶爾回頭（item2）
+- 21-6 📋：style.css 加速線條強化（item5）
+- 21-7 📋：瀏覽器靜態 smoke（量測對 Node）＋騎行 QA（dt×3：4/4 星、maxV~8、bank 有傾斜、0 error）
+- 21-8 📋：截圖驗證（環坡錯開/720 雙環/彎道傾斜/坐姿）
+- 21-9 📋：回歸 11 套件＋README/PROGRESS 收尾＋commit
+- 21-10 📋：push→Pages→live smoke→報告 Jerry
