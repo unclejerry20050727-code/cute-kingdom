@@ -147,21 +147,24 @@
 3. 管中心線距離 <0.65 = 管面相交（半徑 0.3×2）；0.65-0.75 貼臉不算撞
 - 21-3 ✅：park3d.js route 21a（commit 4cd3e3e，瀏覽器量測對 Node）
 - 21-4 ✅：park-coaster.js 半速常數（G5/BOOST2.75/VMAX10/v0 2.5）＋STAR_TS [0.140,0.380,0.544,0.908]＋sim 兩模式全過（aggressive 22.1s 4/4 星 0 停 maxV11.2；gentle 29.6s 4/4 星 0 停）
-- 21-5 📋：park-coaster.js 相機 bank（item6）＋主角面朝前/偶爾回頭（item2）
-- 21-6 📋：style.css 加速線條強化（item5）
-- 21-7 📋：瀏覽器靜態 smoke（量測對 Node）＋騎行 QA（dt×3：4/4 星、maxV~8、bank 有傾斜、0 error）
-- 21-8 📋：截圖驗證（環坡錯開/720 雙環/彎道傾斜/坐姿）
+- 21-5 ✅：park-coaster.js 相機 bank（∝v²・水平曲率、clamp ±25°、camera.up 傾斜）＋主角坐姿面朝前（弧長前顧 1.2u 穩定航向）＋偶爾回頭（隨機＋尖叫觸發 1.2s）＋完賽面朝相機
+- 21-6 ✅：style.css 加速線條強化（線更粗密亮、mask 外扩、fade 更快）
+- 21-7 ✅：靜態 smoke（L=221.3/4環/隧道 .452/.544 全對）＋騎行 QA（實時：4/4 星、maxV 11.2、minY -4.5、flash 1、scream 8、4環全過、lookBacks 8、faceFwd 0.95、maxBank 24.7°、camUp 還原 1、0 pageerror）
+- 21-8 🔄：截圖驗證（環坡錯開/720 雙環/彎道傾斜/坐姿）
 - 21-9 📋：回歸 11 套件＋README/PROGRESS 收尾＋commit
 - 21-10 📋：push→Pages→live smoke→報告 Jerry
 
-### ⚠️ 21-5 交接（中斷後從這裡繼續）
-**21-4 完成（11-14）**：常數已套 park-coaster.js（G 8→5、BOOST 5.5→2.75、V_MAX 16→10、v0 5→2.5、STAR_TS [0.140,0.380,0.544,0.908]）＋node --check；test/.sim21.mjs 兩模式全過：aggressive(v<9.5) 22.1s 4/4 星 0 停 maxV11.2、gentle(v<5) 29.6s 4/4 星 0 停 maxV10.4 → G 不用降 4
-**為何不 V=8（真半速）**：環能量 v²/2=32 < 4GR=89.6（G8/R2.8）過不了環；10.8u 峰也上不去（2GΔy=86>64）。V=10/G=5 維持 0.625 比例，環 coasting 仍可過（v_top≈2-4），爬坡踩踏板可抵（+8.25/s > 坡阻 ~4.7/s）
-**剩餘步驟（依序，每步即 commit）**：
-1. 21-5：park-coaster.js 主角面朝前（rideBill.rotation.y=atan2(tan.x,tan.z)，偶爾回頭 1.2s 看相機、短角 lerp）＋相機 bank（∝v²・水平曲率、clamp ±25°、設 camera.up 再 lookAt、_cleanup 還原）
-2. 21-6：style.css #park-speedlines 強化
-3. 21-7：瀏覽器靜態 smoke（test/.smoke21.cjs）＋騎行 QA（dt×3 auto-pedal：4/4 星、maxV~10-12、0 pageerror）
-4. 21-8：截圖（環坡錯開/720/彎道傾斜/坐姿）
-5. 21-9：回歸 11 套件（注意 peek-park 是否硬編碼 v=5.0 斷言）＋README/PROGRESS 收尾＋刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs
-6. 21-10：push→Pages→live smoke→報告 Jerry
-**目前 worktree**：test/.route21.mjs・.sim21.mjs・.smoke21.cjs 未追蹤；park-coaster.js 已改常數（21-4 已 commit）
+### ⚠️ 21-8 交接（中斷後從這裡繼續）
+**21-7 完成（11-14）**：
+- 修復：fwdYaw 改**弧長前顧 1.2u 水平投影**（環頂/環牆切線近垂直、直接 atan2 會抖）＋u≥0.995 不更新（結尾前顧點在身後會翻轉）＋完賽時面朝相機（慶祝）＋yaw lerp 8→12
+- 騎行 QA（test/.ride21.cjs，凍結 RAF＋關 render 手動 drive dt0.05）：22.2s 完賽 4/4 星、maxV 11.2、minY -4.5、underTime 2s、maxDarkK 1、flash 1、scream 8、4環全過、lookBacks 8、faceFwd 0.95（剩 5%＝環入口螺旋坡的真實 lag）、maxBank 24.7°（clamp 生效）、cleanup 後 camUp=1、0 pageerror
+- faceFwd 量測法：排除回頭中＋回頭後 0.5s 轉向期＋u≥0.995；期望值同前顧法
+**21-8 截圖**（test/.shot21.cjs 已寫好，實時騎行＋輪詢）：
+- 坐姿：t 0.30-0.335（L1/L2 間平段跟車背影）→ /tmp/r21-01-seat.png
+- 彎道傾斜：|bank|>0.35 時截 → /tmp/r21-02-bank.png
+- 720 雙環靜態：cam(-20,6,-5) lookAt(-6.5,3.2,4.5) → /tmp/r21-03-720.png（framing 不對就調）
+- L1 環坡錯開靜態：cam(11.5,4.2,-9) lookAt(24.5,3.6,-9.2) → /tmp/r21-04-loop.png
+**剩餘步驟**（每步即 commit）：
+1. 21-8：跑 .shot21.cjs＋用 read 看 4 張圖驗證（坐姿面朝前/bank 傾斜/720 雙環/環坡錯開）；framing 不對就調相機重截
+2. 21-9：回歸 11 套件（注意 peek-park 是否硬編碼 v=5.0 斷言）＋README/PROGRESS 收尾＋刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs・.ride21.cjs・.shot21.cjs・.dbg21.cjs
+3. 21-10：push→Pages→live smoke→報告 Jerry

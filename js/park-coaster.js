@@ -47,6 +47,8 @@ const ParkCoaster = {
     this.lastScream = -9;      /* 20c：上次尖叫時間（1.8s 冷卻） */
     this.speedOn = false;      /* 20c：加速線狀態 */
     this.bank = 0;             /* 21-5：相機 bank 角（rad，左彎+） */
+    const t0 = park.coasterCurve.getTangentAt(0);
+    this.fwdYaw = Math.atan2(t0.x, t0.z); /* 21-5：面朝前的穩定航向（弧長前顧） */
     this.lookBackT = 0;        /* 21-5：「回頭看螢幕」剩餘秒數 */
     this.nextLookBack = park.t + 5 + Math.random() * 4; /* 21-5：下次隨機回頭 */
 
@@ -192,16 +194,23 @@ const ParkCoaster = {
     const ahead = p.clone().addScaledVector(tan, 1);
     this.car.lookAt(ahead);
 
-    /* 21-5：主角坐姿面朝前（沿切線），偶爾回頭看螢幕（隨機＋尖叫觸發，1.2s，短角 lerp） */
+    /* 21-5：主角坐姿面朝前——航向取弧長前顧 1.2u 的水平投影（環頂/環牆切線近垂直，
+       直接用切線 atan2 會抖）；偶爾回頭看螢幕（隨機＋尖叫觸發，1.2s，短角 lerp） */
     const camYaw = Math.atan2(park.camera.position.x - p.x, park.camera.position.z - p.z);
     if (this.lookBackT <= 0 && park.t >= this.nextLookBack) {
       this.lookBackT = 1.2;
       this.nextLookBack = park.t + 8 + Math.random() * 8;
     }
     if (this.lookBackT > 0) this.lookBackT -= dt;
-    const yawTarget = this.lookBackT > 0 ? camYaw : Math.atan2(tan.x, tan.z);
+    if (u < 0.995) {
+      const uA = Math.min(u + 1.2 / curve.getLength(), 0.999);
+      const pa = curve.getPointAt(uA);
+      const ahx = pa.x - p.x, ahz = pa.z - p.z;
+      if (ahx * ahx + ahz * ahz > 0.02) this.fwdYaw = Math.atan2(ahx, ahz);
+    }
+    const yawTarget = (this.finished || this.lookBackT > 0) ? camYaw : this.fwdYaw;
     const dyaw = Math.atan2(Math.sin(yawTarget - this.rideBill.rotation.y), Math.cos(yawTarget - this.rideBill.rotation.y));
-    this.rideBill.rotation.y += dyaw * (1 - Math.exp(-8 * dt));
+    this.rideBill.rotation.y += dyaw * (1 - Math.exp(-12 * dt));
     this.rideBill.position.copy(p).addScaledVector(up, 1.9);
 
     /* 星星旋轉漂浮 */
