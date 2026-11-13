@@ -152,11 +152,7 @@
 - 21-7 ✅：靜態 smoke（L=221.3/4環/隧道 .452/.544 全對）＋騎行 QA（實時：4/4 星、maxV 11.2、minY -4.5、flash 1、scream 8、4環全過、lookBacks 8、faceFwd 0.95、maxBank 24.7°、camUp 還原 1、0 pageerror）
 - 21-8 ✅：截圖驗證（shots/r21-01~05：坐姿背影/彎道傾斜 20.6°/720 雙環/環坡錯開/乾淨 bank 17°）
 - 21-9 ✅：回歸 11/11 全 PASS（peek-park 踏板斷言改 3 連踩——半速 BOOST 2.75 單踩 v≈2.4）＋README 雲霄飛車段更新（半速/坐姿面朝前/回頭/720/彎道傾斜）＋刪 8 個 temp dotfile
-- 21-10 📋：push→Pages→live smoke→報告 Jerry
+- 21-10 ✅：push bd8d44f→Pages 部署；live smoke（https://unclejerry20050727-code.github.io/cute-kingdom/）：THREE r128、L=221.3、VMAX10/BOOST2.75/G5、#park-speedlines/#park-sunflash 在、紋理切換在、0 pageerror——**第二十ー輪完工** 🎉
 
-### ⚠️ 21-10 交接（中斷後從這裡繼續）
-**21-9 完成（11-14）**：回歸 11/11 全 PASS；peek-park.mjs 踏板測試改 3 連踩（半速新物理）；README 第 59 行雲霄飛車段更新；已刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs・.ride21.cjs・.shot21.cjs・.shot21b.cjs・.static21.cjs・.dbg21.cjs
-**21-10 步驟**：
-1. git push origin main（GitHub Pages 自動部署）
-2. live smoke：等 Pages 建好（~1-2 分鐘）→ fetch_content 抓 https://jerriewong.github.io/20261023-3rd-game/ 確認 200＋標題；或用 Playwright 抓 live 頁跑 3D 初始化（file:// 不可用時改 http）
-3. 報告 Jerry：21 輪 6 項手感修正完成（附 5 張 shots/r21-* 截圖說明）＋URL
+### ✅ 第二十一輪完成（11-14）——等 Jerry 新回饋
+> 📌 **接手筆記**（11-14 更新）：**第二十一輪全部完成並發布上線** ✅（21-3 4cd3e3e、21-4 f33dec9、21-5 f2a1e8f、21-6 00e9508、21-7 7bedf38、21-8 eb5ccc7、21-9 75cba0f/bd8d44f）。21 輪 6 項手感修正全完成：半速（頂速 16→10）／坐姿面朝前＋偶爾回頭／環坡錯開／720 雙連環／加速線條強化／彎道相機傾斜 ±25°。截圖 shots/r21-01~05。線上版 https://unclejerry20050727-code.github.io/cute-kingdom/ 已可玩。等 Jerry 實測回饋（半速感/回頭頻率/720 連環感/bank 傾斜度）。截圖教訓：SwiftShader ~4fps（22s 車程實時 ~137s）、browser close 會卡→腳本末尾 process.exit(0)、長等待用頁內 rAF Promise。
