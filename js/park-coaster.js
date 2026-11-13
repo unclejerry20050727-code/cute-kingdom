@@ -46,6 +46,9 @@ const ParkCoaster = {
     this.emerged = false;      /* 20c：太陽過曝閃光（只一次） */
     this.lastScream = -9;      /* 20c：上次尖叫時間（1.8s 冷卻） */
     this.speedOn = false;      /* 20c：加速線狀態 */
+    this.bank = 0;             /* 21-5：相機 bank 角（rad，左彎+） */
+    this.lookBackT = 0;        /* 21-5：「回頭看螢幕」剩餘秒數 */
+    this.nextLookBack = park.t + 5 + Math.random() * 4; /* 21-5：下次隨機回頭 */
 
     /* 隱藏停靠列車 */
     if (park.parkedTrain) for (const c of park.parkedTrain) c.visible = false;
@@ -137,6 +140,7 @@ const ParkCoaster = {
     if ((tan.y < -0.45 || loopEntry) && park.t - this.lastScream > 1.8) {
       this.lastScream = park.t;
       sfx('scream');
+      this.lookBackT = 1.2; /* 21-5：尖叫時回頭看一眼螢幕 */
     }
     this.prevT = this.t;
 
@@ -188,9 +192,16 @@ const ParkCoaster = {
     const ahead = p.clone().addScaledVector(tan, 1);
     this.car.lookAt(ahead);
 
-    /* 玩家坐在車上（面向相機，避免看到平面背面） */
-    const dx = park.camera.position.x - p.x, dz = park.camera.position.z - p.z;
-    this.rideBill.rotation.y = Math.atan2(dx, dz);
+    /* 21-5：主角坐姿面朝前（沿切線），偶爾回頭看螢幕（隨機＋尖叫觸發，1.2s，短角 lerp） */
+    const camYaw = Math.atan2(park.camera.position.x - p.x, park.camera.position.z - p.z);
+    if (this.lookBackT <= 0 && park.t >= this.nextLookBack) {
+      this.lookBackT = 1.2;
+      this.nextLookBack = park.t + 8 + Math.random() * 8;
+    }
+    if (this.lookBackT > 0) this.lookBackT -= dt;
+    const yawTarget = this.lookBackT > 0 ? camYaw : Math.atan2(tan.x, tan.z);
+    const dyaw = Math.atan2(Math.sin(yawTarget - this.rideBill.rotation.y), Math.cos(yawTarget - this.rideBill.rotation.y));
+    this.rideBill.rotation.y += dyaw * (1 - Math.exp(-8 * dt));
     this.rideBill.position.copy(p).addScaledVector(up, 1.9);
 
     /* 星星旋轉漂浮 */
@@ -215,6 +226,17 @@ const ParkCoaster = {
     const camT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, camUp, 0));
     const look = p.clone().addScaledVector(tan, 5).add(new THREE.Vector3(0, 1, 0));
     const k = 1 - Math.exp(-5 * dt);
+    /* 21-5：相機 bank ∝ v²・水平曲率（clamp ±25°）：設 camera.up 再 lookAt */
+    const uB = Math.min(u, 0.993);
+    const t2 = uB + 0.006;
+    const tan2 = curve.getTangentAt(t2);
+    const dh = Math.atan2(Math.sin(Math.atan2(tan2.x, tan2.z) - Math.atan2(tan.x, tan.z)),
+      Math.cos(Math.atan2(tan2.x, tan2.z) - Math.atan2(tan.x, tan.z)));
+    const curv = dh / (t2 - uB) / curve.getLength(); /* 1/u，+=左彎 */
+    const bankT = Math.max(-0.44, Math.min(0.44, this.v * this.v * curv * 0.03));
+    this.bank += (bankT - this.bank) * (1 - Math.exp(-4 * dt));
+    const fwd = look.clone().sub(park.camera.position).normalize();
+    park.camera.up.set(0, 1, 0).applyAxisAngle(fwd, this.bank);
     park.camera.position.lerp(camT, k);
     park.camera.lookAt(look);
   },
@@ -255,6 +277,9 @@ const ParkCoaster = {
     park.facing = 'down';
     park.redrawAll(0.5, false);
     /* 相機回全景 */
+    park.camera.up.set(0, 1, 0); /* 21-5：還原 bank */
+    this.bank = 0;
+    this.lookBackT = 0;
     park.camera.position.set(0, 19, 34);
     park.camera.lookAt(0, 4, -5);
     /* 狀態 */
