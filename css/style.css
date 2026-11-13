@@ -784,10 +784,10 @@ body {
   position: absolute; inset: -25%;
   pointer-events: none;
   opacity: 0;
-  transform: scale(1.18);
-  background: repeating-conic-gradient(rgba(255,255,255,0) 0deg 5deg, rgba(255,255,255,.55) 5deg 6.2deg);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 34%, #000 82%);
-  mask-image: radial-gradient(circle at 50% 50%, transparent 34%, #000 82%);
-  transition: opacity .18s ease-out, transform .4s ease-out;
+  transform: scale(1.25);
+  background: repeating-conic-gradient(rgba(255,255,255,0) 0deg 3.2deg, rgba(255,255,255,.9) 3.2deg 5.2deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 26%, #000 78%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 26%, #000 78%);
+  transition: opacity .12s ease-out, transform .35s ease-out;
 }
-#park-speedlines.on { opacity: .75; transform: scale(1); }
+#park-speedlines.on { opacity: .95; transform: scale(1); }
