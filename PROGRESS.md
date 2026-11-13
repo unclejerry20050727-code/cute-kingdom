@@ -146,7 +146,7 @@
 2. 出弧 dep1 要「遠切」（離底 1u+、側向 1.3u+）才不會在底帶與進坡相撞
 3. 管中心線距離 <0.65 = 管面相交（半徑 0.3×2）；0.65-0.75 貼臉不算撞
 - 21-3 ✅：park3d.js route 21a（commit 4cd3e3e，瀏覽器量測對 Node）
-- 21-4 🔄：park-coaster.js 半速常數＋test/.sim21.mjs 模擬驗證＋STAR_TS（物理決策見下方交接 block，sim 未跑）
+- 21-4 ✅：park-coaster.js 半速常數（G5/BOOST2.75/VMAX10/v0 2.5）＋STAR_TS [0.140,0.380,0.544,0.908]＋sim 兩模式全過（aggressive 22.1s 4/4 星 0 停 maxV11.2；gentle 29.6s 4/4 星 0 停）
 - 21-5 📋：park-coaster.js 相機 bank（item6）＋主角面朝前/偶爾回頭（item2）
 - 21-6 📋：style.css 加速線條強化（item5）
 - 21-7 📋：瀏覽器靜態 smoke（量測對 Node）＋騎行 QA（dt×3：4/4 星、maxV~8、bank 有傾斜、0 error）
@@ -154,19 +154,14 @@
 - 21-9 📋：回歸 11 套件＋README/PROGRESS 收尾＋commit
 - 21-10 📋：push→Pages→live smoke→報告 Jerry
 
-### ⚠️ 21-4 交接（中斷後從這裡繼續）
-**物理決策（已分析，未套用）**：park-coaster.js 常數（L26-40）：
-- V_MAX 16→**10**、BOOST 5.5→**2.75**、初速 v 5→**2.5**、G 8→**5**；FRICTION 0.12/DRAG 1.5 不變
-- STAR_TS [0.140,0.385,0.545,0.908]→[**0.140,0.380,0.544,0.908**]（21-2 量測值）
-**為何不 V=8（真半速）**：環能量 v²/2=32 < 4GR=89.6（G8/R2.8）過不了環；10.8u 峰也上不去（2GΔy=86>64）。V=10/G=5 維持 0.625 比例（頂速 62.5%、時間 ~2×），環 coasting 仍可過（v_top≈2-4），爬坡踩踏板 3Hz 可抵（+8.25/s > 坡阻 ~4.7/s）
-**下一步（依序）**：
-1. 寫 test/.sim21.mjs：`head -73 test/.route21.mjs`（含 v/loop/cp/curve）＋接上物理 sim（dt=0.016；mirror park-coaster update：v<threshold 時踩 v=min(v+2.75,10)、v+=-G*tan.y*dt - v*0.12*dt、v>10 軟上限 DRAG1.5、停車 v<0.25&&tan.y>=-0.05、星 |t-st|<0.025、t>=1 完賽）。跑兩模式：aggressive（v<9.5）期望完賽 4/4・0 停滯；gentle（v<5）允許停滯（踩踏板恢復）
-2. 若 aggressive 過不了環/起飛 → G 改 4 重跑
-3. 常數套 park-coaster.js（小 edit）＋node --check＋commit
-4. 21-5：主角面朝前（rideBill.rotation.y=atan2(tan.x,tan.z)，偶爾回頭 1.2s 看相機、短角 lerp）＋相機 bank（∝v²・水平曲率、clamp ±25°、設 camera.up 再 lookAt、_cleanup 還原）
-5. 21-6：style.css #park-speedlines 強化
-6. 21-7：瀏覽器靜態 smoke（test/.smoke21.cjs 已存在）＋騎行 QA（dt×3 auto-pedal：4/4 星、maxV~10-12、0 pageerror）
-7. 21-8：截圖（環坡錯開/720/彎道傾斜/坐姿）
-8. 21-9：回歸 11 套件（注意 peek-park 是否硬編碼 v=5.0 斷言）＋README/PROGRESS 收尾＋刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs
-9. 21-10：push→Pages→live smoke→報告 Jerry
-**目前 worktree**：僅 test/.smoke21.cjs 未追蹤；park-coaster.js 尚未改（仍 20b 常數）
+### ⚠️ 21-5 交接（中斷後從這裡繼續）
+**21-4 完成（11-14）**：常數已套 park-coaster.js（G 8→5、BOOST 5.5→2.75、V_MAX 16→10、v0 5→2.5、STAR_TS [0.140,0.380,0.544,0.908]）＋node --check；test/.sim21.mjs 兩模式全過：aggressive(v<9.5) 22.1s 4/4 星 0 停 maxV11.2、gentle(v<5) 29.6s 4/4 星 0 停 maxV10.4 → G 不用降 4
+**為何不 V=8（真半速）**：環能量 v²/2=32 < 4GR=89.6（G8/R2.8）過不了環；10.8u 峰也上不去（2GΔy=86>64）。V=10/G=5 維持 0.625 比例，環 coasting 仍可過（v_top≈2-4），爬坡踩踏板可抵（+8.25/s > 坡阻 ~4.7/s）
+**剩餘步驟（依序，每步即 commit）**：
+1. 21-5：park-coaster.js 主角面朝前（rideBill.rotation.y=atan2(tan.x,tan.z)，偶爾回頭 1.2s 看相機、短角 lerp）＋相機 bank（∝v²・水平曲率、clamp ±25°、設 camera.up 再 lookAt、_cleanup 還原）
+2. 21-6：style.css #park-speedlines 強化
+3. 21-7：瀏覽器靜態 smoke（test/.smoke21.cjs）＋騎行 QA（dt×3 auto-pedal：4/4 星、maxV~10-12、0 pageerror）
+4. 21-8：截圖（環坡錯開/720/彎道傾斜/坐姿）
+5. 21-9：回歸 11 套件（注意 peek-park 是否硬編碼 v=5.0 斷言）＋README/PROGRESS 收尾＋刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs
+6. 21-10：push→Pages→live smoke→報告 Jerry
+**目前 worktree**：test/.route21.mjs・.sim21.mjs・.smoke21.cjs 未追蹤；park-coaster.js 已改常數（21-4 已 commit）
