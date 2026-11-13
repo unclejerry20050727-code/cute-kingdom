@@ -151,16 +151,12 @@
 - 21-6 ✅：style.css 加速線條強化（線更粗密亮、mask 外扩、fade 更快）
 - 21-7 ✅：靜態 smoke（L=221.3/4環/隧道 .452/.544 全對）＋騎行 QA（實時：4/4 星、maxV 11.2、minY -4.5、flash 1、scream 8、4環全過、lookBacks 8、faceFwd 0.95、maxBank 24.7°、camUp 還原 1、0 pageerror）
 - 21-8 ✅：截圖驗證（shots/r21-01~05：坐姿背影/彎道傾斜 20.6°/720 雙環/環坡錯開/乾淨 bank 17°）
-- 21-9 📋：回歸 11 套件＋README/PROGRESS 收尾＋commit
+- 21-9 ✅：回歸 11/11 全 PASS（peek-park 踏板斷言改 3 連踩——半速 BOOST 2.75 單踩 v≈2.4）＋README 雲霄飛車段更新（半速/坐姿面朝前/回頭/720/彎道傾斜）＋刪 8 個 temp dotfile
 - 21-10 📋：push→Pages→live smoke→報告 Jerry
 
-### ⚠️ 21-9 交接（中斷後從這裡繼續）
-**21-8 完成（11-14）**：
-- 關鍵修復：rideBill 是 **DoubleSide plane**——同張臉前後都能看到，必須切紋理：面朝前＝playerTex.up（背影）/回頭・完賽＝playerTex.down（正臉）；_cleanup 還原 park.facing 紋理
-- 回頭頻率控制：尖叫回頭加 4s gate（lastLookStart）、隨機 10-18s → 22s 車程 8 次→ 5 次
-- 截圖（shots/r21-01~05）：01 坐姿背影（爬坡 t0.079）✓ 面朝前；02 bank 20.6°＋加速線放射＋尖叫回頭（t0.138 俯衝）；03 720 雙環靜態（L3+L4）✓；04 L1 環坡錯開（cam 9,5.5,-8.5→24.8,3.2,-9.6）✓；05 乾淨 bank 17°＋背影（t0.88）
-- frozen QA 重跑：22.2s 4/4 星、lookBacks 5、faceFwd 0.95、maxBank 24.7°、0 pageerror
-- 截圖教訓：SwiftShader ~4fps（dt clamp 0.05 → 時基 ~0.16x，22s 車程實時 ~137s）；browser 會後 b.close() 可能卡→QA 腳本末尾直接 process.exit(0)；長等待用「頁內 rAF Promise」不要 Node 端 sleep 輪詢
-**剩餘步驟**（每步即 commit）：
-1. 21-9：回歸 11 套件（注意 peek-park 是否硬編碼 v=5.0 斷言）＋README/PROGRESS 收尾＋刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs・.ride21.cjs・.shot21.cjs・.shot21b.cjs・.static21.cjs・.dbg21.cjs
-2. 21-10：push→Pages→live smoke→報告 Jerry
+### ⚠️ 21-10 交接（中斷後從這裡繼續）
+**21-9 完成（11-14）**：回歸 11/11 全 PASS；peek-park.mjs 踏板測試改 3 連踩（半速新物理）；README 第 59 行雲霄飛車段更新；已刪 test/.route21.mjs・.sim21.mjs・.smoke21.cjs・.ride21.cjs・.shot21.cjs・.shot21b.cjs・.static21.cjs・.dbg21.cjs
+**21-10 步驟**：
+1. git push origin main（GitHub Pages 自動部署）
+2. live smoke：等 Pages 建好（~1-2 分鐘）→ fetch_content 抓 https://jerriewong.github.io/20261023-3rd-game/ 確認 200＋標題；或用 Playwright 抓 live 頁跑 3D 初始化（file:// 不可用時改 http）
+3. 報告 Jerry：21 輪 6 項手感修正完成（附 5 張 shots/r21-* 截圖說明）＋URL

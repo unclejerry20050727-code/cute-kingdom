@@ -50,9 +50,9 @@ await p.evaluate(() => { Park3D.player.position.set(5, 1.5, 6); });
 await p.waitForTimeout(400);
 await p.evaluate(() => Park3D.action());
 ok(await p.evaluate(() => ParkCoaster.active), '雲霄飛車上車');
-/* ⚡ 觸控動作鈕：先讓車停住（陡坡起步會自然停），tap ⚡ 應重新踩到 v=7 再緩衰 */
+/* ⚡ 觸控動作鈕：先讓車停住，連踩 ⚡ 應重新啟動（21：半速 BOOST 2.75——3 連踩 ≈ v8；舊規格單踩 5.5） */
 await p.evaluate(() => { ParkCoaster.v = 0; ParkCoaster.stopped = true; });
-await p.tap('#park-action');
+for (let i = 0; i < 3; i++) { await p.tap('#park-action'); await p.waitForTimeout(80); }
 await p.waitForTimeout(300);
 const v1 = await p.evaluate(() => ParkCoaster.v);
 ok(v1 > 4, `⚡ 觸控動作鈕踩踏板再啟動（停住後 v=${v1.toFixed(1)}）`);
