@@ -50,7 +50,8 @@ const ParkCoaster = {
     const t0 = park.coasterCurve.getTangentAt(0);
     this.fwdYaw = Math.atan2(t0.x, t0.z); /* 21-5：面朝前的穩定航向（弧長前顧） */
     this.lookBackT = 0;        /* 21-5：「回頭看螢幕」剩餘秒數 */
-    this.nextLookBack = park.t + 5 + Math.random() * 4; /* 21-5：下次隨機回頭 */
+    this.lastLookStart = -9;   /* 21-5：上次回頭起始時間（頻率控制） */
+    this.nextLookBack = park.t + 6 + Math.random() * 5; /* 21-5：下次隨機回頭 */
 
     /* 隱藏停靠列車 */
     if (park.parkedTrain) for (const c of park.parkedTrain) c.visible = false;
@@ -142,7 +143,7 @@ const ParkCoaster = {
     if ((tan.y < -0.45 || loopEntry) && park.t - this.lastScream > 1.8) {
       this.lastScream = park.t;
       sfx('scream');
-      this.lookBackT = 1.2; /* 21-5：尖叫時回頭看一眼螢幕 */
+      if (park.t - this.lastLookStart > 4.0) { this.lookBackT = 1.2; this.lastLookStart = park.t; } /* 21-5：尖叫回頭看一眼（4s 頻率控制） */
     }
     this.prevT = this.t;
 
@@ -199,9 +200,12 @@ const ParkCoaster = {
     const camYaw = Math.atan2(park.camera.position.x - p.x, park.camera.position.z - p.z);
     if (this.lookBackT <= 0 && park.t >= this.nextLookBack) {
       this.lookBackT = 1.2;
-      this.nextLookBack = park.t + 8 + Math.random() * 8;
+      this.lastLookStart = park.t;
+      this.nextLookBack = park.t + 10 + Math.random() * 8;
     }
     if (this.lookBackT > 0) this.lookBackT -= dt;
+    /* 21-5：bill 紋理——面朝前（背朝相機）＝背影 up／回頭或完賽慶祝＝正臉 down（同一 plane 雙面會看到鏡像臉，必須切圖） */
+    this.rideBill.material.map = (this.lookBackT > 0 || this.finished) ? park.playerTex.down : park.playerTex.up;
     if (u < 0.995) {
       const uA = Math.min(u + 1.2 / curve.getLength(), 0.999);
       const pa = curve.getPointAt(uA);
@@ -282,6 +286,7 @@ const ParkCoaster = {
     park.shadow.visible = true;
     park.player.position.set(5, 1.5, 6);
     park.player.rotation.y = 0; /* 18e-fix：騎車時 billboard 轉向相機，走路要歸零 */
+    park.player.material.map = park.playerTex[park.facing] || park.playerTex.down; /* 21-5：還原走路紋理 */
     park.shadow.position.set(5, 0.03, 6);
     park.facing = 'down';
     park.redrawAll(0.5, false);

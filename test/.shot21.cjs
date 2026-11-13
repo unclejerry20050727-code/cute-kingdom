@@ -1,6 +1,8 @@
-/* 21-8 截圖：實時騎行（auto-pedal hook）＋輪詢時機截圖（坐姿/彎道傾斜）＋結束後靜態（720/環坡錯開） */
+/* 21-8 騎行截圖 v3：頁內等待（零 round-trip）＋坐姿/彎道截圖；結束即 exit（避免 close 卡住） */
 const { chromium } = require("playwright");
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const T0 = Date.now();
+const mark = (s) => console.log(`[${((Date.now() - T0) / 1000).toFixed(1)}s] ${s}`);
+setTimeout(() => { mark("GLOBAL TIMEOUT"); process.exit(2); }, 200000);
 (async () => {
   const b = await chromium.launch({ executablePath: "/home/obot/.cache/ms-playwright/chromium-1247/chrome-linux64/chrome", args: ["--no-sandbox"] });
   const p = await (await b.newContext()).newPage({ viewport: { width: 1280, height: 720 } });
@@ -16,7 +18,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     Park3D.player.position.set(5, 1.5, 6);
     Park3D.nearStation = { kind: "coaster" };
     Park3D.action();
-    /* auto-pedal hook（實時） */
     const orig = Park3D.update.bind(Park3D);
     Park3D.update = (dt) => {
       const P = ParkCoaster;
@@ -24,57 +25,33 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       orig(dt);
     };
   });
-  const st = () => p.evaluate(() => {
-    const P = ParkCoaster;
-    return { active: P.active, t: +P.t.toFixed(3), v: +P.v.toFixed(1), bank: +P.bank.toFixed(2), stars: P.collected };
-  });
-  /* 1) 坐姿面朝前（L1/L2 之間平段 t≈0.30-0.335，跟車視角看背影） */
-  let s;
-  for (let i = 0; i < 600; i++) {
-    s = await st();
-    if (s.active && s.t >= 0.30 && s.t <= 0.335) break;
-    if (!s.active) break;
-    await sleep(25);
-  }
-  console.log("seat shot:", JSON.stringify(s));
+  mark("boarded");
+  /* 頁內等待器：cond(P) 為真或 75s 超時才回 */
+  const waitInPage = (fn, name) => p.evaluate((fnSrc) => new Promise((res) => {
+    const cond = eval("(" + fnSrc + ")");
+    const t0 = performance.now();
+    (function chk() {
+      try {
+        const r = cond(ParkCoaster, Park3D);
+        if (r) return res(r);
+      } catch (e) { /* 繼續 */ }
+      if (performance.now() - t0 > 75000) return res({ timeout: true, t: ParkCoaster.t, active: ParkCoaster.active });
+      requestAnimationFrame(chk);
+    })();
+  }), fn);
+  /* 1) 坐姿：爬坡段 t 0.078-0.102（無回頭） */
+  let r = await waitInPage("(P, X) => (P.active && P.t >= 0.078 && P.t <= 0.102) ? { t: +P.t.toFixed(3), v: +P.v.toFixed(1) } : null", "seat");
+  mark("seat: " + JSON.stringify(r));
   await p.screenshot({ path: "/tmp/r21-01-seat.png" });
-  /* 2) 彎道傾斜（|bank|>0.35 rad≈20°） */
-  for (let i = 0; i < 1000; i++) {
-    s = await st();
-    if (s.active && Math.abs(s.bank) > 0.35) break;
-    if (!s.active) break;
-    await sleep(25);
-  }
-  console.log("bank shot:", JSON.stringify(s));
+  mark("seat shot saved");
+  /* 2) 彎道傾斜：|bank|>0.35 */
+  r = await waitInPage("(P, X) => (P.active && Math.abs(P.bank) > 0.35) ? { t: +P.t.toFixed(3), v: +P.v.toFixed(1), bank: +P.bank.toFixed(2) } : null", "bank");
+  mark("bank: " + JSON.stringify(r));
   await p.screenshot({ path: "/tmp/r21-02-bank.png" });
-  /* 3) 等完賽＋cleanup */
-  for (let i = 0; i < 600; i++) {
-    s = await st();
-    if (!s.active) break;
-    await sleep(100);
-  }
-  console.log("after ride:", JSON.stringify(s));
-  /* 4) 靜態：720 雙環（L3+L4，西南側視） */
-  await p.evaluate(() => {
-    const sl = document.getElementById("park-speedlines");
-    if (sl) sl.classList.remove("on");
-    const sf = document.getElementById("park-sunflash");
-    if (sf) sf.style.opacity = "0";
-    const cam = Park3D.camera;
-    cam.up.set(0, 1, 0);
-    cam.position.set(-20, 6, -5);
-    cam.lookAt(-6.5, 3.2, 4.5);
-  });
-  await sleep(500);
-  await p.screenshot({ path: "/tmp/r21-03-720.png" });
-  /* 5) 靜態：L1 環＋進出坡錯開（沿 x 軸側視） */
-  await p.evaluate(() => {
-    const cam = Park3D.camera;
-    cam.position.set(11.5, 4.2, -9);
-    cam.lookAt(24.5, 3.6, -9.2);
-  });
-  await sleep(500);
-  await p.screenshot({ path: "/tmp/r21-04-loop.png" });
+  mark("bank shot saved");
+  /* 3) 等完賽＋cleanup（active=false） */
+  r = await waitInPage("(P, X) => (!P.active) ? { t: +P.t.toFixed(3), stars: P.collected } : null", "end");
+  mark("ride end: " + JSON.stringify(r));
   console.log("PAGEERRORS(" + errs.length + "):", errs.slice(0, 3).join(" | "));
-  await b.close();
+  process.exit(0);
 })();
