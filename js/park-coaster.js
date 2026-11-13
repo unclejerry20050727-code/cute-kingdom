@@ -23,21 +23,21 @@ const ParkCoaster = {
   rideBill: null,
   park: null,
 
-  G: 8,             /* 重力（20b：重量感——慢加速） */
+  G: 5,             /* 重力（21-4：再降——半速重量感，環 coasting 仍可過） */
   FRICTION: 0.12,   /* 阻力係數（20b：再調低，長線程） */
-  BOOST: 5.5,       /* 踩踏板加速 */
-  V_MAX: 16,        /* 軟速度上限 */
+  BOOST: 2.75,      /* 踩踏板加速（21-4：半速） */
+  V_MAX: 10,        /* 軟速度上限（21-4：16→10 半速感） */
   DRAG: 1.5,        /* 20b：超過 V_MAX 的額外拖曳（指數回落，保留慣性） */
 
-  /* 軌道上星星位置（t 參數）——20b 依 221u 新軌道實測：俯衝#1中/L2環頂/出洞/丘2頂 */
-  STAR_TS: [0.140, 0.385, 0.545, 0.908],
+  /* 軌道上星星位置（t 參數）——21-2 依 221.3u 新軌道實測：俯衝#1中/L2環頂/出洞/丘2頂 */
+  STAR_TS: [0.140, 0.380, 0.544, 0.908],
 
   start(park) {
     const THREE = window.THREE;
     this.park = park;
     this.active = true;
     this.t = 0;
-    this.v = 5;
+    this.v = 2.5;   /* 21-4：初速 5→2.5（半速） */
     this.stopped = false;
     this.collected = 0;
     this.finished = false;
