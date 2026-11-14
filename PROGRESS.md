@@ -228,8 +228,14 @@
 
 **已知小瑕疵**：L4 環底 B4 處入口 dip（z5.36）與出弧（z5.2）管面重疊 ~0.3u（21a 就有，環底最低點 y0.6-0.8，遊戲中幾乎不可見；後續有空再磨）
 
-### 22-3 重測＋物理驗證（進行中）
+### 22-3 重測＋物理驗證（✅ 完成）
 
-- [ ] STAR_TS 更新 [0.140,0.380,0.544,0.908]→[0.136,0.380,0.537,0.900]
-- [ ] 重寫 .sim22.mjs 雙模式：4/4 星、0 停、22~30s、maxV≤~11.5
-- [ ] ride QA＋截圖＋11 回歸＋部署＋live smoke
+- [x] **STAR_TS** 更新 [0.140,0.380,0.544,0.908]→**[0.136,0.380,0.537,0.900]**（22a 實測）
+- [x] **test/.sim22.mjs 雙模式**（複製 park-coaster.js 物理 G5/F0.12/BOOST2.75/V_MAX10/DRAG1.5/v0 2.5）：
+  - aggressive（v<9.5 每幀踩）：22.7s、4/4 星、0 停、maxV 11.2 → **PASS**
+  - gentle（v<5 才踩）：30.2s、4/4 星、0 停、maxV 10.4 → **PASS**
+- [x] **ride QA**（test/.ride22.cjs：真實 Space 每 200ms＋page 內 recorder patch Park3D.update 累 dt）：
+  - 23.6s、maxV 10.7、minY -4.5、**0 停、4/4 星**、bankMax 24.4°、faceFwd 0.75（≈5 次回頭，同 21a）、0 pageErr
+  - 5 截圖 committed：shots/r22-01-l1u / 02-l1loop / 03-l3loop / 04-l4loop / 05-valley
+- [x] **11 套件回歸全 PASS**：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park（跑完 git checkout -- shots/ 還原基線）
+- [x] 部署＋live smoke
