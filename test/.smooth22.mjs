@@ -88,7 +88,7 @@ const loop = (cx, cz, y0, R, plane, side, n = 23) => {
     ];
 const curve = new THREE.CatmullRomCurve3(cp, false, "catmullrom", 0.5);
 /* 22-1：軌道順暢度量測——曲率峰值（k=1/u）＋S 彎/髮夾（短弧內轉向角） */
-const N = 4000, pts = [], tans = [];
+const N = 8000, pts = [], tans = [];
 for (let i = 0; i <= N; i++) { pts.push(curve.getPointAt(i / N)); tans.push(curve.getTangentAt(Math.min(i / N, 0.9999))); }
 let total = 0; const cum = [0];
 for (let i = 1; i <= N; i++) { total += pts[i].distanceTo(pts[i - 1]); cum.push(total); }
