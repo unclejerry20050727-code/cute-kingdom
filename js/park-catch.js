@@ -65,6 +65,9 @@ const ParkCatch = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
+    /* 24-1：特寫鏡頭（正面；接住舉手／飛撲／爆炸看得清，站牌當背景標題） */
+    park.camera.position.set(this.px, 3.4, 1.0);
+    park.camera.lookAt(this.px, 2.0, this.Z);
     this._setPrompt();
     sfx('pop');
   },
@@ -199,6 +202,10 @@ const ParkCatch = {
     park.player.rotation.z = this.lean;
     const diveK = this.dive ? Math.sin(Math.PI * (1 - this.dive.t / 0.45)) : 0;
     park.player.position.y = 1.5 + diveK * 0.35;
+
+    /* 24-1：特寫鏡頭跟隨玩家（正面） */
+    park.camera.position.set(this.px, 3.4, 1.0);
+    park.camera.lookAt(this.px, 2.0, this.Z);
 
     /* 出圈（難度漸進；24-1d：5s 後 25% 炸彈） */
     const prog = 1 - this.timeLeft / this.DURATION;
