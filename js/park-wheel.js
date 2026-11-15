@@ -164,8 +164,21 @@ const ParkWheel = {
       s.mesh.rotation.y += dt * 2.5;
     }
 
+    /* 24-2b：閃躲（A/D / 方向鍵），無輸入緩慢回中 */
+    const ks = Game.keys;
+    let dx = (ks.has('right') ? 1 : 0) - (ks.has('left') ? 1 : 0);
+    if (dx === 0 && park.dpadDir) dx = park.dpadDir[0];
+    this.pOff += dx * 2.2 * dt;
+    if (dx === 0) this.pOff -= this.pOff * Math.min(1, dt * 2.5);
+    if (this.pOff > 1.2) this.pOff = 1.2;
+    if (this.pOff < -1.2) this.pOff = -1.2;
+
     /* 玩家坐在座艙上（z 偏離輪面 0.8 避免被紅色環管遮住；面向相機） */
-    park.player.position.set(gx, gy + 2.0, gz + 0.8);
+    park.player.position.set(gx + this.pOff, gy + 2.0, gz + 0.8);
+
+    /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置） */
+    this._updateBirds(dt, gx + this.pOff, gy + 2.0);
+
     const camTarget = new THREE.Vector3(gx, gy + 3, gz + 13);
     park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 0.8));
 
@@ -182,7 +195,106 @@ const ParkWheel = {
       return;
     }
 
-    $('#park-prompt').textContent = `🎡 慢慢轉動中…收集 ${this.collected}/4 ★`;
+    const fl = this.hitFlash ? `｜${this.hitFlash.text}` : '';
+    $('#park-prompt').textContent =
+      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜A/D 閃躲`;
+  },
+
+  /* 24-2：鳥群更新（orbit/tele/dive/pass/ret） */
+  _updateBirds(dt, pxNow, pyNow) {
+    const park = this.park;
+    const BZ = this.HUB.z + this.BIRD_Z;
+    this.birdT += dt;
+    this.invuln = Math.max(0, this.invuln - dt);
+    if (this.hitFlash) { this.hitFlash.t -= dt; if (this.hitFlash.t <= 0) this.hitFlash = null; }
+
+    /* 排程：每 3.2s 派一隻空閒鳥（輪流）；接近一圈結束不再派 */
+    const lap = park.wheelAngle - this.startAngle;
+    this.diveTimer -= dt;
+    if (this.diveTimer <= 0 && lap < 9.5) {
+      const b = this.birds[this.diveIdx % this.birds.length];
+      if (b.state === 'orbit') {
+        b.state = 'tele'; b.t = 0.8;
+        b.from = { x: b.group.position.x, y: b.group.position.y };
+        b.to = this._predictPlayer(0.9);
+        this.diveIdx++;
+        this.diveTimer = 3.2;
+        sfx('flap');
+      } else {
+        this.diveTimer = 0.5;
+      }
+    }
+
+    for (const b of this.birds) {
+      const g = b.group;
+      if (b.state === 'orbit') b.orbit.a += b.orbit.speed * dt; /* 俯衝期 a 凍結 */
+      const ox = this.HUB.x + this.R_BIRD * Math.cos(b.orbit.a);
+      const oy = this.HUB.y + this.R_BIRD * Math.sin(b.orbit.a) + Math.sin(this.birdT * 2 + b.phase) * 0.15;
+      let tx, ty, face;
+      if (b.state === 'orbit') {
+        tx = ox; ty = oy;
+        face = b.orbit.a + Math.PI / 2;
+      } else if (b.state === 'tele') {
+        b.t -= dt;
+        tx = ox; ty = oy;
+        face = Math.atan2(b.to.y - oy, b.to.x - ox);
+        if (b.t <= 0) { b.state = 'dive'; b.t = 0.9; }
+      } else if (b.state === 'dive') {
+        b.t -= dt;
+        const u = 1 - Math.max(0, b.t) / 0.9;
+        const e = u * u * (3 - 2 * u);
+        tx = b.from.x + (b.to.x - b.from.x) * e;
+        ty = b.from.y + (b.to.y - b.from.y) * e;
+        face = Math.atan2(b.to.y - b.from.y, b.to.x - b.from.x);
+        const d = Math.hypot(tx - pxNow, ty - pyNow);
+        if (d < 0.95 && this.invuln <= 0) {
+          this.collected = Math.max(0, this.collected - 1);
+          this.hitFlash = { t: 1.3, text: '🐦 被啄了! -1★' };
+          this.invuln = 1.5;
+          b.state = 'pass'; b.t = 0.45;
+          sfx('buzz');
+        } else if (b.t <= 0) {
+          b.state = 'pass'; b.t = 0.45;
+          this.dodges++;
+          this.collected++;
+          park.addStar(1);
+          this.hitFlash = { t: 1.3, text: '🐦 閃過! +1★' };
+          this.invuln = 0.5; /* 短暫寬限，避免回中被擦到 */
+          sfx('coin');
+        }
+      } else if (b.state === 'pass') {
+        b.t -= dt;
+        const L = Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y) || 1;
+        const vx = (b.to.x - b.from.x) / L, vy = (b.to.y - b.from.y) / L;
+        const sp = L / 0.9;
+        tx = b.to.x + vx * sp * (0.45 - Math.max(0, b.t));
+        ty = b.to.y + vy * sp * (0.45 - Math.max(0, b.t));
+        face = Math.atan2(vy, vx);
+        const d = Math.hypot(tx - pxNow, ty - pyNow);
+        if (d < 0.95 && this.invuln <= 0) {
+          this.collected = Math.max(0, this.collected - 1);
+          this.hitFlash = { t: 1.3, text: '🐦 被啄了! -1★' };
+          this.invuln = 1.5;
+          sfx('buzz');
+        }
+        if (b.t <= 0) { b.state = 'ret'; b.t = 0.8; b.retFrom = { x: tx, y: ty }; }
+      } else { /* ret：回到盤旋點 */
+        b.t -= dt;
+        const u = 1 - Math.max(0, b.t) / 0.8;
+        const e = u * u * (3 - 2 * u);
+        tx = b.retFrom.x + (ox - b.retFrom.x) * e;
+        ty = b.retFrom.y + (oy - b.retFrom.y) * e;
+        face = Math.atan2(oy - b.retFrom.y, ox - b.retFrom.x);
+        if (b.t <= 0) b.state = 'orbit';
+      }
+      g.position.set(tx, ty, BZ);
+      g.rotation.z = face;
+      const freq = (b.state === 'tele' || b.state === 'dive') ? 18 : 8;
+      const f = 0.45 + Math.sin(this.birdT * freq + b.phase) * 0.4;
+      b.wL.rotation.z = f;
+      b.wR.rotation.z = -f;
+      b.bodyMat.emissive.setHex((b.state === 'tele' || b.state === 'dive') ? 0x8a1a1a : 0x000000);
+    }
   },
 
   _finish() {
@@ -197,7 +309,8 @@ const ParkWheel = {
       action: () => {},
     };
     $('#park-prompt').textContent =
-      this.collected >= 4 ? '🎡 完美一圈！收齊 4 顆星星！' : `🎡 一圈完成！收集 ${this.collected}/4 ★`;
+      this.collected >= 4 ? `🎡 完美一圈！★ ${this.collected}（含 🐦 閃躲 x${this.dodges}）`
+                          : `🎡 一圈完成！★ ${this.collected}（🐦 閃躲 x${this.dodges}）`;
     $('#park-prompt').classList.remove('hidden');
     sfx('ding');
   },
@@ -211,6 +324,9 @@ const ParkWheel = {
     const park = this.park;
     for (const s of this.stars) park.scene.remove(s.mesh);
     this.stars = [];
+    for (const b of this.birds) park.scene.remove(b.group);
+    this.birds = [];
+    this.pOff = 0;
     this.active = false;
     park.wheelSpeed = 0.25;
     /* 玩家回站點 */
