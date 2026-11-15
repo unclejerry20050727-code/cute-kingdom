@@ -485,12 +485,12 @@ const Park3D = {
   },
 
   /* ══════════ 玩家素材（drawCharacter → 4 方向） ══════════ */
-  redrawPlayer(dir, t, walking) {
+  redrawPlayer(dir, t, walking, pose) {
     const cv = this.playerCanvases[dir];
     const c2 = cv.getContext('2d');
     c2.clearRect(0, 0, 160, 200);
     drawCharacter(c2, Game.playerCfg, {
-      x: 80, y: 188, facing: dir, t, walking, scale: 1.6,
+      x: 80, y: 188, facing: dir, t, walking, scale: 1.6, pose,
     });
     this.playerTex[dir].needsUpdate = true;
   },

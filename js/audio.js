@@ -129,6 +129,14 @@ function sfx(name) {
       tone(1180, t + 0.02, 0.22, { type: 'square', vol: 0.06, release: 0.06, slideTo: 700 });
       tone(1400, t + 0.3, 0.12, { type: 'sawtooth', vol: 0.08, release: 0.05, slideTo: 950 });
       break;
+    case 'flap': /* 24-2：鳥拍翅（兩聲短噪聲） */
+      noiseSfx(t, 0.08, 0.045, 900);
+      noiseSfx(t + 0.1, 0.08, 0.04, 800);
+      break;
+    case 'boom': /* 24-1d：炸彈低鳴＋爆聲 */
+      tone(90, t, 0.3, { type: 'sine', vol: 0.16, release: 0.25, slideTo: 45 });
+      noiseSfx(t, 0.25, 0.09, 300);
+      break;
   }
 }
 
