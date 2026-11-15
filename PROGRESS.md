@@ -277,3 +277,27 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - [x] **ride QA（.ride22.cjs，真踏板+計量）**：`{time:23.6, wallSec:149, maxV:10.7, minY:-4.5, stops:0, stars:4/4, bankMaxDeg:24.3, faceFwd:0.67, frames:466, finished:true, pageErr:0}` PASS
 - [x] **截圖目視**：L1 U 入口（軌道平滑無融合）/ L4 環＋入口坡道（外觀乾淨）/ L4 出弧→終點爬坡（平滑）——shots/r23-*.png 3 張
 - [x] **11 套件回歸全 PASS**：flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park（跑完 git checkout -- shots/ 還原基線）
+
+## 23-4 ✅ 部署
+
+- [x] push `b987582..9b68f62`（23-1/23-2/23-3 共 3 commit）
+- [x] live smoke PASS（three 128、L 227.4、pageErr 0）＋live park3d.js 確認 5 個 23a cp 生效
+
+---
+
+# 第二十四輪：小遊戲新功能（Jerry 要求：甜甜圈接接樂 3 項＋摩天輪鳥群 1 項）
+
+1. 甜甜圈接接樂：
+   - (a) 接到時手向上伸出的視覺效果
+   - (b) 來不及接時可「飛撲接」（動作鈕撲出去擴大接取範圍）
+   - (c) 新增不能接的物品（🧨 炸彈：接到扣星）
+2. 摩天輪：空中鳥群攻擊，玩家要閃躲（A/D 座艙內移動）
+
+## 24-1a 基礎：catch pose＋redrawPlayer pose 參數＋新 sfx（flap/boom）
+## 24-1b 接住反饋：0.6s 舉手 pose＋prompt「接住!」
+## 24-1c 飛撲接：action() 0.45s 衝刺＋傾身＋大接取盒＋冷卻
+## 24-1d 炸彈：25% 出 🧨，接到 -2★＋boom＋爆炸視覺
+## 24-2a 鳥群：3 隻（身體/頭/喙/拍翼）繞輪 r=10.5
+## 24-2b 俯衝 AI（預警→直線撲→迴位）＋A/D 閃躲＋中 -1★／閃過 +1★
+## 24-2c headless 截圖目測（catch 3 狀態＋wheel 鳥撲/閃躲）
+## 24-3 驗證：11 回歸＋push＋live smoke
