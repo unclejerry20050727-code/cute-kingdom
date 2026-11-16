@@ -323,6 +323,12 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 截圖目視 OK：/tmp/w24-01 盤旋（藍鳥×2 可見）／w24-02 俯衝（紅身直撲）／w24-03 閃過（prompt「★ 1（🐦 閃躲 x1）｜🐦 閃過! +1★」）
 - 設計備忘：閃過判定 = 落點時 |pOff_now − pOff_lock| > 0.95（預測已烘焙 lock 時 pOff → 防站點卡位）；全閃 1.2 有 0.25 餘裕；invuln 被啄 1.5s／閃過 0.5s（蓋過 pass 0.45s 防回中被擦）
 
+## 24-3 ✅ 回歸＋push＋live smoke 完成
+- [x] `57da7a3` 11/11 回歸全 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）＋shots/ 還原
+- [x] push `9b68f62..57da7a3  main -> main`
+- [x] live markers：park-wheel.js:9／park-catch.js:19
+- [x] live smoke：`SMOKE22: {…"stars"4/4 參數不變…,"pageErr":0} PASS: smoke22`
+
 ---
 
 ## Round 25（Jerry 回饋）
