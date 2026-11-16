@@ -239,6 +239,10 @@ const ParkCoaster = {
     const camT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, camUp, 0));
     const look = p.clone().addScaledVector(tan, 5).add(new THREE.Vector3(0, 1, 0));
     const k = 1 - Math.exp(-5 * dt);
+    /* 25-1：鏡頭穩定器——look 點低通濾波：粗糙段切線抖動被相機角度時間常數吸收，
+       不再硬修幾何；位置仍跟車 lerp（camT），只有角度多一層和緩 */
+    if (!this.smLook) this.smLook = look.clone();
+    this.smLook.lerp(look, 1 - Math.exp(-6 * dt));
     /* 21-5：相機 bank ∝ v²・水平曲率（clamp ±25°）：設 camera.up 再 lookAt */
     const uB = Math.min(u, 0.993);
     const t2 = uB + 0.006;
@@ -248,10 +252,10 @@ const ParkCoaster = {
     const curv = dh / (t2 - uB) / curve.getLength(); /* 1/u，+=左彎 */
     const bankT = Math.max(-0.44, Math.min(0.44, this.v * this.v * curv * 0.03));
     this.bank += (bankT - this.bank) * (1 - Math.exp(-4 * dt));
-    const fwd = look.clone().sub(park.camera.position).normalize();
+    const fwd = this.smLook.clone().sub(park.camera.position).normalize();
     park.camera.up.set(0, 1, 0).applyAxisAngle(fwd, this.bank);
     park.camera.position.lerp(camT, k);
-    park.camera.lookAt(look);
+    park.camera.lookAt(this.smLook);
   },
 
   /* 20c：太陽過曝閃光（出洞：白閃快速淡出） */
@@ -279,6 +283,7 @@ const ParkCoaster = {
     for (const s of this.stars) park.scene.remove(s.mesh);
     this.stars = [];
     this.car = null;
+    this.smLook = null; /* 25-1：下趟重新收斂 */
     /* 恢復停靠列車 */
     if (park.parkedTrain) for (const c of park.parkedTrain) c.visible = true;
     /* 玩家回站點 */
