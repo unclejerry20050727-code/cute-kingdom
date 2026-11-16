@@ -232,7 +232,7 @@ const Park3D = {
     base.add(this.mkMesh(THREE, new THREE.SphereGeometry(0.8, 12, 10), 0xfff8ec, [0, 9, 0]));
     const wheel = new THREE.Group();
     wheel.position.set(0, 9, 0);
-    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(7.5, 0.4, 10, 40), 0xe2574c));
+    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(7.5, 0.4, 10, 40), 0x9b6fd8)); /* 25-7：輪圈紅→紫（不再與雲霄飛車管同色） */
     wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(6.8, 0.15, 8, 36), 0xf7c948));
     const spokeMat = new THREE.MeshLambertMaterial({ color: 0xfff8ec });
     for (let i = 0; i < 8; i++) {
