@@ -345,3 +345,16 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 25-6 摩天輪跳躲：⚡ 抛物線跳 0.9s/2.2u、冷卻 1.4s、落點 3D 判定
 ## 25-7 摩天輪輪圈換紫 0x9b6fd8
 ## 25-8 驗證：11 回歸＋push＋live smoke
+
+## ✅ Round 25 完成記錄（25-1~25-8 全完）
+
+| 項 | 作法 | 驗證 |
+|---|---|---|
+| 25-1 鏡頭穩定器 | park-coaster.js 加 `smLook` 低通濾波（lerp 係數 1-e^(-6dt)），bank 方向與 lookAt 用平滑後點；位置仍跟車 | .ride22 PASS：23.6s/4星/0停，bankMax 24.3° |
+| 25-2 UI 重疊 | .park-star right 16px→78px（🔊 46px+16 右距+16 間距） | /tmp/ui25-topright.png：徽章與 🔊 分開 |
+| 25-3 接住 pose | character.js catch：手 -45→-108（頭頂≈-88、髮頂≈-88 之上），肘 -55→-87 | canvas 級 /tmp/d25-tex.png 雙手過頭頂；node 純函數 hL/hR y≈-108 |
+| 25-4 飛撲 pose | diveR/diveL 手朝飛撲方向平伸；park-catch ~15fps 重繪 dive pose、撲完還原站姿 | .shot25c pageErr 0；/tmp/c25-02-dive-pose.png 右臂平伸 |
+| 25-5 接接樂鏡頭 | 相機 (px,4.2,3.2) lookAt (px,3.2,Z)（fov 52 不變）；甜甜圈 y≈7-8 進畫面 ≈1s 反應；站牌柱/招牌退到 local z=-1.5 不擋臉 | .catch24 PASS；/tmp/c25-03-falling.png 3 個甜甜圈在上半部 |
+| 25-6 摩天輪跳躲 | A/D 側閃→⚡ 跳（動作鍵/Space/E）：JUMP_T 1.0s、JUMP_H 2.2、冷卻 1.4s；鳥鎖座艙基礎位，落點幀 jumpH>0.95 即閃過（安全窗口 s∈(0.02,0.78)）；_predictPlayer 移除 pOff | .wheel25 PASS：被啄/跳躲+1★/冷卻擋二連/結算 cleanup（player 回站、wheelSpeed 0.25） |
+| 25-7 摩天輪換色 | 輪圈 0xe2574c→0x9b6fd8（紫）；內環黃/座艙彩/頂旗紅保留 | /tmp/w25-02-overview.png：紫輪 vs 紅雲霄管清楚區分 |
+| 25-8 回歸 | 11/11 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）；shots/ 已還原 | 見下方 push/live smoke |
