@@ -7,6 +7,8 @@
    24-2：3 隻鳥在星星外環（r=10.5）盤旋；每 3.2s 派一隻（輪流）
         0.8s 蓄力（紅光+轉向+flap）→0.9s 直線撲「預測 1.7s 後玩家位置」
         →擦過 0.45s→回歸 0.8s；被啄 -1★（1.5s 無敵）；躲過 +1★
+   25-6：閃躲改 ⚡ 跳（0.9s 拋物線跳 2.2u，冷卻 1.4s）——鳥鎖定座艙基礎位置，
+        落點那一幀 jumpH>0.95 = 鳥從腳下過；A/D 側閃移除
    接口：start(park) / update(dt) / action() / abort()
    ════════════════════════════════════════════════════════════════ */
 'use strict';
@@ -25,7 +27,7 @@ const ParkWheel = {
   dodges: 0,
   invuln: 0,
   hitFlash: null,
-  pOff: 0,
+  jump: 0, jumpCd: 0, /* 25-6：⚡ 跳躲（拋物線） */
 
   RIDE_SPEED: 0.5,   /* 遊玩時的轉速（rad/s）≈ 12.6 秒一圈 */
   HUB: { x: -20, y: 9, z: -14 },
@@ -33,6 +35,8 @@ const ParkWheel = {
   R_STAR: 8.6,
   R_BIRD: 10.5,    /* 24-2：鳥群環（星星外側） */
   BIRD_Z: 0.8,     /* 鳥與玩家同平面（輪面 +z 0.8） */
+  JUMP_T: 1.0,    /* 25-6：跳躍持續時間（略長於俯衝 0.9s，起跳容錯大） */
+  JUMP_H: 2.2,    /* 25-6：跳躍高度（落點幀 >0.95 即閃過） */
 
   /* 星星的固定世界角度 */
   STAR_ANGLES: [0.25, 0.25 + Math.PI / 2, 0.25 + Math.PI, 0.25 + 3 * Math.PI / 2],
@@ -73,7 +77,7 @@ const ParkWheel = {
     this.dodges = 0;
     this.invuln = 0;
     this.hitFlash = null;
-    this.pOff = 0;
+    this.jump = 0; this.jumpCd = 0;
     for (let i = 0; i < 3; i++) {
       const b = this._makeBird(THREE);
       b.orbit.a = (i * Math.PI * 2) / 3;
@@ -89,12 +93,17 @@ const ParkWheel = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
-    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（A/D 閃躲）';
+    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（⚡ 跳躲）';
     $('#park-prompt').classList.remove('hidden');
     sfx('pop');
   },
 
-  action() { /* 24-2：閃躲用 A/D（鍵盤/方向鍵），動作鍵無效 */ },
+  action() { /* 25-6：⚡ 跳躲（動作鍵/Space/E；A/D 側閃移除） */
+    if (!this.active || this.jumpCd > 0) return;
+    this.jump = this.JUMP_T;
+    this.jumpCd = 1.4;
+    sfx('whoosh');
+  },
 
   /* 24-2：造卡通鳥（正面視角：圓身+頭喙+雙翼拍動；local +x = 前進方向） */
   _makeBird(THREE) {
@@ -122,13 +131,13 @@ const ParkWheel = {
     };
   },
 
-  /* 24-2：預測 tAhead 秒後玩家位置（含座艙轉動＋目前閃躲偏移） */
+  /* 24-2/25-6：預測 tAhead 秒後玩家位置（座艙基礎位；跳躲用高度差，無 x 偏移） */
   _predictPlayer(tAhead) {
     const park = this.park;
     const g0 = park.ferris.gondolas[0];
     const phi = g0.angle + park.wheelAngle + park.wheelSpeed * tAhead;
     return {
-      x: this.HUB.x + this.R_PATH * Math.cos(phi) + this.pOff,
+      x: this.HUB.x + this.R_PATH * Math.cos(phi),
       y: this.HUB.y + this.R_PATH * Math.sin(phi) - 0.85 + 2.0,
     };
   },
@@ -164,20 +173,20 @@ const ParkWheel = {
       s.mesh.rotation.y += dt * 2.5;
     }
 
-    /* 24-2b：閃躲（A/D / 方向鍵），無輸入緩慢回中 */
-    const ks = Game.keys;
-    let dx = (ks.has('right') ? 1 : 0) - (ks.has('left') ? 1 : 0);
-    if (dx === 0 && park.dpadDir) dx = park.dpadDir[0];
-    this.pOff += dx * 2.2 * dt;
-    if (dx === 0) this.pOff -= this.pOff * Math.min(1, dt * 2.5);
-    if (this.pOff > 1.2) this.pOff = 1.2;
-    if (this.pOff < -1.2) this.pOff = -1.2;
+    /* 25-6：⚡ 跳躲——拋物線跳 4Hτ(1-τ)；落點幀 jumpH>0.95 = 鳥從腳下過 */
+    this.jumpCd = Math.max(0, this.jumpCd - dt);
+    let jumpH = 0;
+    if (this.jump > 0) {
+      this.jump = Math.max(0, this.jump - dt);
+      const tau = 1 - this.jump / this.JUMP_T;
+      jumpH = this.JUMP_H * 4 * tau * (1 - tau);
+    }
 
     /* 玩家坐在座艙上（z 偏離輪面 0.8 避免被紅色環管遮住；面向相機） */
-    park.player.position.set(gx + this.pOff, gy + 2.0, gz + 0.8);
+    park.player.position.set(gx, gy + 2.0 + jumpH, gz + 0.8);
 
-    /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置） */
-    this._updateBirds(dt, gx + this.pOff, gy + 2.0);
+    /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置，含跳高） */
+    this._updateBirds(dt, gx, gy + 2.0 + jumpH);
 
     const camTarget = new THREE.Vector3(gx, gy + 3, gz + 13);
     park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 0.8));
@@ -197,7 +206,7 @@ const ParkWheel = {
 
     const fl = this.hitFlash ? `｜${this.hitFlash.text}` : '';
     $('#park-prompt').textContent =
-      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜A/D 閃躲`;
+      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜⚡ 跳躲`;
   },
 
   /* 24-2：鳥群更新（orbit/tele/dive/pass/ret） */
@@ -331,7 +340,7 @@ const ParkWheel = {
     this.stars = [];
     for (const b of this.birds) park.scene.remove(b.group);
     this.birds = [];
-    this.pOff = 0;
+    this.jump = 0; this.jumpCd = 0;
     this.active = false;
     park.wheelSpeed = 0.25;
     /* 玩家回站點 */
