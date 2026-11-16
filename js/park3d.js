@@ -447,11 +447,11 @@ const Park3D = {
     const pad = this.mkMesh(THREE, new THREE.CircleGeometry(2.8, 26), 0xf3ddb8, [0, 0.02, 0]);
     pad.rotation.x = -Math.PI / 2;
     g.add(pad);
-    g.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.12, 0.12, 2.4, 8), 0x7a5236, [0, 1.2, 0]));
+    g.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.12, 0.12, 2.4, 8), 0x7a5236, [0, 1.2, -1.5])); /* 25-5：柱子退到玩家後方，不擋特寫 */
     const tex = this.makeSignTexture(st.emoji + ' ' + st.label);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.4),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-    sign.position.set(0, 3.3, 0);
+    sign.position.set(0, 3.3, -1.5); /* 25-5：招牌退到背景層 */
     g.add(sign);
     return g;
   },
