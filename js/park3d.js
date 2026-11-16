@@ -219,26 +219,26 @@ const Park3D = {
     const base = new THREE.Group();
     base.position.set(-20, 0, -14);
     const legMat = new THREE.MeshLambertMaterial({ color: 0xb98a5f });
-    const legLen = 9.3;
+    const legLen = 13.95; /* 26-2：輪放大 1.5x */
     for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, legLen, 8), legMat);
-      leg.position.set(side * 1.5, 4.6, 0);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, legLen, 8), legMat);
+      leg.position.set(side * 2.25, 6.6, 0);
       leg.quaternion.setFromUnitVectors(
         new THREE.Vector3(0, 1, 0),
-        new THREE.Vector3(-side * 3, 8.8, 0).normalize()
+        new THREE.Vector3(-side * 4.5, 13.2, 0).normalize()
       );
       base.add(leg);
     }
-    base.add(this.mkMesh(THREE, new THREE.SphereGeometry(0.8, 12, 10), 0xfff8ec, [0, 9, 0]));
+    base.add(this.mkMesh(THREE, new THREE.SphereGeometry(1.0, 12, 10), 0xfff8ec, [0, 13.5, 0]));
     const wheel = new THREE.Group();
-    wheel.position.set(0, 9, 0);
-    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(7.5, 0.4, 10, 40), 0x9b6fd8)); /* 25-7：輪圈紅→紫（不再與雲霄飛車管同色） */
-    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(6.8, 0.15, 8, 36), 0xf7c948));
+    wheel.position.set(0, 13.5, 0);
+    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(11.25, 0.5, 10, 40), 0x9b6fd8)); /* 25-7 紫；26-2 r 7.5→11.25（放大 1.5x） */
+    wheel.add(this.mkMesh(THREE, new THREE.TorusGeometry(10.2, 0.2, 8, 36), 0xf7c948));
     const spokeMat = new THREE.MeshLambertMaterial({ color: 0xfff8ec });
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2 + 0.3;
-      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 7.5, 6), spokeMat);
-      sp.position.set(Math.cos(a) * 3.75, Math.sin(a) * 3.75, 0);
+      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 11.25, 6), spokeMat);
+      sp.position.set(Math.cos(a) * 5.625, Math.sin(a) * 5.625, 0);
       sp.rotation.z = a - Math.PI / 2;
       wheel.add(sp);
     }
@@ -248,17 +248,17 @@ const Park3D = {
       const a = (i / 6) * Math.PI * 2 + 0.5;
       const pivot = new THREE.Group();
       pivot.rotation.z = a;
-      const g = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.6, 1.3),
+      const g = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.0, 1.6),
         new THREE.MeshLambertMaterial({ color: gondolaCols[i] }));
-      g.position.set(7.5, -0.85, 0);
+      g.position.set(11.25, -1.2, 0);
       pivot.add(g);
       wheel.add(pivot);
       gondolas.push({ mesh: g, angle: a });
     }
     base.add(wheel);
     /* 頂端小旗 */
-    base.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.07, 0.07, 1.6, 6), 0xb98a5f, [0, 17.4, 0]));
-    base.add(this.mkMesh(THREE, new THREE.ConeGeometry(0.5, 0.9, 4), 0xe2574c, [0.45, 17.6, 0]));
+    base.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.1, 0.1, 1.8, 6), 0xb98a5f, [0, 25.3, 0]));
+    base.add(this.mkMesh(THREE, new THREE.ConeGeometry(0.7, 1.2, 4), 0xe2574c, [0.6, 25.7, 0]));
     return { base, wheel, gondolas };
   },
 

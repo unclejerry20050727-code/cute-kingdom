@@ -29,12 +29,12 @@ const ParkWheel = {
   hitFlash: null,
   jump: 0, jumpCd: 0, /* 25-6：⚡ 跳躲（拋物線） */
 
-  RIDE_SPEED: 0.5,   /* 遊玩時的轉速（rad/s）≈ 12.6 秒一圈 */
-  HUB: { x: -20, y: 9, z: -14 },
-  R_PATH: 7.5,
-  R_STAR: 8.6,
-  R_BIRD: 10.5,    /* 24-2：鳥群環（星星外側） */
-  BIRD_Z: 0.8,     /* 鳥與玩家同平面（輪面 +z 0.8） */
+  RIDE_SPEED: 0.34,   /* 26-2：輪放大 1.5x 後保持直線速度≈不變（一圈 12.6s→18.5s 遊玩更久） */
+  HUB: { x: -20, y: 13.5, z: -14 }, /* 26-2：hub 9→13.5 */
+  R_PATH: 11.25, /* 26-2：7.5→11.25 */
+  R_STAR: 12.9, /* 26-2：8.6→12.9 */
+  R_BIRD: 15.75,    /* 24-2：鳥群環（星星外側）；26-2：10.5→15.75 */
+  BIRD_Z: 1.2,     /* 鳥與玩家同平面（輪面 +z）；26-2：0.8→1.2 */
   JUMP_T: 1.0,    /* 25-6：跳躍持續時間（略長於俯衝 0.9s，起跳容錯大） */
   JUMP_H: 2.2,    /* 25-6：跳躍高度（落點幀 >0.95 即閃過） */
 
@@ -138,7 +138,7 @@ const ParkWheel = {
     const phi = g0.angle + park.wheelAngle + park.wheelSpeed * tAhead;
     return {
       x: this.HUB.x + this.R_PATH * Math.cos(phi),
-      y: this.HUB.y + this.R_PATH * Math.sin(phi) - 0.85 + 2.0,
+      y: this.HUB.y + this.R_PATH * Math.sin(phi) - 1.28 + 3.0, /* 26-2 */
     };
   },
 
@@ -150,7 +150,7 @@ const ParkWheel = {
 
     /* 座艙世界座標 */
     const gx = this.HUB.x + this.R_PATH * Math.cos(phi);
-    const gy = this.HUB.y + this.R_PATH * Math.sin(phi) - 0.85;
+    const gy = this.HUB.y + this.R_PATH * Math.sin(phi) - 1.28; /* 26-2：0.85→1.28 */
     const gz = this.HUB.z;
 
     /* 星星收集（角度接近） */
@@ -182,14 +182,14 @@ const ParkWheel = {
       jumpH = this.JUMP_H * 4 * tau * (1 - tau);
     }
 
-    /* 玩家坐在座艙上（z 偏離輪面 0.8 避免被紅色環管遮住；面向相機） */
-    park.player.position.set(gx, gy + 2.0 + jumpH, gz + 0.8);
+    /* 玩家坐在座艙上（z 偏離輪面 1.2 避免被輪圈管遮住；面向相機）；26-2：2.0→3.0 */
+    park.player.position.set(gx, gy + 3.0 + jumpH, gz + 1.2);
 
     /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置，含跳高） */
-    this._updateBirds(dt, gx, gy + 2.0 + jumpH);
+    this._updateBirds(dt, gx, gy + 3.0 + jumpH);
 
     const camTarget = new THREE.Vector3(gx, gy + 3, gz + 13);
-    park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 0.8));
+    park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 1.2));
 
     /* 相機跟座艙 */
     const look = new THREE.Vector3(gx, gy + 1.2, gz);
