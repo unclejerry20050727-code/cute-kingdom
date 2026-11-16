@@ -364,3 +364,19 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 | 25-6 摩天輪跳躲 | A/D 側閃→⚡ 跳（動作鍵/Space/E）：JUMP_T 1.0s、JUMP_H 2.2、冷卻 1.4s；鳥鎖座艙基礎位，落點幀 jumpH>0.95 即閃過（安全窗口 s∈(0.02,0.78)）；_predictPlayer 移除 pOff | .wheel25 PASS：被啄/跳躲+1★/冷卻擋二連/結算 cleanup（player 回站、wheelSpeed 0.25） |
 | 25-7 摩天輪換色 | 輪圈 0xe2574c→0x9b6fd8（紫）；內環黃/座艙彩/頂旗紅保留 | /tmp/w25-02-overview.png：紫輪 vs 紅雲霄管清楚區分 |
 | 25-8 回歸 | 11/11 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）；shots/ 已還原 | 見下方 push/live smoke |
+
+## Round 26（Jerry 回饋）
+
+1. 甜甜圈接接樂：
+   - 接到時手已明顯上伸 → 頭頂 🙌 icon 重複，移除（僅 catch pose）
+   - 特寫鏡頭還是太近來不及接 → 再退遠（y6.4/z8.6 lookAt y4.2，甜甜圈 y≈10.5 進畫面 ≈1.5s）
+2. 摩天輪：
+   - 跳躲仍難（鳥上下飛來）→ 改 **A/D 左右躲 ＋ ⚡ 跳躲** 雙模式（鳥鎖定位後玩家再位移即閃過）
+   - 特寫鏡頭太近來不及躲 → 改**全景固定鏡頭**（對準輪心、fov 60，整輪＋鳥群全可見）
+   - 摩天輪放大 1/2（r 7.5→11.25、hub 9→13.5），RIDE_SPEED 0.5→0.34（一圈 12.6s→18.5s 遊玩更久）
+
+## 26-1 接接樂：catch pose 去 🙌 icon＋鏡頭再拉遠
+## 26-2 摩天輪放大 1.5x（park3d 幾何＋ParkWheel 常數＋RIDE_SPEED 0.34）
+## 26-3 摩天輪 A/D 左右躲＋跳躲雙模式
+## 26-4 摩天輪全景固定鏡頭（fov 60、cleanup 還原 52）
+## 26-5 驗證：.wheel26＋11 回歸＋push＋live smoke
