@@ -494,8 +494,8 @@ const Park3D = {
     });
     this.playerTex[dir].needsUpdate = true;
   },
-  redrawAll(t, walking) {
-    for (const d of ['down', 'up', 'left', 'right']) this.redrawPlayer(d, t, walking);
+  redrawAll(t, walking, pose) { /* 25-3：補轉 pose（之前被吞，catch pose 沒畫出來） */
+    for (const d of ['down', 'up', 'left', 'right']) this.redrawPlayer(d, t, walking, pose);
   },
 
   /* ══════════ 每幀 ══════════ */

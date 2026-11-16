@@ -132,11 +132,13 @@ const POSES = {
   peace:    { label: '比耶',     emoji: '✌️', fn: () => ({ hR: [26, -70], elbR: [22, -48], hand: 'peace' }) },
   wave:     { label: '揮手',     emoji: '👋', fn: (pt) => ({ hR: [25 + Math.sin(pt * 10) * 4, -72], elbR: [22, -48] }) },
   cheer:    { label: '歡呼',     emoji: '🙌', fn: (pt) => ({ hL: [-24, -70 + Math.sin(pt * 6) * 2], hR: [24, -70 - Math.sin(pt * 6) * 2], elbL: [-20, -50], elbR: [20, -50] }) },
-  catch:    { label: '伸手接',   emoji: '🙌', fn: (pt) => { /* 24-1b：0.18s 內雙手由肩側舉過頭頂 */
+  catch:    { label: '伸手接',   emoji: '🙌', fn: (pt) => { /* 25-3：雙手由胸前明顯上舉過頭頂（-45→-108；頭頂≈-88），看得見「伸出來接」 */
     const k = Math.min(1, pt / 0.18), e = 1 - (1 - k) * (1 - k);
-    const y = -(70 + 14 * e), w = pt > 0.25 ? Math.sin(pt * 9) * 1.2 : 0;
-    return { hL: [-13, y - w], hR: [13, y + w], elbL: [-16, -60], elbR: [16, -60] };
+    const y = -(45 + 63 * e), w = pt > 0.25 ? Math.sin(pt * 9) * 1.5 : 0;
+    return { hL: [-15, y - w], hR: [15, y + w], elbL: [-15, -55 - 32 * e], elbR: [15, -55 - 32 * e] };
   } },
+  diveR:    { label: '飛撲右',   emoji: '💨', fn: () => ({ hR: [32, -58], elbR: [21, -57], hL: [-17, -44], elbL: [-12, -52] }) }, /* 25-4：手朝飛撲方向（+x）伸 */
+  diveL:    { label: '飛撲左',   emoji: '💨', fn: () => ({ hL: [-32, -58], elbL: [-21, -57], hR: [17, -44], elbR: [12, -52] }) }, /* 25-4：手朝飛撲方向（-x）伸 */
   dance:    { label: '跳舞',     emoji: '♪',  sway: (pt) => Math.sin(pt * 6) * 0.09, fn: (pt) => ({ hL: [-24, -55 - Math.sin(pt * 6) * 12], hR: [24, -55 + Math.sin(pt * 6) * 12], elbL: [-20, -42], elbR: [20, -42] }) },
   hug:      { label: '張開雙臂', emoji: '💕', fn: () => ({ hL: [-28, -30], hR: [28, -30], elbL: [-22, -33], elbR: [22, -33] }) },
   pray:     { label: '比心合掌', emoji: '❤️', fn: () => ({ hL: [-2, -30], hR: [2, -30], elbL: [-16, -28], elbR: [16, -28], hand: 'prayer' }) },

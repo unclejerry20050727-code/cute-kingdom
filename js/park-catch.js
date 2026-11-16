@@ -26,6 +26,7 @@ const ParkCatch = {
   poseT: 0, poseAge: 0, poseLast: -9,
   dive: null,        /* { t, dir } */
   diveCd: 0, lean: 0,
+  divePoseAge: 0, divePoseLast: -9, /* 25-4：飛撲 pose（手朝飛撲方向） */
   flash: null,       /* { t, text } */
   fx: [],
 
@@ -51,6 +52,7 @@ const ParkCatch = {
     this.animFrame = -1;
     this.poseT = 0; this.poseAge = 0; this.poseLast = -9;
     this.dive = null; this.diveCd = 0; this.lean = 0;
+    this.divePoseAge = 0; this.divePoseLast = -9;
     this.flash = null; this.fx = [];
     park.player.rotation.z = 0;
 
@@ -179,7 +181,11 @@ const ParkCatch = {
     if (this.dive) {
       this.dive.t -= dt;
       dx = this.dive.dir;
-      if (this.dive.t <= 0) { this.dive = null; this.diveCd = 1.2; }
+      if (this.dive.t <= 0) {
+        this.dive = null; this.diveCd = 1.2;
+        this.divePoseAge = 0; this.divePoseLast = -9;
+        park.redrawPlayer('down', 0.5, false); /* 25-4：撲完還原站姿 */
+      }
     }
     this.diveCd = Math.max(0, this.diveCd - dt);
     this.walking = dx !== 0;
@@ -190,7 +196,7 @@ const ParkCatch = {
       const f = Math.floor(this.walkT * 4) % 4;
       if (f !== this.animFrame) {
         this.animFrame = f;
-        if (this.poseT <= 0) park.redrawPlayer('down', 0.2 + f * 0.25, true);
+        if (this.poseT <= 0 && !this.dive) park.redrawPlayer('down', 0.2 + f * 0.25, true);
       }
     }
     park.player.position.x = this.px;
@@ -202,6 +208,15 @@ const ParkCatch = {
     park.player.rotation.z = this.lean;
     const diveK = this.dive ? Math.sin(Math.PI * (1 - this.dive.t / 0.45)) : 0;
     park.player.position.y = 1.5 + diveK * 0.35;
+
+    /* 25-4：飛撲 pose——手朝飛撲方向伸（~15fps 重繪） */
+    if (this.dive) {
+      this.divePoseAge += dt;
+      if (this.divePoseAge - this.divePoseLast > 0.07) {
+        this.divePoseLast = this.divePoseAge;
+        park.redrawPlayer('down', 0.5, false, { id: this.dive.dir > 0 ? 'diveR' : 'diveL', t: this.divePoseAge });
+      }
+    }
 
     /* 24-1：特寫鏡頭跟隨玩家（正面） */
     park.camera.position.set(this.px, 3.4, 1.0);
