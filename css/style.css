@@ -736,7 +736,7 @@ body {
 .park-exit-btn:hover { transform: translateY(-3px) scale(1.04); }
 .park-exit-btn:active { transform: scale(.95); }
 .park-star {
-  position: absolute; top: 16px; right: 16px;
+  position: absolute; top: 16px; right: 78px; /* 25-2：避開右上角 🔊（46px 圓鈕 + 16 右距 + 16 間距） */
   font-family: var(--font);
   font-size: 20px; font-weight: 900; color: var(--ink);
   background: var(--panel);
