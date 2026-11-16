@@ -67,9 +67,9 @@ const ParkCatch = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
-    /* 24-1 特寫／25-5 拉遠：看得見甜甜圈從天上落下（spawn y=12 → y≈7~8 進畫面，≈1s 反應時間） */
-    park.camera.position.set(this.px, 4.2, 3.2);
-    park.camera.lookAt(this.px, 3.2, this.Z);
+    /* 24-1 特寫／25-5 拉遠／26-1 再退：甜甜圈 y≈10.5 進畫面，全段落下 ≈1.5s 看得見 */
+    park.camera.position.set(this.px, 6.4, 8.6);
+    park.camera.lookAt(this.px, 4.2, this.Z);
     this._setPrompt();
     sfx('pop');
   },
@@ -218,9 +218,9 @@ const ParkCatch = {
       }
     }
 
-    /* 24-1 特寫／25-5：跟隨＋拉遠（看得見落下甜甜圈與舉手接 pose） */
-    park.camera.position.set(this.px, 4.2, 3.2);
-    park.camera.lookAt(this.px, 3.2, this.Z);
+    /* 24-1 特寫／25-5／26-1：跟隨＋再拉遠 */
+    park.camera.position.set(this.px, 6.4, 8.6);
+    park.camera.lookAt(this.px, 4.2, this.Z);
 
     /* 出圈（難度漸進；24-1d：5s 後 25% 炸彈） */
     const prog = 1 - this.timeLeft / this.DURATION;

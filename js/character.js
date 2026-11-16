@@ -447,8 +447,8 @@ function drawCharacter(ctx, cfg, o) {
   /* 姿勢手臂前層：高舉的手在臉前，不被頭擋（第十五輪） */
   for (const a of frontArms) drawPoseArmSeg(ctx, c, c.isLongSleeve, a[0], a[1], a[2], a[3], a[4], a[5], poseData.hand);
 
-  /* 擺拍特效：頭頂漂浮 emoji（第十五輪） */
-  if (pose) {
+  /* 擺拍特效：頭頂漂浮 emoji（第十五輪；26-1：catch 手已舉過頭頂，🙌 icon 重複不再顯示） */
+  if (pose && o.pose.id !== 'catch') {
     const ey = headY - R - 16 - Math.sin(pt * 3) * 3;
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
