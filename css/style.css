@@ -791,3 +791,21 @@ body {
   transition: opacity .12s ease-out, transform .35s ease-out;
 }
 #park-speedlines.on { opacity: .95; transform: scale(1); }
+
+/* 27-5 海盜船：一圈完成嘔吐 gag——底部綠色暈＋玩家緊閉眼睛大頭 */
+#park-vomit {
+  position: absolute; inset: 0;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 118%, rgba(120,200,60,.5), rgba(120,200,60,0) 62%);
+  transition: opacity .15s ease-out;
+}
+#park-vomit.on { opacity: 1; }
+#park-vomit-face {
+  position: absolute; left: 50%; bottom: 11%;
+  width: 200px; height: 200px;
+  transform: translateX(-50%) scale(0) rotate(-8deg);
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
+}
+#park-vomit.on #park-vomit-face { transform: translateX(-50%) scale(1) rotate(0deg); }

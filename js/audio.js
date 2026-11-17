@@ -137,6 +137,12 @@ function sfx(name) {
       tone(90, t, 0.3, { type: 'sine', vol: 0.16, release: 0.25, slideTo: 45 });
       noiseSfx(t, 0.25, 0.09, 300);
       break;
+    case 'vomit': /* 27-5：干嘔扭動（低頻顫）＋噴吐（兩聲帶通噪聲） */
+      tone(170, t, 0.28, { type: 'sawtooth', vol: 0.14, slideTo: 85 });
+      tone(150, t + 0.34, 0.24, { type: 'sawtooth', vol: 0.12, slideTo: 70 });
+      noiseSfx(t + 0.62, 0.22, 0.2, 900);
+      noiseSfx(t + 0.92, 0.3, 0.14, 650);
+      break;
   }
 }
 

@@ -101,8 +101,8 @@ const { chromium } = require('playwright');
 
   /* R4d：加速線——超速（|ω|>1.2）泵對閃 0.7s；低速泵不閃 */
   await p.evaluate(() => {
-    ParkShip.theta = 0; ParkShip.omega = 1.4; ParkShip.decayT = 0;
-    ParkShip.action();
+    ParkShip.theta = 0; ParkShip.omega = 0.95; ParkShip.decayT = 0;
+    ParkShip.action(); /* 泵後 1.33 > 1.2 閃線；E=0.885 < 1.25 不會翻圈 */
   });
   const sl1 = await p.evaluate(() => document.querySelector('#park-speedlines').classList.contains('on'));
   await p.waitForFunction(() => !document.querySelector('#park-speedlines').classList.contains('on'), null, { timeout: 30000 });
@@ -117,12 +117,30 @@ const { chromium } = require('playwright');
   });
   console.log('R4d speedlines:', JSON.stringify({ fast: sl1, after: sl2, low: sl3 }));
 
-  /* R5：強制到 40s → 結算 3s → cleanup */
-  await p.evaluate(() => { ParkShip.t = ParkShip.DURATION; });
-  await p.waitForFunction(() => !ParkShip.active, null, { timeout: 30000 });
+  /* R4e：完整一圈——E=1.57>1.43 上膛、船頭過 90° 拿頂端星（第 4 顆）、跨 ±π 嘔吐 gag、
+     累 360° → settle → 自然結束（傳奇一圈） */
+  await p.evaluate(() => {
+    ParkShip.theta = 1.0; ParkShip.omega = 1.6; ParkShip.decayT = 0;
+  });
+  await p.waitForFunction(() => ParkShip.vomitT > 0, null, { timeout: 60000 });
+  const rGag = await p.evaluate(() => ({
+    vomitT: +ParkShip.vomitT.toFixed(2),
+    loopActive: ParkShip.loopActive,
+    overlay: document.querySelector('#park-vomit').classList.contains('on'),
+    face: !!document.querySelector('#park-vomit-face'),
+    parts: ParkShip.vomitParts.length,
+    collected: ParkShip.collected,
+    topGot: ParkShip.stars.find((s) => s.top).got,
+  }));
+  await p.screenshot({ path: '/tmp/s27-07-gag.png' });
+  console.log('R4e gag:', JSON.stringify(rGag));
+  /* 360° → settle 收斂 → 結算 3s → cleanup（自然收尾） */
+  await p.waitForFunction(() => !ParkShip.active, null, { timeout: 90000 });
+
+  /* R5：自然結束——應為「傳奇一圈 ★ 4/4」 */
   const r5 = await p.evaluate(() => ({
     prompt: document.querySelector('#park-prompt').textContent,
-    rideTmp: !!Park3D.ride,
+    collected: ParkShip.collected,
   }));
   console.log('R5 finish:', JSON.stringify(r5));
   await p.waitForFunction(() => Park3D.ride === null, null, { timeout: 30000 });
@@ -134,6 +152,8 @@ const { chromium } = require('playwright');
     camUp: Park3D.camera.up.y.toFixed(2),
     shipRot: +Park3D.pirate.ship.rotation.z.toFixed(3),
     starsLeft: ParkShip.stars.length,
+    vomitOn: document.querySelector('#park-vomit').classList.contains('on'),
+    parts: ParkShip.vomitParts.length,
   }));
   console.log('R6 cleanup:', JSON.stringify(r6));
   console.log('pageErr:', errs.length, errs.slice(0, 3));
@@ -146,10 +166,13 @@ const { chromium } = require('playwright');
     && rTop.topGot === false && rTop.topVis === true && rTop.collected === 0
     && rStars.collected === 3 && rStars.parkStars === 3 && rStars.hud.includes('3') && rStars.meshes === 0
     && sl1 === true && sl2.on === false && sl2.t <= 0 && sl3 === false
-    && r5.rideTmp === true
+    && rGag.vomitT > 0 && rGag.loopActive === true && rGag.overlay === true
+    && rGag.face === true && rGag.parts > 0 && rGag.collected === 4 && rGag.topGot === true
+    && r5.collected === 4 && r5.prompt.includes('傳奇一圈')
     && r6.pp === '12.5,10.5' && r6.vis === true && r6.fov === 52
     && r6.cam === '0.0,19.0,34.0' && Math.abs(r6.camUp - 1) < 0.01
-    && Math.abs(r6.shipRot) < 0.01 && r6.starsLeft === 0;
+    && Math.abs(r6.shipRot) < 0.01 && r6.starsLeft === 0
+    && r6.vomitOn === false && r6.parts === 0;
   console.log(pass ? 'PASS: ship27' : 'FAIL: ship27');
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error('FAIL', e.message); process.exit(1); });

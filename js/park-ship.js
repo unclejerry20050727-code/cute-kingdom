@@ -26,11 +26,16 @@ const ParkShip = {
   settleT: 0,          /* 27-5：圈完成後收斂計時 */
   vomitT: 0,           /* 27-5：嘔吐 gag 剩餘秒 */
   speedlineT: 0,       /* 27-4：加速線閃現剩餘秒 */
+  _prevTheta: null,    /* 27-5：上一幀 θ（跨頂偵測） */
+  vomitParts: [],      /* 27-5：嘔吐粒子 [{m, vx, vy, vz, life}] */
 
   G: 5, L: 8,
   C_BASE: 0.02, C_WRONG: 0.45, C_SETTLE: 0.8,
   PUMP_WIN: 0.28, OMIN: 0.12, PUMP_KICK: 0.38, OMAX: 2.3,
   SPEED_OMEGA: 1.2, /* 27-4：超速線——再泵時 |ω|>此值才閃加速線 */
+  LOOMIN: 0.6,      /* 27-5：真轉頂——跨 ±π 時 |ω|>此值才嘔吐 gag */
+  /* 27-5：計圈/頂端星上膛——能量 E = ½ω² + (G/L)(1−cosθ) > 翻頂屏障(1.25) + ½·LOOMIN²(0.18) */
+  LOOP_ENGARM: 1.43,
   DURATION: 40,
   PIVOT: { x: 17.5, y: 11.5, z: 9.5 },
   CAM: { back: 3.3, up: 2.0, look: 10 },
@@ -46,6 +51,7 @@ const ParkShip = {
     this.decayT = 0; this.pumpFlash = null;
     this.t = 0; this.collected = 0; this.stars = [];
     this.loopActive = false; this.loopTotal = 0; this.settleT = 0; this.vomitT = 0; this.speedlineT = 0;
+    this._prevTheta = null; this.vomitParts = [];
     park.pirate.ship.rotation.z = 0;
 
     /* 27-3：4 顆星（金色八面體，繞軸旋轉漂浮） */
@@ -92,6 +98,70 @@ const ParkShip = {
     }
   },
 
+  /* ── 27-5：嘔吐 gag（緊閉><眼大頭彈出 + 綠色粒子 + 綠暈） ── */
+  _ensureFace() {
+    if (this._faceCvs) return;
+    const c = document.createElement('canvas');
+    c.width = c.height = 200;
+    c.id = 'park-vomit-face';
+    const ctx = c.getContext('2d');
+    const cfg = Object.assign({}, Game.playerCfg, { mouthShape: 'open' });
+    drawPortrait(ctx, cfg, 200, { eyesClosed: true, t: 0.2, gaze: 0 });
+    /* >< 緊閉眼：蓋掉溫柔閉眼弧（drawFace 眼中心 = x±0.38R, y+0.12R） */
+    const x = 100, y = 112, R = 72, ex = R * 0.38, ey = y + R * 0.12;
+    ctx.strokeStyle = '#3a2417';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      const cx = x + side * ex, l = R * 0.17;
+      ctx.beginPath();
+      ctx.moveTo(cx - l, ey - l); ctx.lineTo(cx + l, ey + l);
+      ctx.moveTo(cx + l, ey - l); ctx.lineTo(cx - l, ey + l);
+      ctx.stroke();
+    }
+    this._faceCvs = c;
+  },
+  _spawnVomit() {
+    const THREE = window.THREE, park = this.park;
+    const cam = park.camera.position;
+    const fx = Math.cos(this.theta), fy = Math.sin(this.theta); /* 船身朝前 */
+    for (let i = 0; i < 12; i++) {
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1 + Math.random() * 0.12, 6, 5),
+        new THREE.MeshLambertMaterial({ color: 0x8fd34e, emissive: 0x2f5c12 })
+      );
+      m.position.set(
+        cam.x + fx * 1.4 + (Math.random() - 0.5) * 0.5,
+        cam.y - 0.25 + (Math.random() - 0.5) * 0.4,
+        cam.z + (Math.random() - 0.5) * 0.3
+      );
+      park.scene.add(m);
+      this.vomitParts.push({
+        m,
+        vx: fx * (3 + Math.random() * 3) + (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.4) * 1.6,
+        vz: (Math.random() - 0.5) * 1.2,
+        life: 0.9 + Math.random() * 0.3,
+      });
+    }
+  },
+  _triggerVomit() {
+    this.vomitT = 2.2;
+    this.pumpFlash = { t: 2.2, text: '🤮 嘔吐了!!' };
+    this._ensureFace();
+    const el = document.getElementById('park-vomit');
+    if (el) {
+      if (!el.contains(this._faceCvs)) el.appendChild(this._faceCvs);
+      el.classList.add('on');
+    }
+    this._spawnVomit();
+    sfx('vomit');
+  },
+  _endVomit() {
+    const el = document.getElementById('park-vomit');
+    if (el) el.classList.remove('on');
+  },
+
   /* θ → (−π, π] */
   _wrap(th) {
     let d = th % (2 * Math.PI);
@@ -129,6 +199,29 @@ const ParkShip = {
 
     this._tick(dt);
 
+    /* 27-5：轉圈——能量足夠（E>LOOP_ENGARM）即上膛（頂端星可拿）；
+       跨 ±π 且 |ω|>LOOMIN = 真翻頂 → 嘔吐 gag；累滿 360° → settle 收斂 */
+    const prev = this._prevTheta != null ? this._prevTheta : this.theta;
+    this._prevTheta = this.theta;
+    if (!this.settleT) {
+      const jump = Math.abs(this.theta - prev);
+      const E = 0.5 * this.omega * this.omega + (this.G / this.L) * (1 - Math.cos(this.theta));
+      if (E > this.LOOP_ENGARM) this.loopActive = true;
+      if (jump < 1 && Math.abs(this.omega) > this.LOOMIN &&
+          ((prev < Math.PI && this.theta >= Math.PI) || (prev > -Math.PI && this.theta <= -Math.PI))) {
+        this._triggerVomit(); /* 真過頂（船身倒轉）gag */
+      }
+      if (this.loopActive) {
+        this.loopTotal += jump;
+        if (this.loopTotal >= 2 * Math.PI) {
+          this.loopActive = false;
+          this.settleT = 4; /* 一圈完成→強阻尼收斂，4s 後結束（或船先停穩） */
+          this.pumpFlash = { t: 1.5, text: '🌀 完成一圈!!' };
+          sfx('ding');
+        }
+      }
+    }
+
     /* 27-4：加速線計時器到期移除 */
     if (this.speedlineT > 0) {
       this.speedlineT -= dt;
@@ -136,6 +229,24 @@ const ParkShip = {
         const slEl = document.getElementById('park-speedlines');
         if (slEl) slEl.classList.remove('on');
       }
+    }
+
+    /* 27-5：嘔吐 gag 計時＋粒子（重力 -5、落地/到期移除） */
+    if (this.vomitT > 0) {
+      this.vomitT -= dt;
+      for (let i = this.vomitParts.length - 1; i >= 0; i--) {
+        const q = this.vomitParts[i];
+        q.life -= dt;
+        q.vy -= 5 * dt;
+        q.m.position.x += q.vx * dt;
+        q.m.position.y += q.vy * dt;
+        q.m.position.z += q.vz * dt;
+        if (q.life <= 0 || q.m.position.y < 0.05) {
+          this.park.scene.remove(q.m);
+          this.vomitParts.splice(i, 1);
+        }
+      }
+      if (this.vomitT <= 0) this._endVomit();
     }
 
     /* 27-3：星星收集（船頭經過角度窗口 0.24rad；頂端星要 loopActive） */
@@ -158,8 +269,6 @@ const ParkShip = {
     const fl = this.pumpFlash ? `｜${this.pumpFlash.text}` : '';
     $('#park-prompt').textContent =
       `🏴‍☠️ 甩高 ${deg}° ｜ ★ ${this.collected}/4 ｜ 最低點按 ⚡ 加速${fl}`;
-
-    /* 27-5：過頂/整圈/收斂判定（此處佔位，27-5 填入） */
 
     /* 結束：40s 或（27-5）整圈收斂 */
     if (this.settleT > 0) {
@@ -206,6 +315,10 @@ const ParkShip = {
     const slEl = document.getElementById('park-speedlines'); /* 27-4：清特效 */
     if (slEl) slEl.classList.remove('on');
     this.speedlineT = 0;
+    for (const q of this.vomitParts) park.scene.remove(q.m); /* 27-5：清嘔吐粒子 */
+    this.vomitParts = [];
+    this._endVomit(); /* 27-5：收綠暈/大頭 */
+    this._prevTheta = null;
     for (const s of this.stars) park.scene.remove(s.mesh); /* 27-3 */
     this.stars = [];
     park.player.visible = true;
