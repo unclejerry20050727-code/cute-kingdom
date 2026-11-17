@@ -380,3 +380,13 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 26-3 摩天輪 A/D 左右躲＋跳躲雙模式
 ## 26-4 摩天輪全景固定鏡頭（fov 60、cleanup 還原 52）
 ## 26-5 驗證：.wheel26＋11 回歸＋push＋live smoke
+
+## ✅ Round 26 完成記錄（26-1~26-5 全完）
+
+| 項 | 作法 | 驗證 |
+|---|---|---|
+| 26-1 接接樂去 icon＋鏡頭 | character.js catch pose 頭頂 🙌 不再繪製（手已舉過頭頂，icon 重複）；鏡頭再退 (px,6.4,8.6) lookAt (px,4.2,Z)，甜甜圈 y≈10 進畫面 ≈1.5s | /tmp/c26-02-catch-pose.png 無 🙌；.catch24 PASS |
+| 26-2 摩天輪放大 1.5x | park3d 幾何（r 7.5→11.25、hub 9→13.5、星星/鳥環/座艙/支架/旗同步）；RIDE_SPEED 0.5→0.34（一圈 12.6s→18.5s 遊玩更久） | /tmp/w26-01-overview.png 無碰撞；pageErr 0 |
+| 26-3 A/D＋跳雙模式 | A/D 左右側閃 pOff±1.2（加回）與 ⚡ 跳並存；鳥鎖定位含當時 pOff，落點幀用玩家實際位置（pOff+jumpH）判定；prompt「A/D 躲＋⚡ 跳」 | .wheel26 PASS：被啄/A/D閃(pOff1.2)/跳躲(cd1.4)/清理 pOff0 |
+| 26-4 全景鏡頭 | 固定鏡頭對 hub（pos HUB+2/+26、lookAt hub、fov 52→60），整輪＋鳥群全入畫；cleanup 恢復 fov 52 | /tmp/w26-05-wide.png 整輪＋3鳥＋4星全見；.wheel26 回歸 PASS |
+| 26-5 回歸 | 11/11 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）；.catch24＋.wheel26 PASS；shots/ 已還原 | 見下方 push/live smoke |
