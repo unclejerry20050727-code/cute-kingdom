@@ -63,7 +63,7 @@ const Park3D = {
     if (this.ride && this.ride.action) { this.ride.action(); return; }
     if (this.nearStation) {
       const st = this.nearStation;
-      const R = { coaster: window.ParkCoaster, catch: window.ParkCatch, wheel: window.ParkWheel }[st.kind];
+      const R = { coaster: window.ParkCoaster, catch: window.ParkCatch, wheel: window.ParkWheel, ship: window.ParkShip }[st.kind];
       if (R && R.start) {
         sfx('pop');
         this.ride = R;
@@ -164,11 +164,17 @@ const Park3D = {
       this.scene.add(b.group);
     }
 
+    /* ── 海盜船（Round 27；船身繞 A-frame 頂 pivot 旋轉） ── */
+    this.pirate = this.buildPirateShip(THREE);
+    this.scene.add(this.pirate.base);
+    this.scene.add(this.pirate.ship);
+
     /* ── 三個站點 ── */
     this.stations = [
       { kind: 'coaster', label: '雲霄飛車', emoji: '🎢', pos: new THREE.Vector3(5, 0, 6) },
       { kind: 'catch', label: '甜甜圈接接樂', emoji: '🍩', pos: new THREE.Vector3(0, 0, -6) }, /* 18f：搬到廣場上（接圈舞台） */
       { kind: 'wheel', label: '摩天輪', emoji: '🎡', pos: new THREE.Vector3(-16, 0, -2) },
+      { kind: 'ship', label: '海盜船', emoji: '🏴‍☠️', pos: new THREE.Vector3(12.5, 0, 10.5) }, /* Round 27 */
     ];
     for (const st of this.stations) this.scene.add(this.buildStation(THREE, st));
 
@@ -260,6 +266,75 @@ const Park3D = {
     base.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.1, 0.1, 1.8, 6), 0xb98a5f, [0, 25.3, 0]));
     base.add(this.mkMesh(THREE, new THREE.ConeGeometry(0.7, 1.2, 4), 0xe2574c, [0.6, 25.7, 0]));
     return { base, wheel, gondolas };
+  },
+
+  /* Round 27 27-1：海盜船——A-frame 支架（static）＋船身（ship group，origin=pivot，rotation.z=θ）
+     船頭半徑≈8.3（菱形錐尖）、船尾半徑≈5；pivot y=11.5，最低點（船頭直下）y≈3.2 不碰地 */
+  buildPirateShip(THREE) {
+    const base = new THREE.Group();
+    base.position.set(17.5, 0, 9.5);
+    const wood = 0xb98a5f, woodD = 0x8a6242, gold = 0xd4a24c;
+    /* A-frame 支腿（兩側各前/後腿在頂匯合）＋橫撐 */
+    for (const s of [-1, 1]) {
+      const z = s * 2.6;
+      for (const gx of [-6, 4.5]) {
+        const len = Math.hypot(-gx, 11.5);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.62, len, 8),
+          new THREE.MeshLambertMaterial({ color: woodD }));
+        leg.position.set(gx / 2, 11.5 / 2, z);
+        leg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(-gx, 11.5, 0).normalize());
+        base.add(leg);
+      }
+      base.add(this.mkMesh(THREE, new THREE.BoxGeometry(5.0, 0.35, 0.35), wood, [-0.36, 6, z]));
+      base.add(this.mkMesh(THREE, new THREE.BoxGeometry(6.2, 0.3, 0.3), wood, [-0.3, 2.2, z]));
+    }
+    /* 頂端橫樑＋金色軸 */
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 6.6, 10),
+      new THREE.MeshLambertMaterial({ color: woodD }));
+    bar.rotation.x = Math.PI / 2; bar.position.set(0, 11.5, 0);
+    base.add(bar);
+    const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7.0, 8),
+      new THREE.MeshLambertMaterial({ color: gold }));
+    axle.rotation.x = Math.PI / 2; axle.position.set(0, 11.5, 0);
+    base.add(axle);
+    /* 登船平台 */
+    base.add(this.mkMesh(THREE, new THREE.BoxGeometry(12, 0.12, 9), 0xe8d5a8, [0.5, 0.06, 0.5]));
+
+    /* 船身（origin=pivot，船頭朝 +X） */
+    const ship = new THREE.Group();
+    ship.position.set(17.5, 11.5, 9.5);
+    const hull = 0x8a5a3b, deck = 0xc99a6a, red = 0xe2574c;
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(11, 1.4, 2.8), hull, [0.5, -0.7, 0])); /* 船身 x -5..6 */
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(1.7, 2.6, 4),
+      new THREE.MeshLambertMaterial({ color: hull }));
+    bow.rotation.z = -Math.PI / 2;
+    bow.position.set(7, -0.7, 0); /* 菱形船頭，尖 x≈8.3 */
+    ship.add(bow);
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(11, 0.25, 2.5), deck, [0.5, 0.15, 0])); /* 甲板 */
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(11.1, 0.3, 2.9), gold, [0.5, -0.2, 0])); /* 金飾條 */
+    for (const s of [-1, 1]) { /* 兩側護欄＋欄杆 */
+      ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(7.5, 0.12, 0.12), 0x6b4423, [1, 0.85, s * 1.2]));
+      for (const px of [-2.5, 1, 4.5])
+        ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(0.12, 0.7, 0.12), 0x6b4423, [px, 0.5, s * 1.2]));
+    }
+    /* 座位：船尾（主角，紅＋靠背）/中（黃）/前（藍） */
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(1.3, 0.6, 2.1), red, [-3.3, 0.55, 0]));
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(0.25, 1.1, 2.1), 0xc2402f, [-3.95, 1.2, 0]));
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(1.3, 0.5, 2.1), 0xf7c948, [-0.6, 0.45, 0]));
+    ship.add(this.mkMesh(THREE, new THREE.BoxGeometry(1.3, 0.5, 2.1), 0x7ec8e3, [2.2, 0.45, 0]));
+    /* 船頭舵輪＋桅桿＋海盜旗 */
+    const helm = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.09, 8, 16),
+      new THREE.MeshLambertMaterial({ color: 0x6b4423 }));
+    helm.position.set(5, 1.35, 0);
+    ship.add(helm);
+    ship.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.07, 0.07, 0.8, 6), 0x6b4423, [5, 0.9, 0]));
+    ship.add(this.mkMesh(THREE, new THREE.CylinderGeometry(0.08, 0.08, 2.4, 6), 0x8a6242, [5.6, 1.35, 0]));
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.6),
+      new THREE.MeshBasicMaterial({ color: 0x2a2a33, side: THREE.DoubleSide }));
+    flag.position.set(4.95, 2.0, 0);
+    ship.add(flag);
+    return { base, ship, pivot: { x: 17.5, y: 11.5, z: 9.5 } };
   },
 
   buildCoasterTrack(THREE) {
