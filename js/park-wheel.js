@@ -7,8 +7,12 @@
    24-2：3 隻鳥在星星外環（r=10.5）盤旋；每 3.2s 派一隻（輪流）
         0.8s 蓄力（紅光+轉向+flap）→0.9s 直線撲「預測 1.7s 後玩家位置」
         →擦過 0.45s→回歸 0.8s；被啄 -1★（1.5s 無敵）；躲過 +1★
-   25-6：閃躲改 ⚡ 跳（0.9s 拋物線跳 2.2u，冷卻 1.4s）——鳥鎖定座艙基礎位置，
-        落點那一幀 jumpH>0.95 = 鳥從腳下過；A/D 側閃移除
+   25-6：閃躲改 ⚡ 跳（1.0s 拋物線跳 2.2u，冷卻 1.4s）——鳥鎖定座艙基礎位置，
+        落點那一幀 jumpH>0.95 = 鳥從腳下過
+  26-2：輪放大 1.5x（r 7.5→11.25、hub 9→13.5、星星/鳥環/座艙/支架同步），
+        RIDE_SPEED 0.5→0.34（一圈 12.6s→18.5s 遊玩更久）
+  26-3：A/D 左右閃躲加回（pOff±1.2），與 ⚡ 跳躲並存——鳥鎖定「當時 pOff」位置，
+        落點幀玩家實際位置（含 pOff/jumpH）偏離 >0.95 = 閃過
    接口：start(park) / update(dt) / action() / abort()
    ════════════════════════════════════════════════════════════════ */
 'use strict';
@@ -28,6 +32,7 @@ const ParkWheel = {
   invuln: 0,
   hitFlash: null,
   jump: 0, jumpCd: 0, /* 25-6：⚡ 跳躲（拋物線） */
+  pOff: 0, /* 26-3：A/D 左右閃躲（與跳躲並存） */
 
   RIDE_SPEED: 0.34,   /* 26-2：輪放大 1.5x 後保持直線速度≈不變（一圈 12.6s→18.5s 遊玩更久） */
   HUB: { x: -20, y: 13.5, z: -14 }, /* 26-2：hub 9→13.5 */
@@ -77,7 +82,7 @@ const ParkWheel = {
     this.dodges = 0;
     this.invuln = 0;
     this.hitFlash = null;
-    this.jump = 0; this.jumpCd = 0;
+    this.jump = 0; this.jumpCd = 0; this.pOff = 0; /* 26-3 */
     for (let i = 0; i < 3; i++) {
       const b = this._makeBird(THREE);
       b.orbit.a = (i * Math.PI * 2) / 3;
@@ -93,7 +98,7 @@ const ParkWheel = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
-    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（⚡ 跳躲）';
+    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（A/D 左右躲＋⚡ 跳）';
     $('#park-prompt').classList.remove('hidden');
     sfx('pop');
   },
@@ -131,13 +136,13 @@ const ParkWheel = {
     };
   },
 
-  /* 24-2/25-6：預測 tAhead 秒後玩家位置（座艙基礎位；跳躲用高度差，無 x 偏移） */
+  /* 24-2/25-6/26-3：預測 tAhead 秒後玩家位置（含當時的 A/D 側閃 pOff；跳躲用高度差） */
   _predictPlayer(tAhead) {
     const park = this.park;
     const g0 = park.ferris.gondolas[0];
     const phi = g0.angle + park.wheelAngle + park.wheelSpeed * tAhead;
     return {
-      x: this.HUB.x + this.R_PATH * Math.cos(phi),
+      x: this.HUB.x + this.R_PATH * Math.cos(phi) + this.pOff, /* 26-3：鎖定位含側閃 */
       y: this.HUB.y + this.R_PATH * Math.sin(phi) - 1.28 + 3.0, /* 26-2 */
     };
   },
@@ -173,6 +178,15 @@ const ParkWheel = {
       s.mesh.rotation.y += dt * 2.5;
     }
 
+    /* 24-2b/26-3：A/D 左右閃躲（加回），無輸入緩慢回中 */
+    const ks = Game.keys;
+    let dx = (ks.has('right') ? 1 : 0) - (ks.has('left') ? 1 : 0);
+    if (dx === 0 && park.dpadDir) dx = park.dpadDir[0];
+    this.pOff += dx * 2.2 * dt;
+    if (dx === 0) this.pOff -= this.pOff * Math.min(1, dt * 2.5);
+    if (this.pOff > 1.2) this.pOff = 1.2;
+    if (this.pOff < -1.2) this.pOff = -1.2;
+
     /* 25-6：⚡ 跳躲——拋物線跳 4Hτ(1-τ)；落點幀 jumpH>0.95 = 鳥從腳下過 */
     this.jumpCd = Math.max(0, this.jumpCd - dt);
     let jumpH = 0;
@@ -183,10 +197,10 @@ const ParkWheel = {
     }
 
     /* 玩家坐在座艙上（z 偏離輪面 1.2 避免被輪圈管遮住；面向相機）；26-2：2.0→3.0 */
-    park.player.position.set(gx, gy + 3.0 + jumpH, gz + 1.2);
+    park.player.position.set(gx + this.pOff, gy + 3.0 + jumpH, gz + 1.2); /* 26-3：含側閃 */
 
-    /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置，含跳高） */
-    this._updateBirds(dt, gx, gy + 3.0 + jumpH);
+    /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置，含側閃與跳高） */
+    this._updateBirds(dt, gx + this.pOff, gy + 3.0 + jumpH);
 
     const camTarget = new THREE.Vector3(gx, gy + 3, gz + 13);
     park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 1.2));
@@ -206,7 +220,7 @@ const ParkWheel = {
 
     const fl = this.hitFlash ? `｜${this.hitFlash.text}` : '';
     $('#park-prompt').textContent =
-      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜⚡ 跳躲`;
+      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜A/D 躲＋⚡ 跳`;
   },
 
   /* 24-2：鳥群更新（orbit/tele/dive/pass/ret） */
@@ -340,7 +354,7 @@ const ParkWheel = {
     this.stars = [];
     for (const b of this.birds) park.scene.remove(b.group);
     this.birds = [];
-    this.jump = 0; this.jumpCd = 0;
+    this.jump = 0; this.jumpCd = 0; this.pOff = 0; /* 26-3 */
     this.active = false;
     park.wheelSpeed = 0.25;
     /* 玩家回站點 */
