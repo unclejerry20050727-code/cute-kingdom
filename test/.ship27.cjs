@@ -71,6 +71,34 @@ const { chromium } = require('playwright');
   console.log('R4 sync: ship.rotation.z =', r4sync.rot.toFixed(3), 'theta =', r4sync.th.toFixed(3));
   await p.screenshot({ path: '/tmp/s27-04-ride.png' });
 
+  /* R4b：頂端星（90°）未轉圈不可拿（先歸零星星狀態，排除自由擺動順手拿到的） */
+  await p.evaluate(() => {
+    for (const s of ParkShip.stars) { if (!s.top) { s.got = false; s.mesh.visible = true; } }
+    ParkShip.collected = 0;
+    Park3D.stars = 0;
+    document.querySelector('#park-star').textContent = '🌟 0';
+    ParkShip.theta = Math.PI / 2; ParkShip.omega = 0; ParkShip.decayT = 0; /* 靜止在頂端 */
+  });
+  await p.waitForTimeout(300);
+  const rTop = await p.evaluate(() => {
+    const top = ParkShip.stars.find((s) => s.top);
+    return { topGot: top.got, topVis: top.mesh.visible, collected: ParkShip.collected, flags: ParkShip.stars.map((s) => s.got ? 1 : 0), theta: +ParkShip.theta.toFixed(2) };
+  });
+  console.log('R4b topStarNoLoop:', JSON.stringify(rTop));
+
+  /* R4c：三顆擺幅星依序拿到（+50°/−50°/+115°） */
+  for (const [deg, need] of [[50, 1], [-50, 2], [115, 3]]) {
+    await p.evaluate((d) => { ParkShip.theta = d * Math.PI / 180; ParkShip.omega = 0.3; ParkShip.decayT = 0; }, deg);
+    await p.waitForFunction((n) => ParkShip.collected >= n, need, { timeout: 30000 });
+  }
+  const rStars = await p.evaluate(() => ({
+    collected: ParkShip.collected,
+    parkStars: Park3D.stars,
+    hud: document.querySelector('#park-star').textContent,
+    meshes: ParkShip.stars.filter((s) => s.got && s.mesh.visible).length,
+  }));
+  console.log('R4c stars:', JSON.stringify(rStars));
+
   /* R5：強制到 40s → 結算 3s → cleanup */
   await p.evaluate(() => { ParkShip.t = ParkShip.DURATION; });
   await p.waitForFunction(() => !ParkShip.active, null, { timeout: 30000 });
@@ -87,6 +115,7 @@ const { chromium } = require('playwright');
     cam: Park3D.camera.position.x.toFixed(1) + ',' + Park3D.camera.position.y.toFixed(1) + ',' + Park3D.camera.position.z.toFixed(1),
     camUp: Park3D.camera.up.y.toFixed(2),
     shipRot: +Park3D.pirate.ship.rotation.z.toFixed(3),
+    starsLeft: ParkShip.stars.length,
   }));
   console.log('R6 cleanup:', JSON.stringify(r6));
   console.log('pageErr:', errs.length, errs.slice(0, 3));
@@ -96,10 +125,12 @@ const { chromium } = require('playwright');
     && Math.abs(r2.omega - 0.73) < 0.05
     && r3a.flash && r3a.flash.includes('按錯') && r3b.E < r3b.E0 * 0.8
     && Math.abs(r4sync.rot - r4sync.th) < 0.02
+    && rTop.topGot === false && rTop.topVis === true && rTop.collected === 0
+    && rStars.collected === 3 && rStars.parkStars === 3 && rStars.hud.includes('3') && rStars.meshes === 0
     && r5.rideTmp === true
     && r6.pp === '12.5,10.5' && r6.vis === true && r6.fov === 52
     && r6.cam === '0.0,19.0,34.0' && Math.abs(r6.camUp - 1) < 0.01
-    && Math.abs(r6.shipRot) < 0.01;
+    && Math.abs(r6.shipRot) < 0.01 && r6.starsLeft === 0;
   console.log(pass ? 'PASS: ship27' : 'FAIL: ship27');
   process.exit(pass ? 0 : 1);
 })().catch(e => { console.error('FAIL', e.message); process.exit(1); });

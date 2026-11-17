@@ -419,7 +419,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 
 ## 27-1 park3d：海盜船幾何＋站點 ✅（buildPirateShip：base A-frame 11 件＋ship group 20 件；station ship；action 映射 ship:window.ParkShip；截圖 s27-01 全景/s27-02 θ=0/s27-03 θ=90 驗證，pageErr 0）
 ## 27-2 park-ship.js：物理＋第一人稱＋上船/結束/cleanup（基本慢擺）✅（ParkShip：單擺 G5/L8 c0.02、初始ω0.35、泵±0.38/OMAX2.3、按錯 decay1.8s c0.45、fov60 第一人稱 cam=−3.3f+2.0u、40s→3s結算→cleanup 船歸位/玩家回(12.5,10.5)/fov52；index.html 掛載 park-ship.js；.ship27 PASS（泵對0.347→0.722/按錯E衰減26%/rotation.z同步/cleanup全還原），pageErr 0）
-## 27-3 ⚡ 加速/減速時機＋3 星＋prompt 回饋
+## 27-3 ⚡ 加速/減速時機＋3 星＋prompt 回饋 ✅（4 星置入：R_STAR 8.3、+50/−50/115° 擺幅星＋90° 頂端星（top&&非loopActive不可拿）；角度窗口0.24rad、park.addStar+blip；.ship27 加 R4b/R4c（頂端星拿不到+3星依序拿到+HUD🌟3+cleanup移除），PASS）
 ## 27-4 加速線條（超速再加速）
 ## 27-5 轉一圈＋頂端星＋緊閉眼睛嘔吐 gag
 ## 27-6 驗證：.ship27＋回歸＋push＋live smoke

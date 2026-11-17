@@ -32,6 +32,10 @@ const ParkShip = {
   DURATION: 40,
   PIVOT: { x: 17.5, y: 11.5, z: 9.5 },
   CAM: { back: 3.3, up: 2.0, look: 10 },
+  /* 27-3：4 顆星（船頭半徑 8.3 的固定世界角；+90° 頂端星只在完整轉圈 loopActive 時可拿） */
+  R_STAR: 8.3,
+  STAR_ANGLES: [50 * Math.PI / 180, -50 * Math.PI / 180, 115 * Math.PI / 180, Math.PI / 2],
+  STAR_WIN: 0.24,
 
   start(park) {
     this.park = park;
@@ -41,6 +45,17 @@ const ParkShip = {
     this.t = 0; this.collected = 0; this.stars = [];
     this.loopActive = false; this.loopTotal = 0; this.settleT = 0; this.vomitT = 0;
     park.pirate.ship.rotation.z = 0;
+
+    /* 27-3：4 顆星（金色八面體，繞軸旋轉漂浮） */
+    const THREE = window.THREE;
+    this.stars = [];
+    for (const a of this.STAR_ANGLES) {
+      const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.6),
+        new THREE.MeshLambertMaterial({ color: 0xffd34d, emissive: 0x8a6a00 }));
+      m.position.set(this.PIVOT.x + this.R_STAR * Math.cos(a), this.PIVOT.y + this.R_STAR * Math.sin(a), this.PIVOT.z);
+      park.scene.add(m);
+      this.stars.push({ mesh: m, angle: a, got: false, top: a === Math.PI / 2 });
+    }
 
     park.camera.fov = 60; /* 27-2：第一人稱廣角（cleanup 恢復 52） */
     park.camera.updateProjectionMatrix();
@@ -106,6 +121,20 @@ const ParkShip = {
 
     this._tick(dt);
 
+    /* 27-3：星星收集（船頭經過角度窗口 0.24rad；頂端星要 loopActive） */
+    for (const s of this.stars) {
+      if (s.got) continue;
+      s.mesh.rotation.y += dt * 2.5;
+      if (s.top && !this.loopActive) continue;
+      let d = (this.theta - s.angle) % (2 * Math.PI);
+      if (d > Math.PI) d -= 2 * Math.PI;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      if (Math.abs(d) < this.STAR_WIN) {
+        s.got = true; s.mesh.visible = false;
+        this.collected++;
+        park.addStar(1);
+      }
+    }
     /* prompt：甩高角度＋星星＋教學 */
     if (this.pumpFlash) { this.pumpFlash.t -= dt; if (this.pumpFlash.t <= 0) this.pumpFlash = null; }
     const deg = Math.round(Math.abs(this._wrap(this.theta)) * 180 / Math.PI);
@@ -154,7 +183,8 @@ const ParkShip = {
   _cleanup(awarded) {
     const park = this.park;
     park.pirate.ship.rotation.z = 0;
-    /* 27-3/27-5：星星/粒子/overlay 清理在此補 */
+    for (const s of this.stars) park.scene.remove(s.mesh); /* 27-3 */
+    this.stars = [];
     park.player.visible = true;
     park.shadow.visible = true;
     park.player.position.set(12.5, 1.5, 10.5);
