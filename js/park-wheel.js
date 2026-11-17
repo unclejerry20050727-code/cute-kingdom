@@ -53,6 +53,9 @@ const ParkWheel = {
     this.startAngle = park.wheelAngle;
     this.collected = 0;
     park.wheelSpeed = this.RIDE_SPEED;
+    /* 26-4：全景 fov（cleanup 恢復 52） */
+    park.camera.fov = 60;
+    park.camera.updateProjectionMatrix();
 
     /* 玩家坐上 0 號座艙 */
     park.player.visible = true;
@@ -202,14 +205,11 @@ const ParkWheel = {
     /* 24-2：鳥群盤旋／俯衝／命中判定（玩家實際位置，含側閃與跳高） */
     this._updateBirds(dt, gx + this.pOff, gy + 3.0 + jumpH);
 
-    const camTarget = new THREE.Vector3(gx, gy + 3, gz + 13);
-    park.player.rotation.y = Math.atan2(camTarget.x - gx, camTarget.z - (gz + 1.2));
-
-    /* 相機跟座艙 */
-    const look = new THREE.Vector3(gx, gy + 1.2, gz);
-    const k = 1 - Math.exp(-4 * dt);
-    park.camera.position.lerp(camTarget, k);
-    park.camera.lookAt(look);
+    /* 26-4：固定全景鏡頭對 hub——整個大輪＋鳥群逼近全入畫（取代跟座艙近景） */
+    const camPos = new THREE.Vector3(this.HUB.x, this.HUB.y + 2, this.HUB.z + 26);
+    park.player.rotation.y = Math.atan2(camPos.x - (gx + this.pOff), camPos.z - (gz + 1.2));
+    park.camera.position.copy(camPos);
+    park.camera.lookAt(this.HUB.x, this.HUB.y, this.HUB.z);
 
     /* 一圈完成？ */
     const lap = park.wheelAngle - this.startAngle;
@@ -367,6 +367,8 @@ const ParkWheel = {
     park.redrawAll(0.5, false);
     park.camera.position.set(0, 19, 34);
     park.camera.lookAt(0, 4, -5);
+    park.camera.fov = 52; /* 26-4：恢復全景 fov */
+    park.camera.updateProjectionMatrix();
     park.ride = null;
     park.nearStation = null;
     park.hidePrompt();
