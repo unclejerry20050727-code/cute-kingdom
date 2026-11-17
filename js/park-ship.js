@@ -25,10 +25,12 @@ const ParkShip = {
   loopTotal: 0,        /* 27-5：本圈累積角度 */
   settleT: 0,          /* 27-5：圈完成後收斂計時 */
   vomitT: 0,           /* 27-5：嘔吐 gag 剩餘秒 */
+  speedlineT: 0,       /* 27-4：加速線閃現剩餘秒 */
 
   G: 5, L: 8,
   C_BASE: 0.02, C_WRONG: 0.45, C_SETTLE: 0.8,
   PUMP_WIN: 0.28, OMIN: 0.12, PUMP_KICK: 0.38, OMAX: 2.3,
+  SPEED_OMEGA: 1.2, /* 27-4：超速線——再泵時 |ω|>此值才閃加速線 */
   DURATION: 40,
   PIVOT: { x: 17.5, y: 11.5, z: 9.5 },
   CAM: { back: 3.3, up: 2.0, look: 10 },
@@ -43,7 +45,7 @@ const ParkShip = {
     this.theta = 0; this.omega = 0.35; /* 初始小擺（幅≈25°），一上船就看到擺動 */
     this.decayT = 0; this.pumpFlash = null;
     this.t = 0; this.collected = 0; this.stars = [];
-    this.loopActive = false; this.loopTotal = 0; this.settleT = 0; this.vomitT = 0;
+    this.loopActive = false; this.loopTotal = 0; this.settleT = 0; this.vomitT = 0; this.speedlineT = 0;
     park.pirate.ship.rotation.z = 0;
 
     /* 27-3：4 顆星（金色八面體，繞軸旋轉漂浮） */
@@ -77,6 +79,12 @@ const ParkShip = {
       this.omega = clamp(this.omega + this.PUMP_KICK * Math.sign(this.omega), -this.OMAX, this.OMAX);
       this.pumpFlash = { t: 0.9, text: '⚡ 泵了! 越甩越高' };
       sfx('whoosh');
+      /* 27-4：超速（|ω|>1.2）再泵 → 加速線閃 0.7s（複用雲霄 #park-speedlines） */
+      if (Math.abs(this.omega) > this.SPEED_OMEGA) {
+        this.speedlineT = 0.7;
+        const slEl = document.getElementById('park-speedlines');
+        if (slEl) slEl.classList.add('on');
+      }
     } else {
       this.decayT = 1.8;
       this.pumpFlash = { t: 0.9, text: '🐢 按錯時機、慢慢減速…' };
@@ -121,6 +129,15 @@ const ParkShip = {
 
     this._tick(dt);
 
+    /* 27-4：加速線計時器到期移除 */
+    if (this.speedlineT > 0) {
+      this.speedlineT -= dt;
+      if (this.speedlineT <= 0) {
+        const slEl = document.getElementById('park-speedlines');
+        if (slEl) slEl.classList.remove('on');
+      }
+    }
+
     /* 27-3：星星收集（船頭經過角度窗口 0.24rad；頂端星要 loopActive） */
     for (const s of this.stars) {
       if (s.got) continue;
@@ -159,6 +176,9 @@ const ParkShip = {
   _finish() {
     const park = this.park;
     this.active = false;
+    this.speedlineT = 0; /* 27-4：結算期不再閃加速線 */
+    const slEl = document.getElementById('park-speedlines');
+    if (slEl) slEl.classList.remove('on');
     park.ride = {
       update: (dt) => {
         ParkShip._tick(dt, ParkShip.C_SETTLE); /* 結算 3s 內船慢慢擺回 */
@@ -183,6 +203,9 @@ const ParkShip = {
   _cleanup(awarded) {
     const park = this.park;
     park.pirate.ship.rotation.z = 0;
+    const slEl = document.getElementById('park-speedlines'); /* 27-4：清特效 */
+    if (slEl) slEl.classList.remove('on');
+    this.speedlineT = 0;
     for (const s of this.stars) park.scene.remove(s.mesh); /* 27-3 */
     this.stars = [];
     park.player.visible = true;

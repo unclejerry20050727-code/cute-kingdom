@@ -99,6 +99,24 @@ const { chromium } = require('playwright');
   }));
   console.log('R4c stars:', JSON.stringify(rStars));
 
+  /* R4d：加速線——超速（|ω|>1.2）泵對閃 0.7s；低速泵不閃 */
+  await p.evaluate(() => {
+    ParkShip.theta = 0; ParkShip.omega = 1.4; ParkShip.decayT = 0;
+    ParkShip.action();
+  });
+  const sl1 = await p.evaluate(() => document.querySelector('#park-speedlines').classList.contains('on'));
+  await p.waitForFunction(() => !document.querySelector('#park-speedlines').classList.contains('on'), null, { timeout: 30000 });
+  const sl2 = await p.evaluate(() => ({
+    on: document.querySelector('#park-speedlines').classList.contains('on'),
+    t: ParkShip.speedlineT,
+  }));
+  const sl3 = await p.evaluate(() => {
+    ParkShip.theta = 0; ParkShip.omega = 0.8; ParkShip.decayT = 0;
+    ParkShip.action(); /* 0.8+0.38=1.18 < 1.2，不該閃 */
+    return document.querySelector('#park-speedlines').classList.contains('on');
+  });
+  console.log('R4d speedlines:', JSON.stringify({ fast: sl1, after: sl2, low: sl3 }));
+
   /* R5：強制到 40s → 結算 3s → cleanup */
   await p.evaluate(() => { ParkShip.t = ParkShip.DURATION; });
   await p.waitForFunction(() => !ParkShip.active, null, { timeout: 30000 });
@@ -127,6 +145,7 @@ const { chromium } = require('playwright');
     && Math.abs(r4sync.rot - r4sync.th) < 0.02
     && rTop.topGot === false && rTop.topVis === true && rTop.collected === 0
     && rStars.collected === 3 && rStars.parkStars === 3 && rStars.hud.includes('3') && rStars.meshes === 0
+    && sl1 === true && sl2.on === false && sl2.t <= 0 && sl3 === false
     && r5.rideTmp === true
     && r6.pp === '12.5,10.5' && r6.vis === true && r6.fov === 52
     && r6.cam === '0.0,19.0,34.0' && Math.abs(r6.camUp - 1) < 0.01
