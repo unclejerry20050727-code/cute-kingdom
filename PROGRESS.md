@@ -390,3 +390,8 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 | 26-3 A/D＋跳雙模式 | A/D 左右側閃 pOff±1.2（加回）與 ⚡ 跳並存；鳥鎖定位含當時 pOff，落點幀用玩家實際位置（pOff+jumpH）判定；prompt「A/D 躲＋⚡ 跳」 | .wheel26 PASS：被啄/A/D閃(pOff1.2)/跳躲(cd1.4)/清理 pOff0 |
 | 26-4 全景鏡頭 | 固定鏡頭對 hub（pos HUB+2/+26、lookAt hub、fov 52→60），整輪＋鳥群全入畫；cleanup 恢復 fov 52 | /tmp/w26-05-wide.png 整輪＋3鳥＋4星全見；.wheel26 回歸 PASS |
 | 26-5 回歸 | 11/11 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）；.catch24＋.wheel26 PASS；shots/ 已還原 | 見下方 push/live smoke |
+
+## Round 26 push / live 驗證
+- push：`7be5e70..f9ef4ad main -> main`（26-0~26-5 共 6 commits）
+- live smoke：.smoke22 PASS（pageErr 0）
+- live 代碼確認：park-wheel.js 含 26 標記 16 行（pOff/fov 60/RIDE_SPEED 0.34）
