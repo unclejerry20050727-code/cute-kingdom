@@ -7,6 +7,8 @@
    - 加速線條（27-4）：|ω|>1.2 再按對 → #park-speedlines 閃 0.7s
    - 轉一圈（27-5）：|ω|>0.6 過 ±π = 真過頂 → 嘔吐 gag；累積 360° = 圈完成
      → 強阻尼收斂 → 底部穩定/4s → 結束
+   - 28.5-A：主角臉部特寫小框（右上角，FPV 看不到自己→旁側小框全程顯示表情：
+     calm/fun/excited/panic/vomit 五層＋眨眼/gaze/頭汗/落淚）
    - 40s 限時；結束 → awardStars('ship', n) → cleanup（船歸位、玩家回站點）
    接口：start(park) / update(dt) / action() / abort()
    ════════════════════════════════════════════════════════════════ */
@@ -76,6 +78,11 @@ const ParkShip = {
     $('#park-action').classList.remove('near');
     $('#park-prompt').classList.remove('hidden');
     sfx('pop');
+
+    /* 28.5-A：臉部特寫小框（FPV 看不到自己→旁側顯示表情） */
+    this._ensureFacebox();
+    this._blinkTimer = 1.5 + Math.random() * 2; this._blinkOn = 0;
+    this._faceboxShow(true);
   },
 
   action() { /* 27-2：⚡ 泵（最低點按對加速；按錯慢減速） */
@@ -99,6 +106,20 @@ const ParkShip = {
   },
 
   /* ── 27-5：嘔吐 gag（緊閉><眼大頭彈出 + 綠色粒子 + 綠暈） ── */
+  /* >< 緊閉眼（28.5-A：嘔吐大頭與臉部小框共用）——drawFace 眼中心 = x±0.38R, y+0.1R 附近 */
+  _drawSquint(ctx, cx, cy, R) {
+    const ex = R * 0.38, ey = cy + R * 0.10, l = R * 0.17;
+    ctx.strokeStyle = '#3a2417';
+    ctx.lineWidth = Math.max(3, R * 0.055);
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      const x = cx + side * ex;
+      ctx.beginPath();
+      ctx.moveTo(x - l, ey - l); ctx.lineTo(x + l, ey + l);
+      ctx.moveTo(x + l, ey - l); ctx.lineTo(x - l, ey + l);
+      ctx.stroke();
+    }
+  },
   _ensureFace() {
     if (this._faceCvs) return;
     const c = document.createElement('canvas');
@@ -107,19 +128,111 @@ const ParkShip = {
     const ctx = c.getContext('2d');
     const cfg = Object.assign({}, Game.playerCfg, { mouthShape: 'open' });
     drawPortrait(ctx, cfg, 200, { eyesClosed: true, t: 0.2, gaze: 0 });
-    /* >< 緊閉眼：蓋掉溫柔閉眼弧（drawFace 眼中心 = x±0.38R, y+0.12R） */
-    const x = 100, y = 112, R = 72, ex = R * 0.38, ey = y + R * 0.12;
-    ctx.strokeStyle = '#3a2417';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    for (const side of [-1, 1]) {
-      const cx = x + side * ex, l = R * 0.17;
-      ctx.beginPath();
-      ctx.moveTo(cx - l, ey - l); ctx.lineTo(cx + l, ey + l);
-      ctx.moveTo(cx + l, ey - l); ctx.lineTo(cx - l, ey + l);
-      ctx.stroke();
-    }
+    /* >< 緊閉眼：蓋掉溫柔閉眼弧 */
+    this._drawSquint(ctx, 100, 112, 72);
     this._faceCvs = c;
+  },
+
+  /* ── 28.5-A：主角臉部特寫小框（FPV 看不到自己的表情→旁側小框全程顯示）── */
+  _ensureFacebox() {
+    if (this._facebox) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const box = document.createElement('div');
+    box.id = 'park-facebox';
+    Object.assign(box.style, {
+      position: 'absolute', top: '72px', right: '14px',
+      width: '128px', height: '128px',
+      pointerEvents: 'none', zIndex: '7',
+      background: 'var(--panel)', border: '4px solid var(--panel-border)',
+      borderRadius: '28px', boxShadow: 'var(--shadow)',
+      opacity: '0', transform: 'scale(.6)',
+      transition: 'opacity .22s ease, transform .22s cubic-bezier(.34,1.56,.64,1)',
+    });
+    const c = document.createElement('canvas');
+    c.width = c.height = Math.round(128 * dpr);
+    c.style.cssText = 'width:100%;height:100%;display:block';
+    box.appendChild(c);
+    document.getElementById('screen-park3d').appendChild(box);
+    this._facebox = box;
+    this._faceboxCvs = c;
+    this._blinkTimer = 1.5 + Math.random() * 2;
+    this._blinkOn = 0;
+    this._faceState = null;
+  },
+  _faceboxShow(on) {
+    if (!this._facebox) return;
+    this._facebox.style.opacity = on ? '1' : '0';
+    this._facebox.style.transform = on ? 'scale(1)' : 'scale(.6)';
+  },
+  /* 28.5-A：表情分層——calm(小擺微笑)→fun(中等擺)→excited(|ω|>0.95 張嘴)
+     →panic(loopActive 或 |ω|>1.45：張嘴＋頭汗)→vomit(><＋張嘴＋落淚＋綠暈＋頭抖) */
+  _updateFace(dt) {
+    if (!this._faceboxCvs) return;
+    const c = this._faceboxCvs, ctx = c.getContext('2d');
+    const S = c.width;
+    const w = Math.abs(this.omega);
+    const vom = this.vomitT > 0;
+    const panic = vom || this.loopActive || w > 1.45;
+    const excited = !panic && w > 0.95;
+
+    /* 自然眨眼（panic/vomit 不眨） */
+    if (!panic) {
+      this._blinkTimer -= dt;
+      if (this._blinkTimer <= 0) { this._blinkTimer = 2.2 + Math.random() * 2.4; this._blinkOn = 0.12; }
+    }
+    let blink = 0;
+    if (this._blinkOn > 0) { this._blinkOn -= dt; blink = 1; }
+
+    const cfg = Object.assign({}, Game.playerCfg, {
+      mouthShape: panic || excited ? 'open' : 'smile',
+    });
+    const gaze = panic ? 0 : clamp(this.omega * 0.6, -1, 1);
+
+    ctx.clearRect(0, 0, S, S);
+    ctx.save();
+    /* 頭部：嘔吐時抖動，否則隨角速度傾斜＋輕微浮動 */
+    let rot = 0, shx = 0, shy = 0;
+    if (vom) {
+      rot = (Math.random() - 0.5) * 0.14;
+      shx = (Math.random() - 0.5) * S * 0.04;
+    } else {
+      rot = clamp(this.omega * 0.1, -0.22, 0.22);
+      shy = Math.sin(this.t * 2.2) * S * 0.012;
+    }
+    ctx.translate(S / 2 + shx, S / 2 + shy);
+    ctx.rotate(rot);
+    ctx.translate(-S / 2, -S / 2);
+    drawPortrait(ctx, cfg, S, { t: this.t, gaze, blink });
+
+    /* 疊加（與 drawPortrait 臉對齊：x=S/2, y=S*0.56, R=S*0.36） */
+    const x = S / 2, y = S / 2 + S * 0.06, R = S * 0.36;
+    if (vom) {
+      this._drawSquint(ctx, x, y, R);
+      /* 淚：眼下落淚滴（循環落下） */
+      const ph = (this.t * 1.4) % 1;
+      ctx.fillStyle = 'rgba(110,190,235,0.95)';
+      for (const side of [-1, 1]) {
+        const tx = x + side * R * 0.38, ty = y + R * 0.26 + ph * R * 0.3;
+        ctx.beginPath();
+        ctx.ellipse(tx, ty, R * 0.05, R * 0.075, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(140,210,80,0.14)';
+      ctx.fillRect(0, 0, S, S);
+    } else if (panic) {
+      /* 頭汗：兩太陽穴（輕彈跳） */
+      ctx.fillStyle = 'rgba(120,190,235,0.9)';
+      const b = Math.sin(this.t * 9);
+      for (const [sx, sy] of [[x - R * 0.8, y - R * 0.5 + b * R * 0.05], [x + R * 0.84, y - R * 0.36 - b * R * 0.05]]) {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - R * 0.24);
+        ctx.quadraticCurveTo(sx + R * 0.14, sy - R * 0.02, sx, sy + R * 0.12);
+        ctx.quadraticCurveTo(sx - R * 0.14, sy - R * 0.02, sx, sy - R * 0.24);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    this._faceState = vom ? 'vomit' : panic ? 'panic' : excited ? 'excited' : w > 0.5 ? 'fun' : 'calm';
   },
   _spawnVomit() {
     const THREE = window.THREE, park = this.park;
@@ -198,6 +311,9 @@ const ParkShip = {
     this.t += dt;
 
     this._tick(dt);
+
+    /* 28.5-A：臉部小框每幀重繪（表情隨 ω/loopActive/vomitT） */
+    this._updateFace(dt);
 
     /* 27-5：轉圈——能量足夠（E>LOOP_ENGARM）即上膛（頂端星可拿）；
        跨 ±π 且 |ω|>LOOMIN = 真翻頂 → 嘔吐 gag；累滿 360° → settle 收斂 */
@@ -291,6 +407,7 @@ const ParkShip = {
     park.ride = {
       update: (dt) => {
         ParkShip._tick(dt, ParkShip.C_SETTLE); /* 結算 3s 內船慢慢擺回 */
+        ParkShip._updateFace(dt); /* 28.5-A：結算期繼續顯示（慢慢回 calm） */
         park.ride._t = (park.ride._t || 3) - dt;
         if (park.ride._t <= 0) ParkShip._cleanup(true);
       },
@@ -311,6 +428,7 @@ const ParkShip = {
 
   _cleanup(awarded) {
     const park = this.park;
+    this._faceboxShow(false); /* 28.5-A：收小框 */
     park.pirate.ship.rotation.z = 0;
     const slEl = document.getElementById('park-speedlines'); /* 27-4：清特效 */
     if (slEl) slEl.classList.remove('on');
