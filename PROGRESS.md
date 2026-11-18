@@ -423,3 +423,29 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 27-4 加速線條（超速再加速）✅（|ω|>1.2 再泵對→複用 #park-speedlines 閃 0.7s，遊戲時間計時器、結算/清理移除；.ship27 加 R4d（fast閃/到期消失/低速不閃）PASS）
 ## 27-5 轉一圈＋頂端星＋緊閉眼睛嘔吐 gag ✅（能量上膛：E=½ω²+(G/L)(1−cosθ)>1.43→loopActive（頂端星可拿；正轉時船頭 90° 先於 ±π 過頂，故用能量而非跨頂上膛）；跨 ±π 且 |ω|>0.6 真翻頂→嘔吐 gag 2.2s：drawPortrait(eyesClosed+mouth open)+>< 緊閉眼大頭彈出(#park-vomit-face)+12 綠粒子(重力−5)+#park-vomit 綠暈+sfx vomit；累 360°→settle c0.8 收斂/4s→「傳奇一圈」；cleanup 清粒子/綠暈/加速線；.ship27 加 R4e（gag 觸發+頂端星第4顆+自然收尾 4/4+清理）全 PASS、倒轉 gag 截圖確認）
 ## 27-6 驗證：.ship27＋回歸＋push＋live smoke ✅（.ship27 全流程 PASS（含 R4e 轉圈 gag 4/4）；.catch24＋.wheel26 PASS；11/11 回歸 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park）；shots/ 已還原；push 7b211ba，live smoke PASS、live park-ship.js 含 27-5 標記、#park-vomit 在位）
+
+# 第二十八輪：學校＋時間系統（Jerry 需求 2026-07）
+
+## 需求（原文要點）
+1. **新地點：學校**——沿「出門那條路」繼續**往下**蓋學校（地圖路底端）
+2. 學校裡可以上**課程**；**一開始進去先給教學**；教學結束後跳出**很大的字「你想要選哪一堂課上」**；**一次先選 4 堂**
+3. **課表 8 門課**：家具課、烹飪課、釣魚課、花藝課、咖啡課（做咖啡，≠烹飪）、體育課（鍛鍊體力）、寵物課（照顧寵物）、跳舞課
+4. **時間系統**：從 **1/1 開始、沒有年份**；**1 秒＝1 遊戲分鐘**（1 分鐘＝1 小時）；顯示**左下角、小小的**、**一樣字體（RHR）但較不同顏色**、不與背景重疊
+
+## 設計（28-0）
+- **時鐘**：`Game.clock = { day, month, hour, min }`，新遊戲起始 **1/1 08:00**（起床時間）；1 秒＋1 分；min→hour→day→month（月長 [31,28,31,30,31,30,31,31,30,31,30,31]，12→1 循環無年）；`Game.clockAcc` 累計 dt；DOM 小膠囊 `#clock-badge`（#screen-game 內左下角，RHR 字、藍色系配色 `#EAF6FC` 底＋`#4A9BC4` 邊＋`#2F6E96` 字，與綠草地/米白路都區分）；顯示格式 `🕐 1/1 08:05`（純數字+:/，無新 CJK）；僅分鐘變動寫 DOM；state==='game' 才走時；存檔 `clock` 進 fullSave（舊檔補預設 1/1 08:00）
+- **學校位置（mapscene.js）**：`SC = { x: 490, y: 585 }` 路底端脈衝點（紫色系，區分麥當勞棕/遊樂園粉）；學校建築畫靜態底圖：x 350~630、y 505~655（壓住路尾，像路的終點站）——紅磚牆＋大屋頂＋門廊＋招牌「學校」＋校鐘＋旗杆＋兩棵小樹；點擊 34px 內 → `enterSchool()`
+- **學校 screen（仿 shop/work 的 .screen 覆蓋層）**：`#screen-school`＋sub 'school'；setSub 掛 screen 顯示/隱藏；Esc/✕ → 回 map
+- **流程**：首次進入 → Dialogue 教學（小宥帶路：歡迎來學校/這裡能選課/一次選4堂/學到技能）→ 結束後大標題 `school-big-q`「你想要選哪一堂課上？」（彈跳動畫大字）＋課卡格（8 張：emoji+名稱+一句介紹，點擊 toggles 選/不選，上限 4、選滿才可按「選好啦！」）→ 確認：sfx ding、toast「選定 4 堂課！」、`Game.school.selected` 存檔、顯示課表（4 張已選卡＋✅已學會）；**再進入**（visited）：跳過教學直接顯示課表＋「重新選課」按鈕
+- **資料**：`SCHOOL_COURSES`（game.js 頂端）：furniture 🪑家具課/做家具、cooking 🍳烹飪課/做菜、fishing 🎣釣魚課/釣魚、flower 💐花藝課/插花、coffee ☕咖啡課/做咖啡、sport ⚽體育課/鍛鍊體力、pet 🐾寵物課/照顧寵物、dance 💃跳舞課/跳舞
+- **狀態**：`Game.school = { visited: false, selected: [] }`；fullSave 加 `school`；beginGame 補預設（舊檔 `visited:false`）
+- **技能效果（本輪範圍）**：選課＝「已學會」徽章＋課表（存檔）；每門課的實際玩法（做家具/煮咖啡/釣魚…）留待後續輪
+- **字型**：新中文（學校/課程/選課/教學/體育/寵物/跳舞/烹飪/釣魚/花藝/咖啡/家具…）→ 重跑 `/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf`＋`?v=` +1（與 28-3 同 commit）
+- **注意**：map 走路範圍 y 182~640 不變（學校門前 585 可走到）；地圖花/草随机生成要避開學校區；flow.mjs 等回歸若斷言地圖內容需留意
+
+## 28-1 時間系統（Game.clock＋#clock-badge＋存檔）
+## 28-2 地圖學校（mapscene 建築＋紫色脈衝點 SC＋enterSchool 觸發）
+## 28-3 學校 screen＋教學＋選課 UI（8 課選 4＋大標題＋課表＋再進跳教學）
+## 28-4 選課存檔＋技能狀態＋字型重跑
+## 28-5 測試 .school28（時鐘走針/進學校/教學/選4/課表/再進/回歸）
+## 28-6 回歸 11 套＋.ship27/.catch24/.wheel26＋push＋live smoke
