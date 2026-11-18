@@ -473,4 +473,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 4 張截圖：s28-02 地圖學校 / s28-03 教學 / s28-04 選課(4選中) / s28-05 課表+toast
 
 ## 28-6 回歸 11 套＋.ship27/.catch24/.wheel26＋push＋live smoke
-- ⬜ 待做
+- ✅ **完成**：14 套回歸全 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park/.ship27/.catch24/.wheel26）＋本輪 .clock28/.school28；shots/ 已還原；push `686acbe..135a6e2`（28-0/28-1/28-2~28-5 三 commit）
+- ✅ **live smoke**：`node test/.smoke22.cjs` **PASS**（pageErr 0）；live 標記確認：index 含 clock-badge＋screen-school、game.js 含 SCHOOL_COURSES、mapscene 含 drawSchool、style.css ?v=21、fonts/rhr-900.woff2 新尺寸 254008B（今日重建）
+
+> **第二十八輪完成 ✅**（2026-11-18）：學校上線（地圖建築＋小宥教學＋8選4選課＋課表/換課＋存檔）＋時間系統（1/1 08:00 起無年、1秒=1遊戲分、左下角藍膠囊）；14 套回歸＋.clock28/.school28 全 PASS；push 135a6e2、live smoke PASS。
