@@ -563,6 +563,19 @@ body {
 }
 .money-badge { left: 214px; }
 
+/* 第二十八輪：左下角時鐘（小、RHR 字、藍色系—與綠草地/米白路都區分） */
+#clock-badge {
+  position: absolute; left: 14px; bottom: 176px; /* dpad 佔左下角 168px，時鐘貼在它上方 */
+  background: #EAF6FC;
+  border: 3px solid #4A9BC4;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 15px; font-weight: 700; color: #2F6E96;
+  box-shadow: 0 4px 0 rgba(74, 155, 196, .3);
+  pointer-events: none;
+  z-index: 15;
+}
+
 /* 地圖：回家 */
 .map-home-btn { top: 74px; right: 16px; bottom: auto; }
 

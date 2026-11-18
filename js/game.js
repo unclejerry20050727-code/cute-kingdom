@@ -33,6 +33,9 @@ const Game = {
   work: { unlocked: 1, best: {} },
   /* 第十八輪：遊樂園星星與最佳紀錄（1★=2🪙） */
   park: { stars: 0, best: { coaster: 0, catch: 0, wheel: 0 } },
+  /* 第二十八輪：時間（1/1 起、無年；1 秒＝1 遊戲分鐘） */
+  clock: { month: 1, day: 1, hour: 8, min: 0 },
+  clockAcc: 0, clockText: '',
   /* 地圖 */
   mapP: { x: 490, y: 195, facing: 'down', walkT: 0, walking: false },
   mouse: { wx: 0, wy: 0, tx: 0, ty: 0 },
@@ -161,6 +164,11 @@ function beginGame(save, skipIntro) {
     stars: (save.park && save.park.stars) || 0,
     best: Object.assign({ coaster: 0, catch: 0, wheel: 0 }, save.park && save.park.best),
   };
+  /* 第二十八輪：時間（舊存檔補預設 1/1 08:00） */
+  Game.clock = (save.clock && typeof save.clock.day === 'number')
+    ? save.clock
+    : { month: 1, day: 1, hour: 8, min: 0 };
+  Game.clockAcc = 0;
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -177,6 +185,7 @@ function beginGame(save, skipIntro) {
     document.getElementById(id).classList.add('hidden');
   }
   $('#screen-game').classList.remove('hidden');
+  $('#clock-badge').classList.remove('hidden'); /* 第二十八輪：左下角時鐘 */
   Dialogue.close();
 
   if (skipIntro) {
@@ -235,6 +244,38 @@ function syncMoneyUI() {
   const inWorld = ['free', 'goOut', 'map', 'work'].includes(Game.sub);
   $('#hud-money').classList.toggle('hidden', !inWorld);
   if (typeof Game.money === 'number') $('#hud-money-val').textContent = Game.money;
+}
+
+/* ══════════ 第二十八輪：時間系統（1/1 起無年；1 秒＝1 遊戲分鐘） ══════════ */
+const CLOCK_DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+function advanceClockMinute() {
+  const c = Game.clock;
+  c.min++;
+  if (c.min >= 60) {
+    c.min = 0; c.hour++;
+    if (c.hour >= 24) {
+      c.hour = 0; c.day++;
+      if (c.day > CLOCK_DIM[c.month - 1]) {
+        c.day = 1; c.month++;
+        if (c.month > 12) c.month = 1; /* 無年份：12 月後回 1 月 */
+      }
+    }
+  }
+}
+function clockText() {
+  const c = Game.clock;
+  return `🕐 ${c.month}/${c.day} ${String(c.hour).padStart(2, '0')}:${String(c.min).padStart(2, '0')}`;
+}
+function tickClock(dt) {
+  if (Game.state !== 'game') return;
+  Game.clockAcc = (Game.clockAcc || 0) + dt;
+  let changed = false;
+  while (Game.clockAcc >= 1) { Game.clockAcc -= 1; advanceClockMinute(); changed = true; }
+  if (changed || Game.clockText === '') {
+    Game.clockText = clockText();
+    const el = $('#clock-badge');
+    if (el) el.textContent = Game.clockText;
+  }
 }
 
 /* ══════════ 子狀態更新 ══════════ */
@@ -914,6 +955,7 @@ function frame(ts) {
   Dialogue.update(dt);
   if (Game.state === 'create') updatePreview();
   if (Game.state === 'game' && Game.sub) {
+    tickClock(dt); /* 第二十八輪：時間走針（1 秒＝1 遊戲分鐘） */
     updateGame(dt);
     if (Game.sub !== 'loading') renderGame();
   }
@@ -1485,6 +1527,7 @@ function fullSave(stage) {
     gear: Game.gear ?? { uniform: false, hat: false },
     work: Game.work, /* 第十三輪b：關卡進度 */
     park: Game.park, /* 第十八輪：遊樂園星星與紀錄（載入時舊存檔補預設） */
+    clock: Game.clock, /* 第二十八輪：時間 */
   };
 }
 
