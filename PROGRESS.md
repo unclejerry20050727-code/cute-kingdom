@@ -477,3 +477,50 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - ✅ **live smoke**：`node test/.smoke22.cjs` **PASS**（pageErr 0）；live 標記確認：index 含 clock-badge＋screen-school、game.js 含 SCHOOL_COURSES、mapscene 含 drawSchool、style.css ?v=21、fonts/rhr-900.woff2 新尺寸 254008B（今日重建）
 
 > **第二十八輪完成 ✅**（2026-11-18）：學校上線（地圖建築＋小宥教學＋8選4選課＋課表/換課＋存檔）＋時間系統（1/1 08:00 起無年、1秒=1遊戲分、左下角藍膠囊）；14 套回歸＋.clock28/.school28 全 PASS；push 135a6e2、live smoke PASS。
+
+# 第二十九輪：課程生效（選的課要有實際效果）
+
+## 來源
+- Jerry 在第二十八輪完成後說「continue」→ 接 28-0 明確留的尾巴：「每門課的實際玩法（做家具/煮咖啡/釣魚…）留待後續輪」
+- 本輪範圍＝**第一階段**：先做 3 個輕量效果（速度/新家具/新牆飾），樹立 needsCourse 門控模式；重的（新 mini-game/場景）留後續輪
+
+## 調查結果（2026-11-18，行號以當時 js/game.js 1900+ 行版本為準，用 grep 重新定位）
+- **走路速度**（js/game.js）：
+  - 房間 WASD：`const speed = 4.4 * dt;`（updateGame，tryMove 前）
+  - 房間點地面走：`const speed = 4.8;`（moveTarget 分支）
+  - 地圖 WASD：`m.x = clamp(m.x + (dx / len) * 235 * dt, ROAD_L + 10, ROAD_R - 10)`（case 'map'）
+  - 地圖點地面：`m.x += (x - m.x) * Math.min(1, dt * 250 / d)`（比例式，可同步乘 speedMul 保持一致）
+- **BUILD_ITEMS**（js/world.js:1237）：`{ id: { name, tab: 'furniture'|'decor'|'floor', w, d, h, max, block, draw: fn } }`；現有 furniture：bed/desk/chair/sofa/shelf/dresser/lamp/piano；decor：plant/vase/teddy/balloon…
+- **WALL_ITEMS**（js/world.js:1688）：`{ id: { name, tab: 'wall'|'fest', max, span, hMid, hitW, sizeH, draw: fn } }`；現有：heartFrame/starFrame/clock/poster/wallShelf/garland(彩旗)/couplet…（注意「彩旗」已存在，花藝課新項用「花環」避免撞名）
+- **POSES**（js/character.js:131）：**dance 姿勢已存在**（label 跳舞、emoji ♪、sway+手臂動畫）→ 跳舞課**不需要**新姿勢；startPose（game.js:834）依 POSE_ORDER 輪替
+- **WORK_LEVELS**（js/mini.js:23）：打工關卡是獨立 mini-game → 咖啡/烹飪課若要做關卡，體量大，**留後續輪**
+- **學校狀態**（js/game.js）：`Game.school = { visited, confirmed, selected: [] }`（已存檔）；`SCHOOL_COURSES` ids：furniture/cooking/fishing/flower/coffee/sport/pet/dance；`SCHOOL_MAX=4`
+- **建造 UI**：建頁卡由 BUILD_ITEMS/WALL_ITEMS 生成（game.js 的 setupBuildUI/fillBuildTabs 一帶，grep `BUILD_ITEMS` 可找到迭代點）；放置流程 Game.placement { item, mode, ... }
+
+## 本輪設計
+- **共用 helper（game.js，放 SCHOOL_COURSES 下方）**：
+  ```js
+  function hasCourse(id) { return !!(Game.school && Game.school.selected && Game.school.selected.includes(id)); }
+  function speedMul() { return hasCourse('sport') ? 1.25 : 1; } /* 第二十九輪：體育課 */
+  ```
+- **29-1 體育課 ⚽ 速度×1.25**：4.4/4.8（房間）、235/250（地圖）全部乘 speedMul()
+- **29-2 家具課 🪑 黑板**：BUILD_ITEMS 加 `board: { name: '黑板', tab: 'decor', w: 2, d: 1, h: 50, max: 1, block: true, needsCourse: 'furniture', draw: drawBoard }`；drawBoard＝木框+墨綠板面+白粉筆線（手寫風，參照 drawPlant/drawVase 的寫法與位置）；商店：未上家具課→卡片灰色+🔒+提示「上家具課解鎖」且不可放
+- **29-3 花藝課 💐 花環**：WALL_ITEMS 加 `flowerWreath: { name: '花環', tab: 'wall', max: 2, span: 1, hMid: 160, hitW: 18, sizeH: 44, needsCourse: 'flower', draw: drawWallFlowerWreath }`；同樣商店門控
+- **留後續輪（寫進 PROGRESS 記錄即可）**：跳舞課（姿勢已有→可考虑跳舞時發 ♪ 粒子）、烹飪/咖啡/釣魚/寵物（需新 mini-game 或場景）
+- **字型**：新 CJK（黑/環/解鎖…部分已有）→ 重跑 make-font＋`?v=21→22`；⚠️ /tmp/fontenv 若再被清：`python3 -m venv /tmp/fontenv --clear && /tmp/fontenv/bin/python -m pip install fonttools brotli` 再重跑
+- **測試 .course29.cjs**：R1 speedMul（無課=1/有體育課=1.25）＋地圖走 1s 位移比較（約 235 vs 294px）；R2 無家具課→黑板卡鎖定不可選；R3 有課→可選可放可存檔（reload 後還在）；R4 花環同上（抽一測）；pageErr 0
+
+## 子任務
+## 29-0 計畫（本節）
+## 29-1 hasCourse/speedMul＋體育課速度×1.25
+## 29-2 家具課→黑板（BUILD_ITEMS+drawBoard+商店門控）
+## 29-3 花藝課→花環（WALL_ITEMS+drawWallFlowerWreath+商店門控）
+## 29-4 字型重跑 ?v=22＋.course29 測試
+## 29-5 回歸 14 套＋.clock28/.school28＋push＋live smoke
+
+## 新 session 接續步驟
+1. 確認 `git status` 乾淨（HEAD 應在 29-0 commit）；啟動 server：`python3 -m http.server 8742 --bind 127.0.0.1`
+2. 做 29-1（最小改動，先 commit）
+3. 29-2 前先 grep 確認 drawPlant 定義位置與建造 tab 卡的生成迴圈，照抄模式
+4. 每小步 commit（避免 terminated 丟進度）；截圖放 /tmp/s29-0x-*.png
+5. 29-4/29-5 收尾
