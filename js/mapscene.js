@@ -10,6 +10,7 @@ const ROAD_L = ROAD.x - ROAD.halfW, ROAD_R = ROAD.x + ROAD.halfW;
 const MC = { x: 490, y: 432 };      /* 麥當勞的點 */
 const MC_SHOP = { x0: 612, y0: 332 }; /* 小舖 */
 const PK = { x: 490, y: 300 };        /* 第十八輪：遊樂園脈衝點（路中，麥當勞上方） */
+const SC = { x: 420, y: 600 };        /* 第二十八輪：學校脈衝點（路左側底端，學校門前） */
 
 let mapCanvas = null;
 
@@ -139,6 +140,9 @@ function ensureMap() {
     }
   }
 
+  /* ── 第二十八輪：學校（路左側底端，遊樂園下方）── */
+  drawSchool(ctx);
+
   mapCanvas = c;
 }
 
@@ -243,6 +247,51 @@ function drawPark(ctx) {
 }
 
 /* 黃色 M 拱（麥當勞風，純圖形） */
+/* 第二十八輪：學校（路左側底端：塔樓時鐘+紅旗+「學校」招牌+雙窗雙簕） */
+function drawSchool(ctx) {
+  const L = 120, R = 375, wallTop = 545, base = 648;
+  /* 地影 */
+  ctx.fillStyle = 'rgba(90,62,43,0.15)';
+  ctx.beginPath(); ctx.ellipse(247, base + 6, 150, 14, 0, 0, Math.PI * 2); ctx.fill();
+  /* 主屋頂（中央塔從中間竄出） */
+  handShape(ctx, [[L - 15, wallTop], [245, 462], [R + 15, wallTop]], { fill: '#B98A5F', seed: 94 });
+  /* 中央塔 */
+  handShape(ctx, [[215, 480], [275, 480], [275, 550], [215, 550]], { fill: '#FDF2DF', seed: 90 });
+  handShape(ctx, [[208, 480], [245, 442], [282, 480]], { fill: '#B98A5F', seed: 91 });
+  /* 塔上時鐘 */
+  handEllipse(ctx, 245, 512, 15, 15, { fill: '#FFF8EC', lw: 3, seed: 92 });
+  ctx.strokeStyle = '#5A3E2B'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(245, 512); ctx.lineTo(245, 502); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(245, 512); ctx.lineTo(252, 516); ctx.stroke();
+  /* 旗杆+紅旗 */
+  handLine(ctx, 245, 442, 245, 420, { stroke: '#B98A5F', lw: 3, seed: 93 });
+  ctx.fillStyle = '#E2574C';
+  ctx.beginPath(); ctx.moveTo(245, 420); ctx.lineTo(268, 426); ctx.lineTo(245, 432); ctx.closePath(); ctx.fill();
+  /* 牆面 */
+  handShape(ctx, [[L, wallTop], [R, wallTop], [R, base], [L, base]], { fill: '#FFF8EC', seed: 95 });
+  /* 輕磚線 */
+  for (const yy of [575, 605, 630])
+    handLine(ctx, L + 6, yy, R - 6, yy, { stroke: 'rgba(122,82,54,0.15)', lw: 2, seed: yy });
+  /* 招牌「學校」 */
+  handShape(ctx, [[175, 552], [315, 552], [315, 584], [175, 584]], { fill: '#FFF8EC', seed: 96, amp: 2 });
+  ctx.fillStyle = '#E2574C';
+  ctx.font = '900 28px RHR';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('學 校', 245, 569);
+  /* 門簷+門 */
+  handShape(ctx, [[215, 588], [275, 588], [275, 596], [215, 596]], { fill: '#E2574C', seed: 98 });
+  handShape(ctx, [[225, 596], [265, 596], [265, 648], [225, 648]], { fill: '#B98A5F', seed: 97 });
+  handEllipse(ctx, 258, 622, 3, 3, { fill: '#FFD98A', lw: 2, seed: 971 });
+  /* 窗（左右各一） */
+  for (const wx of [152, 338])
+    handShape(ctx, [[wx - 15, 596], [wx + 15, 596], [wx + 15, 626], [wx - 15, 626]], { fill: '#CBE9F8', stroke: '#FFF7EA', lw: 3, seed: wx });
+  /* 門前階梯 */
+  handShape(ctx, [[216, 648], [274, 648], [274, 655], [216, 655]], { fill: '#E4D2AF', seed: 99 });
+  /* 小簕×2 */
+  handEllipse(ctx, 134, 640, 16, 12, { fill: '#7FB86B', stroke: null, seed: 991 });
+  handEllipse(ctx, 360, 640, 16, 12, { fill: '#8FC47E', stroke: null, seed: 992 });
+}
+
 function drawMLogo(ctx, x, y, s) {
   ctx.save();
   ctx.strokeStyle = '#F7C948';
@@ -293,6 +342,20 @@ function renderMap(ctx, t, player) {
   ctx.fillStyle = '#FFF8EC';
   ctx.font = '900 13px RHR'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('玩', PK.x, PK.y + 1);
+
+  /* 第二十八輪：學校脈衝圈（紫色系，區分麥當勞棕/遊樂園粉） */
+  for (let i = 0; i < 2; i++) {
+    const pr = ((t * 0.5) + i * 0.5) % 1;
+    ctx.strokeStyle = `rgba(155,110,196,${(0.55 * (1 - pr)).toFixed(3)})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(SC.x, SC.y, 14 + pr * 26, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  handEllipse(ctx, SC.x, SC.y, 11, 11, { fill: '#9B6EC4', lw: 3, seed: 66 });
+  ctx.fillStyle = '#FFF8EC';
+  ctx.font = '900 13px RHR'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('學', SC.x, SC.y + 1);
 
   /* 招牌（輕輕上下浮動） */
   const bob = Math.sin(t * 1.8) * 4;

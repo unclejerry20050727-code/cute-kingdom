@@ -271,6 +271,34 @@
   <button class="scene-x" id="work-x" title="回地圖">✕</button>
 </div>
 
+<!-- 第二十八輪：學校 -->
+<div id="screen-school" class="screen hidden">
+  <button class="scene-x" id="school-x" title="回地圖">✕</button>
+  <div class="school-panel pop-in">
+    <div class="school-title">🏫 可愛國小學 <span class="school-title-sub">· 選課</span></div>
+
+    <!-- 第一次進校：小宥教學 -->
+    <div class="school-tut hidden" id="school-tut">
+      <canvas id="school-tut-face" width="88" height="88"></canvas>
+      <div class="school-tut-main">
+        <div class="school-tut-name" id="school-tut-name">小宥</div>
+        <div class="school-tut-text" id="school-tut-text"></div>
+        <div class="school-tut-more" id="school-tut-more">👆 點一下繼續</div>
+      </div>
+    </div>
+
+    <!-- 教學完：大字選課 -->
+    <div class="school-big hidden" id="school-big">你想要選哪一堂課上？</div>
+
+    <div class="school-courses hidden" id="school-courses"></div>
+
+    <div class="school-foot hidden" id="school-foot">
+      <div class="school-count" id="school-count">已選 0/4</div>
+      <button class="btn school-confirm" id="school-confirm" disabled>確認！</button>
+    </div>
+  </div>
+</div>
+
 <!-- toast -->
 <div class="toast hidden" id="toast"></div>
 

@@ -1,6 +1,19 @@
 /* ══════════ 可愛國 — 主程式 ══════════ */
 'use strict';
 
+/* 第二十八輪：學校課程表（8 選 4） */
+const SCHOOL_COURSES = [
+  { id: 'furniture', name: '家具課', emoji: '🪑', desc: '學會做家具' },
+  { id: 'cooking', name: '烹飪課', emoji: '🍳', desc: '做美味料理' },
+  { id: 'fishing', name: '釣魚課', emoji: '🎣', desc: '學會釣魚' },
+  { id: 'flower', name: '花藝課', emoji: '💐', desc: '插漂亮的花' },
+  { id: 'coffee', name: '咖啡課', emoji: '☕', desc: '學會做咖啡' },
+  { id: 'sport', name: '體育課', emoji: '⚽', desc: '鍛鍊體力' },
+  { id: 'pet', name: '寵物課', emoji: '🐾', desc: '照顧小動物' },
+  { id: 'dance', name: '跳舞課', emoji: '💃', desc: '學會跳舞' },
+];
+const SCHOOL_MAX = 4;
+
 const Game = {
   state: 'cover',   // cover | title | create | game
   sub: null,        // fp | talk | meet | tutBuild | placing | praise | goOut | free | loading | map | work
@@ -33,6 +46,8 @@ const Game = {
   work: { unlocked: 1, best: {} },
   /* 第十八輪：遊樂園星星與最佳紀錄（1★=2🪙） */
   park: { stars: 0, best: { coaster: 0, catch: 0, wheel: 0 } },
+  /* 第二十八輪：學校（已訪/選好的 4 堂課） */
+  school: { visited: false, confirmed: false, selected: [] },
   /* 第二十八輪：時間（1/1 起、無年；1 秒＝1 遊戲分鐘） */
   clock: { month: 1, day: 1, hour: 8, min: 0 },
   clockAcc: 0, clockText: '',
@@ -67,6 +82,14 @@ function init() {
   $('#map-home').onclick = () => { sfx('whoosh'); homeFromMap(); };
   $('#shop-x').onclick = () => { sfx('back'); closeShop(); };
   $('#work-x').onclick = () => { sfx('back'); exitWork(); };
+  /* 第二十八輪：學校 */
+  $('#school-x').onclick = () => { sfx('back'); exitSchool(); };
+  $('#school-tut').onclick = () => advanceSchoolTut();
+  $('#school-courses').addEventListener('click', (e) => {
+    const b = e.target.closest('.school-course');
+    if (b) toggleSchoolCourse(b.dataset.id);
+  });
+  $('#school-confirm').onclick = () => confirmOrChangeSchool();
   $('#buy-uniform').onclick = () => buyGear('uniform');
   $('#buy-hat').onclick = () => buyGear('hat');
   $('#btn-mute').onclick = toggleMute;
@@ -169,6 +192,12 @@ function beginGame(save, skipIntro) {
     ? save.clock
     : { month: 1, day: 1, hour: 8, min: 0 };
   Game.clockAcc = 0;
+  /* 第二十八輪：學校（舊存檔補預設） */
+  Game.school = {
+    visited: !!(save.school && save.school.visited),
+    confirmed: !!(save.school && save.school.confirmed),
+    selected: Array.isArray(save.school && save.school.selected) ? save.school.selected : [],
+  };
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -181,7 +210,7 @@ function beginGame(save, skipIntro) {
 
   $('#hud-name').textContent = '小島';
   Game.state = 'game';
-  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading', 'screen-shop', 'screen-work']) {
+  for (const id of ['screen-cover', 'screen-title', 'screen-create', 'screen-loading', 'screen-shop', 'screen-work', 'screen-school']) {
     document.getElementById(id).classList.add('hidden');
   }
   $('#screen-game').classList.remove('hidden');
@@ -232,6 +261,8 @@ function setSub(sub) {
   else showDpad(false); /* 第十一輪d：放置中 dpad 無用且會與放置操作鈕重疊，一律隱藏 */
   if (sub === 'park3d') $('#screen-park3d').classList.remove('hidden');
   else $('#screen-park3d').classList.add('hidden'); /* 第十八輪18d：3D 公園全屏層 */
+  if (sub === 'school') $('#screen-school').classList.remove('hidden');
+  else $('#screen-school').classList.add('hidden'); /* 第二十八輪：學校全屏層 */
   $('#map-home').classList.toggle('hidden', sub !== 'map');
   const canPose = sub === 'free' || sub === 'map'; /* 16a：地圖也顯示擺拍/拍照鈕 */
   $('#pose-btn').classList.toggle('hidden', !canPose); /* 第十五輪：擺拍鈕；16a：地圖也支援 */
@@ -345,6 +376,9 @@ function updateGame(dt) {
     }
     case 'park3d': { /* 第十八輪18d：3D 遊樂園 */
       if (window.Park3D) Park3D.update(dt);
+      break;
+    }
+    case 'school': { /* 第二十八輪：學校畫面（純 UI，無世界更新） */
       break;
     }
     case 'map': {
@@ -570,6 +604,128 @@ async function enterPark() {
     return;
   }
   setSub('park3d');
+}
+
+/* ══════════ 第二十八輪：學校（教學→大字選課，8 選 4） ══════════ */
+let schoolTutLine = 0;
+const SCHOOL_TUT_LINES = [
+  '哇，歡迎來到學校！我是學校的嚮導小宥！',
+  '這裡可以上你喜歡的課——從做家具到做咖啡，課程超多的~',
+  `一次先選 ${SCHOOL_MAX} 堂課：點課程卡就能選，選滿就按「確認」~`,
+  '了解了吧？那來選課吧！（之後都可以回學校換課喔~）',
+];
+
+function enterSchool() {
+  sfx('pop');
+  hideHint();
+  openSchoolScreen();
+  setSub('school');
+}
+
+function exitSchool() {
+  sfx('whoosh');
+  saveGame(fullSave(Game.stage));
+  setSub('map');
+}
+
+function openSchoolScreen() {
+  schoolTutLine = 0;
+  /* 小宥頭像 */
+  const face = document.getElementById('school-tut-face');
+  const fctx = face.getContext('2d');
+  fctx.clearRect(0, 0, face.width, face.height);
+  drawPortrait(fctx, XIAOYOU_CFG, face.width, {});
+  renderSchoolCourses();
+  if (!Game.school.visited) {
+    /* 第一次：先教學 */
+    $('#school-tut').classList.remove('hidden');
+    $('#school-big').classList.add('hidden');
+    $('#school-courses').classList.add('hidden');
+    $('#school-foot').classList.add('hidden');
+    showSchoolTutLine();
+  } else {
+    $('#school-tut').classList.add('hidden');
+    $('#school-big').classList.remove('hidden');
+    $('#school-courses').classList.remove('hidden');
+    $('#school-foot').classList.remove('hidden');
+    updateSchoolFoot();
+  }
+}
+
+function showSchoolTutLine() {
+  $('#school-tut-name').textContent = '小宥';
+  $('#school-tut-text').textContent = SCHOOL_TUT_LINES[schoolTutLine];
+  $('#school-tut-more').textContent =
+    schoolTutLine < SCHOOL_TUT_LINES.length - 1 ? '👆 點一下繼續' : '👆 開始選課吧！';
+}
+
+function advanceSchoolTut() {
+  schoolTutLine++;
+  if (schoolTutLine >= SCHOOL_TUT_LINES.length) {
+    sfx('ding');
+    $('#school-tut').classList.add('hidden');
+    $('#school-big').classList.remove('hidden');
+    $('#school-courses').classList.remove('hidden');
+    $('#school-foot').classList.remove('hidden');
+    updateSchoolFoot();
+  } else {
+    sfx('click');
+    showSchoolTutLine();
+  }
+}
+
+function selectedCourseIds() {
+  return (Game.school.selected || []).filter(id => SCHOOL_COURSES.some(c => c.id === id));
+}
+
+function renderSchoolCourses() {
+  const wrap = $('#school-courses');
+  const sel = new Set(selectedCourseIds());
+  wrap.innerHTML = SCHOOL_COURSES.map(c => `
+    <button class="school-course${sel.has(c.id) ? ' on' : ''}" data-id="${c.id}">
+      <span class="school-course-emoji">${c.emoji}</span>
+      <span class="school-course-name">${c.name}</span>
+      <span class="school-course-desc">${c.desc}</span>
+      <span class="school-course-check">${sel.has(c.id) ? '✅' : '☐'}</span>
+    </button>`).join('');
+}
+
+function toggleSchoolCourse(id) {
+  const sel = selectedCourseIds();
+  const i = sel.indexOf(id);
+  if (i >= 0) { sel.splice(i, 1); sfx('click'); }
+  else {
+    if (sel.length >= SCHOOL_MAX) { showToast(`一次最多選 ${SCHOOL_MAX} 堂課，先取消一門再說~`); return; }
+    sel.push(id); sfx('pop');
+  }
+  Game.school.selected = sel;
+  renderSchoolCourses();
+  updateSchoolFoot();
+}
+
+function updateSchoolFoot() {
+  const n = selectedCourseIds().length;
+  const full = n >= SCHOOL_MAX;
+  $('#school-count').textContent =
+    (Game.school.confirmed && full) ? `📚 課表 ${n}/${SCHOOL_MAX} ✅` : `已選 ${n}/${SCHOOL_MAX}`;
+  const btn = $('#school-confirm');
+  if (Game.school.confirmed && full) { btn.disabled = false; btn.textContent = '換課'; }
+  else { btn.disabled = !full; btn.textContent = '確認！'; }
+}
+
+function confirmOrChangeSchool() {
+  if (Game.school.confirmed) {
+    Game.school.confirmed = false;
+    sfx('click');
+    showToast('換成喜歡的課吧~');
+  } else {
+    Game.school.visited = true;
+    Game.school.confirmed = true;
+    sfx('ding');
+    showToast('📚 選課完成！你的 4 堂課定下來了~');
+  }
+  saveGame(fullSave(Game.stage));
+  updateSchoolFoot();
 }
 
 function fillShopUI() {
@@ -1034,6 +1190,7 @@ function setupInput() {
     }
     if (e.key === 'Escape') {
       if (Game.sub === 'park3d' && window.Park3D) { Park3D.exit(); return; } /* 第十八輪18d */
+      if (Game.sub === 'school') { exitSchool(); return; } /* 第二十八輪 */
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
     }
@@ -1166,6 +1323,7 @@ function setupInput() {
         /* 點麥當勞 → 商店；點遊樂園 → 3D 公園；點道路 → 走過去 */
         if (Math.hypot(wx - MC.x, wy - MC.y) < 34) { openShop(); break; }
         if (Math.hypot(wx - PK.x, wy - PK.y) < 34) { enterPark(); break; } /* 第十八輪18d */
+        if (Math.hypot(wx - SC.x, wy - SC.y) < 34) { enterSchool(); break; } /* 第二十八輪：學校 */
         if (wx > ROAD_L && wx < ROAD_R && wy > 175 && wy < 645) {
           Game.mapTarget = { x: clamp(wx, ROAD_L + 10, ROAD_R - 10), y: clamp(wy, 182, 640) };
         }
@@ -1528,6 +1686,7 @@ function fullSave(stage) {
     work: Game.work, /* 第十三輪b：關卡進度 */
     park: Game.park, /* 第十八輪：遊樂園星星與紀錄（載入時舊存檔補預設） */
     clock: Game.clock, /* 第二十八輪：時間 */
+    school: Game.school, /* 第二十八輪：學校選課 */
   };
 }
 

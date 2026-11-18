@@ -3,19 +3,19 @@
 /* 第十七輪 e2：VF(CFF2)→靜態 glyf 三權重，修 iOS 舊版 WebKit 對 CFF2/VF woff2 渲染怪異（拍照偶發顯示成攻擊）；?v= 每重跑一次加一強迫重下載 */
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-500.woff2?v=20') format('woff2');
+  src: url('../fonts/rhr-500.woff2?v=21') format('woff2'); /* 28-2：重跑子集（學校新字元；fontenv 重建） */
   font-weight: 500;
   font-style: normal;
 }
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-700.woff2?v=20') format('woff2');
+  src: url('../fonts/rhr-700.woff2?v=21') format('woff2'); /* 28-2：重跑子集（學校新字元） */
   font-weight: 700;
   font-style: normal;
 }
 @font-face {
   font-family: 'RHR';
-  src: url('../fonts/rhr-900.woff2?v=20') format('woff2');
+  src: url('../fonts/rhr-900.woff2?v=21') format('woff2'); /* 28-2：重跑子集（學校新字元） */
   font-weight: 900;
   font-style: normal;
 }
@@ -650,6 +650,50 @@ body {
 /* ══════════ 打工畫面（場景畫在 main canvas，這只是 ✕） ══════════ */
 #screen-work { z-index: 15; pointer-events: none; }
 #screen-work .scene-x { pointer-events: auto; }
+
+/* ══════════ 第二十八輪：學校 ══════════ */
+#screen-school { background: rgba(122, 82, 154, .45); z-index: 20; }
+.school-panel {
+  width: min(720px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 5px solid #9B6EC4;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 22px 26px;
+}
+.school-title { font-size: 30px; font-weight: 900; color: #7A4E9E; text-align: center; }
+.school-title-sub { font-size: 18px; color: #9B6EC4; }
+.school-tut { display: flex; gap: 14px; margin: 20px 0 8px; cursor: pointer; }
+#school-tut-face { border-radius: 50%; background: #FFF3E2; border: 3px solid #9B6EC4; flex: 0 0 auto; }
+.school-tut-name { font-size: 18px; font-weight: 900; color: #7A4E9E; }
+.school-tut-text { font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin-top: 4px; }
+.school-tut-more { font-size: 14px; color: var(--ink-soft); margin-top: 8px; }
+.school-big {
+  text-align: center; font-size: clamp(28px, 6vw, 44px); font-weight: 900; color: #7A4E9E;
+  margin: 22px 0 10px; animation: bounce-down 1s ease-in-out infinite;
+}
+.school-courses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+.school-course {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: #F6EFE2; border: 3px solid #D8C6A8; border-radius: 18px;
+  padding: 12px 6px; cursor: pointer; font-family: var(--font);
+  transition: transform .1s;
+}
+.school-course:active { transform: translateY(2px); }
+.school-course.on { background: #EFE4F8; border-color: #9B6EC4; box-shadow: 0 4px 0 rgba(155,110,196,.25); }
+.school-course-emoji { font-size: 34px; }
+.school-course-name { font-size: 17px; font-weight: 900; color: var(--ink); }
+.school-course-desc { font-size: 12px; color: var(--ink-soft); }
+.school-course-check { position: absolute; top: 6px; right: 8px; font-size: 16px; }
+.school-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+.school-count { font-size: 19px; font-weight: 900; color: var(--ink); }
+.school-confirm { background: var(--mint); border-color: var(--mint-deep); color: #14532D; font-size: 20px; padding: 10px 26px; }
+.school-confirm:disabled { opacity: .5; cursor: default; }
+@media (max-width: 640px) {
+  .school-courses { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* toast */
 .toast {

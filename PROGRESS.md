@@ -449,3 +449,28 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 28-4 選課存檔＋技能狀態＋字型重跑
 ## 28-5 測試 .school28（時鐘走針/進學校/教學/選4/課表/再進/回歸）
 ## 28-6 回歸 11 套＋.ship27/.catch24/.wheel26＋push＋live smoke
+
+## 28-1 時間系統（Game.clock＋#clock-badge＋存檔）
+- ✅ **完成（commit 6970f95）**：`Game.clock` 1/1 08:00 起、無年、1 秒=1 遊戲分（`clockAcc` 累計 dt、`advanceClockMinute` 進位 min→hour→day→month→12月回1月）；`tickClock(dt)` 掛 frame 主迴圈（state==='game' 才走）；`#clock-badge` 左下角小膠囊（藍色系 #EAF6FC/#4A9BC4/#2F6E96，**bottom:176px 貼 dpad 上方**避免重疊）；fullSave/beginGame 帶 clock（舊檔補預設）；`.clock28.cjs` PASS（R1 起始/R2 3秒走3分/R3 進位+12月回1月/R4 存檔）＋地圖截圖確認
+
+## 28-2 地圖學校（mapscene 建築＋紫色脈衝點 SC＋enterSchool 觸發）
+- ✅ **完成**：`drawSchool(ctx)` 畫學校（路**左側**底端 x120~375、y462~655：棕大屋頂＋中塔鐘樓＋紅旗＋米白牆＋「學校」紅字招牌＋校門＋兩窗＋階梯＋灌木），`ensureMap` 在花草後繪製（蓋住隨機花）；`SC = { x: 420, y: 600 }` 紫色脈衝圈（`#9B6EC4`，雙圈擴散＋「學」字）——**位置從計畫的 (490,585) 路中改為 (420,600) 路左側**（不壓住路尾行走空間、避開麥當勞）；map click 34px → `enterSchool()`
+- 截圖確認：地圖學校建築完整、脈衝圈在路邊、不擋走路
+
+## 28-3 學校 screen＋教學＋選課 UI（8 課選 4＋大標題＋課表＋再進跳教學）
+- ✅ **完成**：`#screen-school`（.screen 覆蓋層、紫色主題、z20）＋sub 'school'（setSub 掛顯示/隱藏、Esc/✕ → exitSchool→map）
+- **教學**：不用 Dialogue（它在 #screen-game z5 會墊底）→ 自建 `school-tut` 面板（小宥頭像 canvas `drawPortrait(XIAOYOU_CFG)`＋4 段文字，點一下逐段推進，最後 ding 進選課）
+- **選課**：大字 `school-big`「你想要選哪一堂課上？」（bounce-down 彈跳）＋8 課卡（2 行×4、emoji+名稱+一句話、選中紫色高亮＋✅、上限 4 toast 擋第5門）＋`school-foot`（已選 n/4＋確認鈕選滿才啟用）
+- **確認/換課**：確認→visited+confirmed、toast「📚 選課完成！」、課表模式（按鈕變「換課」）；換課→回到選擇（保留已選）再確認
+- **再進入**：visited=true 跳教學直接課表
+
+## 28-4 選課存檔＋技能狀態＋字型重跑
+- ✅ **完成**：`Game.school = { visited, confirmed, selected:[] }` 進 fullSave/beginGame（舊檔補預設）；`SCHOOL_COURSES`（8 門：furniture🪑/cooking🍳/fishing🎣/flower💐/coffee☕/sport⚽/pet🐾/dance💃）＋`SCHOOL_MAX=4`
+- **字型**：/tmp/fontenv 被系統清掉 fontTools 的 .py → 重建 venv（pip install fonttools brotli）→ 重跑 make-font（1254 字元）→ `?v=20→21`
+
+## 28-5 測試 .school28（時鐘走針/進學校/教學/選4/課表/再進/回歸）
+- ✅ **完成**：`.school28.cjs` **PASS**（pageErr 0）：R1 地圖點 SC 進校/R2 教學4段→大字+8課/R3 選4（第5門被擋）/R4 確認→課表+存檔/R5 離開重進→無教學+4門已選+換課/R6 換課→取消烹飪(3)→選體育(4)→再確認
+- 4 張截圖：s28-02 地圖學校 / s28-03 教學 / s28-04 選課(4選中) / s28-05 課表+toast
+
+## 28-6 回歸 11 套＋.ship27/.catch24/.wheel26＋push＋live smoke
+- ⬜ 待做
