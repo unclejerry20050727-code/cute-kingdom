@@ -513,6 +513,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 子任務
 ## 29-0 計畫（本節）
 ## 29-1 hasCourse/speedMul＋體育課速度×1.25
+- ✅ **完成**：game.js 加 `hasCourse(id)`＋`speedMul()`（體育課=1.25）；房間 4.4/4.8、地圖 235/250 全部乘 speedMul；`.q291.cjs` PASS（base=1/withSport=1.25/地圖 1s 實測 293.75px=235×1.25、pageErr 0）
 ## 29-2 家具課→黑板（BUILD_ITEMS+drawBoard+商店門控）
 ## 29-3 花藝課→花環（WALL_ITEMS+drawWallFlowerWreath+商店門控）
 ## 29-4 字型重跑 ?v=22＋.course29 測試

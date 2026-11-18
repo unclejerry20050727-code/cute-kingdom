@@ -14,6 +14,10 @@ const SCHOOL_COURSES = [
 ];
 const SCHOOL_MAX = 4;
 
+/* 第二十九輪：課程生效（體育課速度/家具課黑板/花藝課花環） */
+function hasCourse(id) { return !!(Game.school && Game.school.selected && Game.school.selected.includes(id)); }
+function speedMul() { return hasCourse('sport') ? 1.25 : 1; } /* 第二十九輪：體育課 ⚽ */
+
 const Game = {
   state: 'cover',   // cover | title | create | game
   sub: null,        // fp | talk | meet | tutBuild | placing | praise | goOut | free | loading | map | work
@@ -399,8 +403,8 @@ function updateGame(dt) {
       if (len > 0 || Game.mapTarget) m.pose = null; /* 16a：移動即取消擺拍 */
       if (len > 0) {
         Game.mapTarget = null;
-        m.x = clamp(m.x + (dx / len) * 235 * dt, ROAD_L + 10, ROAD_R - 10);
-        m.y = clamp(m.y + (dy / len) * 235 * dt, 182, 640);
+        m.x = clamp(m.x + (dx / len) * 235 * speedMul() * dt, ROAD_L + 10, ROAD_R - 10);
+        m.y = clamp(m.y + (dy / len) * 235 * speedMul() * dt, 182, 640);
         m.facing = Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? 'down' : 'up') : (dx > 0 ? 'right' : 'left');
         m.walking = true; m.walkT += dt;
       } else if (Game.mapTarget) {
@@ -408,8 +412,8 @@ function updateGame(dt) {
         const d = Math.hypot(x - m.x, y - m.y);
         if (d < 7) { Game.mapTarget = null; m.walking = false; }
         else {
-          m.x += (x - m.x) * Math.min(1, dt * 250 / d);
-          m.y += (y - m.y) * Math.min(1, dt * 250 / d);
+          m.x += (x - m.x) * Math.min(1, dt * 250 * speedMul() / d);
+          m.y += (y - m.y) * Math.min(1, dt * 250 * speedMul() / d);
           m.facing = Math.abs(x - m.x) > Math.abs(y - m.y) ? (x > m.x ? 'right' : 'left') : (y > m.y ? 'down' : 'up');
           m.walking = true; m.walkT += dt;
         }
@@ -883,7 +887,7 @@ function updateMovement(dt) {
     Game.moveTarget = null;
     const len = Math.hypot(dx, dy);
     dx /= len; dy /= len;
-    const speed = 4.4 * dt;
+    const speed = 4.4 * speedMul() * dt;
     tryMove(p, dx * speed, dy * speed);
     /* 朝向：以畫面速度判斷 */
     const vx = (dx - dy), vy = (dx + dy);
@@ -900,7 +904,7 @@ function updateMovement(dt) {
       Game.moveTarget = null;
       p.walking = false;
     } else {
-      const speed = 4.8;
+      const speed = 4.8 * speedMul();
       const nx = mx / d * speed * dt, ny = my / d * speed * dt;
       const before = [p.x, p.y];
       tryMove(p, nx, ny);
