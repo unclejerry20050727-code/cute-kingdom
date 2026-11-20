@@ -16,6 +16,7 @@ const SCHOOL_MAX = 4;
 
 /* 第二十九輪：課程生效（體育課速度/家具課黑板/花藝課花環） */
 function hasCourse(id) { return !!(Game.school && Game.school.selected && Game.school.selected.includes(id)); }
+const COURSE_NAMES = { cooking: '烹飪課', furniture: '家具課', fishing: '釣魚課', flower: '花藝課', coffee: '咖啡課', sport: '體育課' }; /* 第二十九輪：課程門控提示用 */
 function speedMul() { return hasCourse('sport') ? 1.25 : 1; } /* 第二十九輪：體育課 ⚽ */
 
 const Game = {
@@ -1565,6 +1566,8 @@ function floorCard(id, it) {
   c2.save();
   const s = Math.min(0.72, 78 / (it.h + (it.w + it.d) * 8));
   const pv = it.pv ?? (96 - it.h / 2);
+  /* 第二十九輪 29-2：課程解鎖——未選該課程 → 灰卡 + 🔒 */
+  const locked = it.needsCourse && !hasCourse(it.needsCourse);
   c2.translate(64, 42);
   c2.scale(s, s);
   c2.translate(-OX, -(OY + pv)); /* 視覺中心對齊卡片中央（pv 可自訂，如氣球） */
@@ -1573,11 +1576,18 @@ function floorCard(id, it) {
   const nm = document.createElement('div');
   nm.className = 'bi-name';
   const n = countItem(id);
-  nm.textContent = it.name + (n >= it.max ? `（${n}/${it.max}）` : '');
-  item.append(cv, nm);
-  if (n >= it.max) item.classList.add('dis');
+  nm.textContent = it.name + (locked ? ' 🔒' : (n >= it.max ? `（${n}/${it.max}）` : ''));
+  if (locked) {
+    const hk = document.createElement('div');
+    hk.className = 'bi-lock';
+    hk.textContent = `上${COURSE_NAMES[it.needsCourse]}解鎖`;
+    item.append(cv, nm, hk);
+  } else item.append(cv, nm);
+  if (n >= it.max || locked) item.classList.add('dis');
+  if (locked) item.classList.add('locked');
   item.onclick = () => {
     sfx('click');
+    if (locked) { showToast(`🔒 先上${COURSE_NAMES[it.needsCourse]}才能解鎖${it.name}`); return; }
     const cur = countItem(id);
     if (cur >= it.max) { showToast(`已經有 ${cur} 個${it.name}囉～`); return; }
     if (!canPlaceNow()) return;

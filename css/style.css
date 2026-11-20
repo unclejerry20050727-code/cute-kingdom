@@ -315,6 +315,8 @@ body {
 .build-item .bi-name { font-size: 16px; font-weight: 700; margin-top: 2px; }
 .build-item.dis { opacity: .55; cursor: not-allowed; }
 .build-item.dis:hover { transform: none; border-color: #D9B992; }
+.build-item .bi-lock { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-top: 1px; } /* 第二十九輪：課程解鎖提示 */
+.build-item.locked { filter: grayscale(.55); }
 .build-empty { color: var(--ink-soft); font-weight: 700; font-size: 17px; text-align: center; width: 100%; }
 .tint-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; }
 .tint-label { font-size: 16px; font-weight: 700; color: var(--ink); min-width: 64px; }

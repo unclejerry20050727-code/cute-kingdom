@@ -558,7 +558,22 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 ## 29-0 計畫（本節）
 ## 29-1 hasCourse/speedMul＋體育課速度×1.25
 - ✅ **完成**：game.js 加 `hasCourse(id)`＋`speedMul()`（體育課=1.25）；房間 4.4/4.8、地圖 235/250 全部乘 speedMul；`.q291.cjs` PASS（base=1/withSport=1.25/地圖 1s 實測 293.75px=235×1.25、pageErr 0）
-## 29-2 家具課→黑板（BUILD_ITEMS+drawBoard+商店門控）
+## 29-2 家具課→黑板（BUILD_ITEMS+drawBoard+商店門控）＋ 29-2b 旋轉缺面修復
+- ✅ **29-2 完成**：
+  - world.js `drawBoard`（4 腳＋木框 isoBox 2×1 h12-46＋墨綠板面＋白粉筆 A+/波浪/愛心/太陽＋粉筆托 2 支粉筆；bad tint 換色）
+  - `BUILD_ITEMS.board: { name:'黑板', tab:'decor', w:2, d:1, h:50, max:1, block:true, needsCourse:'furniture', draw:drawBoard }`（surfaceHAt 跳 decor→黑板上不會疊小東西；rebuildBlocked 不看 tab→block 生效）
+  - game.js：`COURSE_NAMES` const＋floorCard 門控（無課→卡片 `dis locked`＋🔒＋「上 X 課解鎖」提示、點擊 showToast 不放置）
+  - style.css：`.bi-lock`/`.locked`（grayscale＋降透明）
+  - 字型免重建：黑/板/花/環/解/鎖/先 全在 rhr-900.woff2（fontTools cmap 驗證）
+  - `.qa292.mjs` **ALL PASS**（12 項：鎖定卡 UI/toast/選課解鎖/進入放置/BUILD_ITEMS 參數/pageErr 0）
+- 🔍 **QA 發現既有 bug（29-2b）**：rot=1 時所有旋轉家具**缺前右寬面**（床/書桌/沙發/鋼琴/黑板）——根因 `isoBox` 側面/描邊硬編碼原座標 BC/CD 面，rot90 後該兩面變背面/窄面，螢幕真正可見的 B'-C' 寬面沒人畫；`drawBed` 同樣硬編碼；另 `faceSpace` 原點錯：'ty' rot0 原點 A 非 D（五斗櫃抽屜畫到頂面/背面、鋼琴鍵掛背邊）、ROT 分支 'tx' 原點對 w>1 會到盒中心
+- ✅ **29-2b 修復**（world.js）：
+  - `isoBox`：以菱形最底角 bi 決定兩個可見側面（bi 相鄰兩邊），midpoint x 對比盒子中心定 right/left 色；描邊＝底角＋兩相鄰角豎線＋頂菱形 → 任意 rot 都畫對
+  - `drawBed`：同法選面；顏色物理正確（長邊 AB/CD 深 #E2AE7C、端頭 BC/DA 淺 #F0C08F）
+  - `faceSpace(ctx,tx,ty,h,which,w,d)`：rot0 'tx' 原點 B=(tx+w,ty)→C；rot0 'ty' 原點 D=(tx,ty+1)→C；ROT 'tx' 原點 f(tx+w,ty+1)→前左窄面；ROT 'ty' 原點 f(tx,ty)→前右寬面（內容始終顯示在朝向鏡頭面）；drawShelf/drawDresser/drawPiano 呼叫補 w/d
+  - `drawBoard` 板面：同 isoBox 邏輯選「最底角的較長前邊」為綠板面，g1=螢幕左端點保證 A+ 不鏡射；rot0 座標與原實作完全一致
+- ✅ **驗證**（test/.proberot.mjs 1800×2000 12 格 before/after）：rot0 床/書桌/書架/沙發像素級一致（magick compare 僅 58 px × 1-3 階 AA 抖動＝無回歸）；rot1 床/書桌/沙發/鋼琴/黑板缺面全補上、腳不懸浮；五斗櫃抽屜/鋼琴鍵 rot0 從背面移到前面（faceSpace 原點修正的預期變化）；`.qa292.mjs` 重跑 **ALL PASS**＋截圖（/tmp/292-*.png）確認 rot0/rot1 黑板、鎖定卡、房間視圖皆正確
+- ⚠️ 已知小限制（不影響本輪）：rot1 鋼琴鍵仍顯示在前右寬面（物理上鍵盤可能背對鏡頭）＝「永遠可見」取捨；rot1 沙發靠背在寬邊（朝向取捨）。若要更真可加 rot=2/3，留後續輪
 ## 29-3 花藝課→花環（WALL_ITEMS+drawWallFlowerWreath+商店門控）
 ## 29-4 字型重跑 ?v=22＋.course29 測試
 ## 29-5 回歸 14 套＋.clock28/.school28＋push＋live smoke

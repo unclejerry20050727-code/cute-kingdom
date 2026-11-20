@@ -393,11 +393,16 @@ function drawBed(ctx, tx, ty, o = {}) {
   const savedAlpha = ctx.globalAlpha;
   if (o.ghost) ctx.globalAlpha *= 0.62;
 
-  /* 側面 */
-  ctx.fillStyle = o.tint === 'bad' ? '#E89AA6' : '#F0C08F';
-  poly(ctx, [B0[0], B0[1]], [C0[0], C0[1]], [C2[0], C2[1]], [B[0], B[1]]);
-  ctx.fillStyle = o.tint === 'bad' ? '#DE8794' : '#E2AE7C';
-  poly(ctx, [C0[0], C0[1]], [D0[0], D0[1]], [D[0], D[1]], [C2[0], C2[1]]);
+  /* 側面（29-2b：依螢幕最底角選兩個可見面，旋轉安全；長邊 AB/CD 深色、端頭 BC/DA 淺色）*/
+  const longC = o.tint === 'bad' ? '#DE8794' : '#E2AE7C';
+  const endC = o.tint === 'bad' ? '#E89AA6' : '#F0C08F';
+  const T = [A, B, C2, D], Bt = [A0, B0, C0, D0];
+  let bi = 0; for (let i = 1; i < 4; i++) if (T[i][1] > T[bi][1]) bi = i;
+  for (const f of [bi, (bi + 3) % 4]) {
+    const a = T[f], b = T[(f + 1) % 4], a0 = Bt[f], b0 = Bt[(f + 1) % 4];
+    ctx.fillStyle = (f === 0 || f === 2) ? longC : endC;
+    poly(ctx, a0, b0, b, a);
+  }
 
   /* 床面 */
   ctx.fillStyle = o.tint === 'bad' ? '#F3B7C1' : '#FFF6E9';
@@ -476,32 +481,39 @@ function isoBox(ctx, tx, ty, w, d, h0, h1, opt = {}) {
   const { top = '#FFF6E9', right = '#F0C08F', left = '#E2AE7C', stroke = INK, lw = 3 } = opt;
   const A = P(tx, ty, -h1), B = P(tx + w, ty, -h1), C = P(tx + w, ty + d, -h1), D = P(tx, ty + d, -h1);
   const A0 = P(tx, ty, -h0), B0 = P(tx + w, ty, -h0), C0 = P(tx + w, ty + d, -h0), D0 = P(tx, ty + d, -h0);
-  ctx.fillStyle = right;
-  poly(ctx, [B0[0], B0[1]], [C0[0], C0[1]], [C[0], C[1]], [B[0], B[1]]);
-  ctx.fillStyle = left;
-  poly(ctx, [C0[0], C0[1]], [D0[0], D0[1]], [D[0], D[1]], [C[0], C[1]]);
+  /* 29-2b：依螢幕位置找出兩個「前面」（與菱形最底角相鄰的兩邊），90° 旋轉時也能畫對側面 */
+  const T = [A, B, C, D], Bt = [A0, B0, C0, D0];
+  let bi = 0; for (let i = 1; i < 4; i++) if (T[i][1] > T[bi][1]) bi = i;
+  const midX = (A[0] + B[0] + C[0] + D[0]) / 4;
+  for (const k of [(bi + 3) % 4, (bi + 1) % 4]) {
+    ctx.fillStyle = (T[k][0] + T[bi][0]) / 2 > midX ? right : left;
+    poly(ctx, T[k], T[bi], Bt[bi], Bt[k]);
+  }
   ctx.fillStyle = top;
-  poly(ctx, [A[0], A[1]], [B[0], B[1]], [C[0], C[1]], [D[0], D[1]]);
+  poly(ctx, A, B, C, D);
   if (stroke) {
     ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round';
-    poly(ctx, [A[0], A[1]], [B[0], B[1]], [C[0], C[1]], [D[0], D[1]]);
+    poly(ctx, A, B, C, D);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(B0[0], B0[1]); ctx.lineTo(B[0], B[1]);
-    ctx.moveTo(C0[0], C0[1]); ctx.lineTo(C[0], C[1]);
-    ctx.moveTo(D0[0], D0[1]); ctx.lineTo(D[0], D[1]);
+    for (const k of [bi, (bi + 1) % 4, (bi + 3) % 4]) { ctx.moveTo(Bt[k][0], Bt[k][1]); ctx.lineTo(T[k][0], T[k][1]); }
     ctx.stroke();
   }
 }
 
-/* 立面空間：which='tx' → +tx 面（朝前右）；'ty' → +ty 面（朝前左）。
-   進入後用 2D 座標繪製（x 沿牆向右、y 向下），自動帶上等距斜度 */
-function faceSpace(ctx, tx, ty, h, which) {
-  const [px, py] = P(which === 'tx' ? tx + 1 : tx, ty, -h);
-  let ux = which === 'tx' ? -0.8944 : 0.8944, uy = 0.4472;
-  if (ROT_FN) { /* 第十輪：旋轉時側面方向隨 tile 軸轉（(0,1)→(−1,0)、(1,0)→(0,1)） */
-    ux = -0.8944;
-    uy = which === 'tx' ? -0.4472 : 0.4472;
+/* 立面空間：which='tx' → +tx 面（B-C 邊，朝前右）；'ty' → +ty 面（D-C 邊，朝前左）。
+   進入後用 2D 座標繪製（x 沿面向右、y 向下），自動帶上等距斜度。
+   29-2b：w/d 為物品尺寸（'tx' 面原點在 B=(tx+w,ty)；'ty' 面原點在 D=(tx,ty+1)）；
+   旋轉時對應到另一個「朝向鏡頭」的邊繼續顯示（避免內容畫到隱面） */
+function faceSpace(ctx, tx, ty, h, which, w = 1, d = 1) {
+  let px, py, ux, uy;
+  if (!ROT_FN) {
+    if (which === 'tx') { [px, py] = P(tx + w, ty, -h); ux = -0.8944; uy = 0.4472; } /* B→C */
+    else { [px, py] = P(tx, ty + 1, -h); ux = 0.8944; uy = 0.4472; }                 /* D→C */
+  } else if (which === 'tx') {
+    [px, py] = P(tx + w, ty + 1, -h); ux = 0.8944; uy = 0.4472;   /* 旋轉後 → 前左窄面（原點 f(tx+w,ty+1)）*/
+  } else {
+    [px, py] = P(tx, ty, -h); ux = -0.8944; uy = 0.4472;          /* 旋轉後 → 前右長面（原點 f(tx,ty)）*/
   }
   ctx.transform(ux, uy, 0, 1, px, py);
 }
@@ -596,7 +608,7 @@ function drawShelf(ctx, tx, ty, o = {}) {
   if (!o.ghost) {
     /* 前右面：書格 ×2 + 小書本 */
     ctx.save();
-    faceSpace(ctx, tx, ty, 58, 'tx');
+    faceSpace(ctx, tx, ty, 58, 'tx', 1, 1);
     const W = 35.78; /* 1 格 ≈ 35.8px */
     ctx.fillStyle = '#FFF6E9';
     ctx.fillRect(3, 8, W - 6, 20);
@@ -626,7 +638,7 @@ function drawDresser(ctx, tx, ty, o = {}) {
   isoBox(ctx, tx, ty, 1, 1, 0, 44, { top: '#FBE3BC', right: bad ? '#DE8794' : '#EFC99A', left: bad ? '#D47A88' : '#E2B483' });
   if (!o.ghost) {
     ctx.save();
-    faceSpace(ctx, tx, ty, 44, 'ty');
+    faceSpace(ctx, tx, ty, 44, 'ty', 1, 1);
     const W = 35.78;
     ctx.strokeStyle = INK; ctx.lineWidth = 2;
     for (let r = 0; r < 3; r++) {
@@ -690,7 +702,7 @@ function drawPiano(ctx, tx, ty, o = {}) {
   isoBox(ctx, tx, ty, 2, 1, 0, 52, { top: '#F7B7CC', right: bad ? '#DE8794' : '#EFA0BC', left: bad ? '#D47A88' : '#E28BA9' });
   /* 琴鍵（前左面下緣） */
   ctx.save();
-  faceSpace(ctx, tx, ty, 52, 'ty');
+  faceSpace(ctx, tx, ty, 52, 'ty', 2, 1);
   const W = 71.56;
   ctx.fillStyle = '#2E2018';
   ctx.fillRect(6, 34, W - 12, 11);
@@ -772,6 +784,81 @@ function drawVase(ctx, tx, ty, o = {}) {
     ctx.beginPath(); ctx.arc(cx + 4, cy - 31, 2.2, 0, Math.PI * 2); ctx.fill();
   }
   if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
+/* ── 擺飾：黑板（第二十九輪 29-2：家具課解鎖；2x1 立式黑板，粉筆塗鴉） ── */
+function drawBoard(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  const w = 2, d = 1; /* 29-2：尺寸常數（旋轉由 ROT_FN 處理）*/
+  const wood = bad ? '#DE8794' : '#B57C42', woodDk = bad ? '#D47A88' : '#9A6430';
+  /* 四腳（h12） */
+  for (const [lx, ly] of [[0.1, 0.1], [1.6, 0.1], [0.1, 0.6], [1.6, 0.6]])
+    isoBox(ctx, tx + lx, ty + ly, 0.2, 0.2, 0, 12, { top: woodDk, right: wood, left: wood, stroke: INK, lw: 2 });
+  /* 板身（木框，h12~46） */
+  isoBox(ctx, tx, ty, 2, 1, 12, 46, { top: woodDk, right: wood, left: wood, stroke: INK, lw: 2.5 });
+  /* 綠色板面（29-2b：永遠畫在「朝向鏡頭的長邊」——rot0=前左 D-C、rot1=前右——旋轉後仍可見；內縮 0.14 格為木框）*/
+  const cs = [P(tx, ty, -44), P(tx + w, ty, -44), P(tx + w, ty + 1, -44), P(tx, ty + 1, -44)];
+  let bi = 0; for (let i = 1; i < 4; i++) if (cs[i][1] > cs[bi][1]) bi = i;
+  const e1 = (bi + 3) % 4, e2 = (bi + 1) % 4;
+  const L1 = Math.hypot(cs[e1][0] - cs[bi][0], cs[e1][1] - cs[bi][1]);
+  const L2 = Math.hypot(cs[e2][0] - cs[bi][0], cs[e2][1] - cs[bi][1]);
+  let p1 = L1 > L2 ? cs[e1] : cs[bi], p2 = L1 > L2 ? cs[bi] : cs[e2];
+  if (p1[0] > p2[0]) [p1, p2] = [p2, p1]; /* 內容左→右閱讀 */
+  const eL = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+  const ux = (p2[0] - p1[0]) / eL, uy = (p2[1] - p1[1]) / eL, inset = 0.14 * 35.78;
+  const g1 = [p1[0] + ux * inset, p1[1] + uy * inset], g2 = [p2[0] - ux * inset, p2[1] - uy * inset];
+  const g3 = [g2[0], g2[1] + 30], g4 = [g1[0], g1[1] + 30];
+  ctx.fillStyle = bad ? '#C98F9B' : '#5E8C6A';
+  poly(ctx, g1, g2, g3, g4);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(g1[0], g1[1]); ctx.lineTo(g2[0], g2[1]); ctx.lineTo(g3[0], g3[1]); ctx.lineTo(g4[0], g4[1]); ctx.closePath();
+  ctx.stroke();
+  /* 粉筆塗鴉（板面 local 座標：x 沿板面長邊、y 向下；local 寬 L≈61.5、高 30） */
+  const L = Math.hypot(g2[0] - g1[0], g2[1] - g1[1]);
+  ctx.save();
+  ctx.transform((g2[0] - g1[0]) / L, (g2[1] - g1[1]) / L, 0, 1, g1[0], g1[1]);
+  const chalk = '#FFF6E9';
+  ctx.strokeStyle = chalk; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  /* 「A+」 */
+  ctx.beginPath();
+  ctx.moveTo(L * 0.10, 20); ctx.lineTo(L * 0.155, 5); ctx.lineTo(L * 0.21, 20);
+  ctx.moveTo(L * 0.132, 15); ctx.lineTo(L * 0.178, 15);
+  ctx.moveTo(L * 0.29, 7); ctx.lineTo(L * 0.29, 19);
+  ctx.moveTo(L * 0.24, 13); ctx.lineTo(L * 0.34, 13);
+  ctx.stroke();
+  /* 波浪線 */
+  ctx.beginPath();
+  ctx.moveTo(L * 0.44, 10);
+  ctx.quadraticCurveTo(L * 0.52, 16, L * 0.60, 10);
+  ctx.quadraticCurveTo(L * 0.68, 4, L * 0.76, 10);
+  ctx.stroke();
+  /* 小愛心 */
+  ctx.fillStyle = chalk;
+  drawHeartPath(ctx, L * 0.17, 23.5, 3.5);
+  ctx.fill();
+  /* 小太陽 */
+  ctx.beginPath(); ctx.arc(L * 0.72, 21, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 1.6;
+  for (let i = 0; i < 8; i++) {
+    const an = i * Math.PI / 4;
+    ctx.beginPath();
+    ctx.moveTo(L * 0.72 + Math.cos(an) * 4, 21 + Math.sin(an) * 4);
+    ctx.lineTo(L * 0.72 + Math.cos(an) * 6, 21 + Math.sin(an) * 6);
+    ctx.stroke();
+  }
+  /* 粉筆槽 + 粉筆 */
+  ctx.fillStyle = woodDk;
+  ctx.fillRect(L * 0.05, 27, L * 0.9, 3);
+  ctx.fillStyle = chalk;
+  ctx.fillRect(L * 0.30, 24.5, 5, 2.8);
+  ctx.fillStyle = bad ? '#DE8794' : '#F3B8C6';
+  ctx.fillRect(L * 0.55, 24.5, 5, 2.8);
+  ctx.restore();
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 2, 1, o);
   ctx.globalAlpha = saved;
 }
 
@@ -1248,6 +1335,8 @@ const BUILD_ITEMS = {
   vase:    { name: '花瓶',   tab: 'decor', w: 1, d: 1, h: 34, max: 3, block: false, draw: drawVase },
   teddy:   { name: '泰迪熊', tab: 'decor', w: 1, d: 1, h: 30, max: 2, block: false, draw: drawTeddy },
   balloon: { name: '氣球',   tab: 'decor', w: 1, d: 1, h: 82, max: 2, block: false, pv: 63, draw: drawBalloon },
+  /* 第二十九輪 29-2：黑板（家具課解鎖；2x1 立式、擋路） */
+  board:     { name: '黑板', tab: 'decor', w: 2, d: 1, h: 50, max: 1, block: true, needsCourse: 'furniture', draw: drawBoard },
   /* 第九輪c：地飾（layer:'floor' 貼地層繪製） */
   rug:     { name: '地毯',   tab: 'floor', w: 2, d: 2, h: 6,  max: 2, block: false, layer: 'floor', draw: drawRug },
   doormat: { name: '門墊',   tab: 'floor', w: 1, d: 1, h: 3,  max: 1, block: false, layer: 'floor', draw: drawDoormat },
