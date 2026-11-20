@@ -507,6 +507,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - **幾何上限**：face＝dot(法線, 朝相機)＝√(1−(toCam·head)²)；環頂頭向朝環心（下）而相機在環外上方→該視角最佳解 face≈0.76（≈40° 傾角），非 bug
 - **測試 .bill285.cjs** PASS：minOpacity 1.000（全程無淡出）、環內中段頭向朝環心 >0.75 占比 100%（avg 1.00）、face>0.5 占 98.3%／>0.75 占 90.9%（不側對）、逐幀最大跳轉 34.9°／0 flip、4 星 0 pageErr；快照環頂/環牆/entry/exit 主角皆在（環頂倒掛、環側側傾）＋ride22 L3 環快照主角可見＋完賽回站點主角直立（quaternion 已還原）
 - **回歸**：.coasterfix PASS（L1 方位 334.4°、0 flip、4 星 0 pageErr，相機行為不變）、.ride22 PASS（4/4 星、0 停、0 pageErr）
+- **push/live（2026-11-20 晚）**：push `20d8e35` 上線 GitHub Pages；live park-coaster.js 確認含 28.5-D 標記×3、billO 0 處；.livesmoke285 PASS（pageErr 0、4 環、L3 fixedN 在位）；⚠️ js 無 ?v= 防快取→使用者需強制重新整理（Ctrl/Cmd+Shift+R）
 
 ## 28.5-B 最終設計（v8，多輪迭代後的收斂解）
 - **演進**：v3 chase+guard（最近點 guard 不夠）→ v4 環內 orbit（環面視向必穿出管→支柱/管遮蔽，結構死）→ v5 環外 flyaround（入口坡遮蔽）→ v6 chase+2.0（環頂撞山脊）→ v6.1 偏移 3.4＋lead 5u（L1 入口坡 0.128／L3 遠牆 0.18 遮蔽）→ v6.2 固定法線（L1 雙側皆敗）→ v7 純 orbit（底端 Rcam−LIFT=R 內切環、與不夾地衝突＋入口/出口佔據底端走廊）→ **v8＝v6.1 基礎＋L3 固定 +x 法線＋3D 軌道推離護衛**
