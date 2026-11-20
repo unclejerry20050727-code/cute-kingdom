@@ -433,7 +433,7 @@ const Park3D = {
     const LOOPS_DEF = [
       { cx: 25, cz: -9, y0: 0.8, R: 2.8, plane: 'yz' },
       { cx: 14, cz: -14.5, y0: 0.8, R: 2.8, plane: 'xy' },
-      { cx: -10, cz: 2, y0: 0.8, R: 2.8, plane: 'yz' },
+      { cx: -10, cz: 2, y0: 0.8, R: 2.8, plane: 'yz', fixedN: [1, 0, 0] }, /* 28.5-B v8：L3 固定 +x 法線（動態 nrm 入口指 −x−z、視向穿越環面撞 −z 外緣 0.18；掃描實測固定 +x 無遮蔽） */
       { cx: -4, cz: 5.5, y0: 0.8, R: 2.5, plane: 'xy' },
     ];
     this.coasterLoops = LOOPS_DEF.map((lp) => {
@@ -445,7 +445,7 @@ const Park3D = {
         const a = lp.plane === 'yz' ? p.z - lp.cz : p.x - lp.cx;
         if (inPlane && Math.hypot(p.y - cy, a) < lp.R + 0.45) { if (t < t0) t0 = t; if (t > t1) t1 = t; }
       }
-      return { t0, t1, cx: lp.cx, cy, cz: lp.cz };
+      return { t0, t1, cx: lp.cx, cy, cz: lp.cz, fixedN: lp.fixedN || null };
     });
     let entryT = null, exitT = null;
     for (let i = 1; i <= N; i++) {

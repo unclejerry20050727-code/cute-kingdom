@@ -491,11 +491,22 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
   **修法**：動態建立 `#park-facebox`（右上角小圓框，canvas 隨 DPR 放大），海盜船全程顯示主角頭像（drawPortrait，與立繪同源），表情分層：**calm**（小擺微笑）→**fun**（中等擺）→**excited**（|ω|>0.95 張嘴）→**panic**（loopActive 或 |ω|>1.45：張嘴＋頭汗）→**vomit**（>< 緊閉眼＋張嘴＋落淚＋綠暈＋頭抖）；眨眼定時器、gaze 隨 ω 擺頭、頭部微傾斜；結算 3s 期繼續顯示（慢慢擺回→calm）；cleanup 隱藏。無新 CJK 文字→字型/`?v=` 不動（樣式全 inline，不碰 style.css）。
 
 ## 子任務
-- 28.5-A 📋：海盜船臉部特寫小框（park-ship.js：_ensureFacebox/_updateFace/_drawSquint 共用＋start/update/ride/cleanup 掛載）＋.shipfix 測試＋截圖
-- 28.5-B 📋：雲霄飛車 360° 跟環相機（park-coaster.js：inLoop＋smUp＋車體座標 camT/look＋環內提速濾波＋bank 歸零）＋.coasterfix 測試（環內 camera.up 繞環軸累積角≈±360°、逐幀跳轉無 180°）＋環頂截圖
-- 28.5-C 📋：回歸（.ship27/.ride22/.wheel26/.catch24/peek-park）＋PROGRESS 收尾
+- 28.5-A ✅（ff50359）：海盜船臉部特寫小框（park-ship.js：_ensureFacebox/_updateFace/_drawSquint 共用＋start/update/ride/cleanup 掛載）＋.shipfix 測試（5 層全中＋pageErr 0）＋截圖
+- 28.5-B ✅（v8）：雲霄飛車 360° 跟環相機（見下方最終設計）＋.coasterfix（L1 方位角 334° 單圈、逐幀最大跳轉 33.3°、0 flip、4 星 0 pageErr）＋6 張環內快照確認
+- 28.5-C ✅：回歸 .ride22（4/4 星）＋.ship27 全 PASS
+
+## 28.5-B 最終設計（v8，多輪迭代後的收斂解）
+- **演進**：v3 chase+guard（最近點 guard 不夠）→ v4 環內 orbit（環面視向必穿出管→支柱/管遮蔽，結構死）→ v5 環外 flyaround（入口坡遮蔽）→ v6 chase+2.0（環頂撞山脊）→ v6.1 偏移 3.4＋lead 5u（L1 入口坡 0.128／L3 遠牆 0.18 遮蔽）→ v6.2 固定法線（L1 雙側皆敗）→ v7 純 orbit（底端 Rcam−LIFT=R 內切環、與不夾地衝突＋入口/出口佔據底端走廊）→ **v8＝v6.1 基礎＋L3 固定 +x 法線＋3D 軌道推離護衛**
+- **v8 核心**（park-coaster.js 環內）：
+  1. `nrm = Lp.fixedN ? fixedN : rhat×tan`；L3 固定 [1,0,0]（動態法線在 L3 入口指 −x−z→視向穿越環面撞 −z 外緣 0.18；park3d.js LOOPS_DEF 加 fixedN）
+  2. `camT = chaseT + nrm·3.4`、`look = carPos + tan·5`、world up（無翻轉）
+  3. **推離護衛**：1200 軌道點（Float32Array 緩存，無每幀配置）；鏡頭離管 <0.8u 且前/側方→推至 1.15u；視向車前段離管 <0.45u→推至 0.8u；3 次迭代、目標 y≥0.8；低通 20/s 抹平＝鏡頭輕輕側移讓軌道
+- **靜態掃描**（.dbgcl.cjs 四環）：losBefore 全清（≥0.484 或 null）、camClose ≥1.3u@≤41°（僅畫面角落細條）、L1 方位角 346°／L3 −352°
+- **關鍵洞察**：環底進/出口走廊兩側都被進出環軌道佔據（L1 +x U 形彎/−x 出口、L3 +x L4 環），任何環底相機路徑都會擦入→局部推離比改軌跡更穩
 
 > 📌 做完接回第二十九輪 29-2（家具課→黑板）。
+
+> ✅ **第二十八點五輪完成**（2026-11-20）：28.5-A 海盜船臉部小框（ff50359）＋28.5-B 雲霄飛車 v8 跟環相機（見上）全 PASS；慢放复查無 180° 翻跳。
 
 # 第二十九輪：課程生效（選的課要有實際效果）
 

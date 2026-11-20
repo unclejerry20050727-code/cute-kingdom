@@ -5,7 +5,8 @@
    - 20b 重量感（G8/F0.12/BOOST5.5/V_MAX16/DRAG1.5）＋20c 特效（出洞過曝/俯衝加速線/尖叫/地底暗模式）
    - 4 顆星星沿軌道；t≥1 過終點 → 結算（星星入 Park3D.stars）
    - 車速過低會停住 → 提示「再踩一下！」
-   - 相機跟車（切線後方），玩家 billboard 坐在車上
+   - 相機跟車（切線後方，25-1 幾何不動），玩家 billboard 坐在車上；28.5-B：相機 up 改環感知
+     （環內朝環心＋lowpass＋邊界 smoothstep 混合）→ 真跟軌道繞 360°（修「2 次 180° 快速反轉」）
    接口：start(park) / update(dt) / action() / abort()
    ════════════════════════════════════════════════════════════════ */
 'use strict';
@@ -184,10 +185,12 @@ const ParkCoaster = {
     /* 20b：4 迴環（t 範圍/環心由 Park3D.coasterLoops 量測）：環內車廂/玩家朝環心偏置
        （掛在軌道內側，環頂倒掛）；環底處環心在正上方，與世界 up 無縫接軌 */
     let up = new THREE.Vector3(0, 1, 0);
+    let inLoop = false; /* 28.5-B：環內核心區——相機 up 朝環心（見下方相機段） */
     const loops = park.coasterLoops;
     if (loops) for (const Lp of loops) {
       if (u >= Lp.t0 && u <= Lp.t1) {
         up = new THREE.Vector3(Lp.cx, Lp.cy, Lp.cz).sub(p).normalize();
+        inLoop = true;
         break;
       }
     }
@@ -216,6 +219,12 @@ const ParkCoaster = {
     const dyaw = Math.atan2(Math.sin(yawTarget - this.rideBill.rotation.y), Math.cos(yawTarget - this.rideBill.rotation.y));
     this.rideBill.rotation.y += dyaw * (1 - Math.exp(-12 * dt));
     this.rideBill.position.copy(p).addScaledVector(up, 1.9);
+    /* 28.5-B：環內淡出主角 sprite——v6 環內 chase 相機距 billboard（2.4×3.0）2.4~4.8u、
+       sprite 佔 30~50° 仍偏大；入環淡出（25/s ~0.15s）、出環淡回（8/s ~0.3s），慢放不跳 */
+    if (this.billO === undefined || this.billO === null) this.billO = 1;
+    this.billO += ((inLoop ? 0 : 1) - this.billO) * (1 - Math.exp(-(inLoop ? 25 : 8) * dt));
+    if (this.billO < 0.02) this.billO = 0;
+    this.rideBill.material.opacity = this.billO;
 
     /* 星星旋轉漂浮 */
     for (const s of this.stars) {
@@ -236,24 +245,103 @@ const ParkCoaster = {
     const under = p.y < -0.15;
     park.underground = under; /* 20c：Park3D.update 地底暗模式 */
     const camUp = under ? Math.min(4, Math.max(0.15, -0.35 - p.y)) : 4;
-    const camT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, camUp, 0));
-    const look = p.clone().addScaledVector(tan, 5).add(new THREE.Vector3(0, 1, 0));
-    const k = 1 - Math.exp(-5 * dt);
-    /* 25-1：鏡頭穩定器——look 點低通濾波：粗糙段切線抖動被相機角度時間常數吸收，
-       不再硬修幾何；位置仍跟車 lerp（camT），只有角度多一層和緩 */
+    /* 28.5-B v6.1：chase＋環外平面偏移 3.4＋look 提前 5u（環法線 rhat×tan 自動適應環面）
+       v6(偏移 2.0, look=車) 否決：靜態掃描實測環頂視向死穿入環山脊管（0.03~0.07）——
+       山脊在 L1 -z 側後方 (x 25.3~26.4, y 4.7~6.7, z≈-12.05)，2.0 偏移的視向正好從它中間穿過。
+       v5 flyaround 否決：靜態掃描實測 +x R3.4 軌道圈擦入環山坡 0.92／地面 U 形軌 0.83，
+       x 偏移加大到 3.4 環底更鑽進 U 形管內 0.26；-x 側撞出環軌道→L1 環四周全被軌道包圍。
+       v6.1 實測：環底視向穿 -z 側環點 x≈25.8（管帶 24.7~25.3 外 0.5）；山脊處視向距脊
+       1.3~4u；U 形軌最近 0.34（在鏡頭外/背後）；方位角累積 350.6° 近單調（t0/t1 邊界
+       偏移方向擺動產生 2 次小回跳，低通 20/s 抹平）。look=車箱中心＋5u 切線提前（同 25-1
+       環外 look 的提前量，進出環無框架跳變）；up＝世界 up（視向永不垂直→無翻轉）；
+       不需位置硬切（t0/t1 目標留在高位、低通滑動干淨，snap 是單幀跳變＝閃爍） */
+    const chaseT = p.clone().addScaledVector(tan, -6).add(new THREE.Vector3(0, camUp, 0));
+    const chaseLook = p.clone().addScaledVector(tan, 5).add(new THREE.Vector3(0, 1, 0));
+    let camT = chaseT, look = chaseLook, upV = new THREE.Vector3(0, 1, 0);
+    const loopS = inLoop ? 1 : 0;
+    if (inLoop && loops) {
+      for (const Lp of loops) {
+        if (u < Lp.t0 || u > Lp.t1) continue;
+        const c = new THREE.Vector3(Lp.cx, Lp.cy, Lp.cz);
+        const rhat = p.clone().sub(c).normalize(); /* 環心→車 */
+        const nrm = Lp.fixedN
+          ? new THREE.Vector3(Lp.fixedN[0], Lp.fixedN[1], Lp.fixedN[2]) /* 28.5-B v8：L3 固定 +x（動態 nrm 入口指 −x−z 會穿越環面） */
+          : rhat.clone().cross(tan).normalize(); /* 環法線（環內恒定、自動適應 yz/xy 環） */
+        camT = chaseT.clone().addScaledVector(nrm, 3.4);
+        if (camT.y < 0.8) camT.y = 0.8; /* 安全：不鑽地（環內實測 chase+4u 已夠高、不觸發） */
+        look = this.car.position.clone().addScaledVector(tan, 5); /* 5u 提前（同環外 chaseLook 提前量） */
+        break;
+      }
+      /* 28.5-B v8：軌道推離護衛——環底進/出口走廊兩側都被進出環軌道佔據（U 形彎/爬坡/出口段），
+         v6.1 基礎路徑的鏡頭/視向會擦入（實測 0.05~0.64）；對最近違規管沿「離管中心」方向把目標點
+         推出安全距離（鏡頭 0.8→1.15、視向車前段 0.45→0.8），迭代 3 次。目標端平滑＋低通 20/s
+         → 視覺上是鏡頭輕輕側移讓軌道，不閃不跳。靜態掃描驗證：四環 losBefore 全清、camClose≥1.3 */
+      if (!this._tp) {
+        const NP = 1200; this._tp = new Float32Array((NP + 1) * 3); this._tpN = NP;
+        for (let j = 0; j <= NP; j++) { const q = curve.getPointAt(j / NP); this._tp[j * 3] = q.x; this._tp[j * 3 + 1] = q.y; this._tp[j * 3 + 2] = q.z; }
+      }
+      const tp = this._tp, NP = this._tpN;
+      for (let iter = 0; iter < 3; iter++) {
+        const ax = camT.x, ay = camT.y, az = camT.z;
+        const lx = look.x, ly = look.y, lz = look.z;
+        const abx = lx - ax, aby = ly - ay, abz = lz - az;
+        const ab2 = abx * abx + aby * aby + abz * abz || 1e-9;
+        const vl = Math.sqrt(ab2);
+        const sCar = ((this.car.position.x - ax) * abx + (this.car.position.y - ay) * aby + (this.car.position.z - az) * abz) / ab2;
+        let bestNeed = 0, bx = 0, by = 0, bz = 0;
+        for (let j = 0; j <= NP; j++) {
+          const t = j / NP, ix = j * 3;
+          const qxx = tp[ix], qyy = tp[ix + 1], qzz = tp[ix + 2];
+          if (Math.abs(t - u) < 0.008) continue; /* 排除車自身局部軌道 */
+          const dx = qxx - ax, dy = qyy - ay, dz = qzz - az;
+          const d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 > 100) continue;
+          const d = Math.sqrt(d2);
+          let need = 0;
+          if (d < 0.8) { /* 鏡頭離管太近（且在前/側方） */
+            const dotV = (dx * abx + dy * aby + dz * abz) / (d * vl);
+            if (dotV > -0.3) need = 1.15 - d;
+          }
+          const s = ((qxx - ax) * abx + (qyy - ay) * aby + (qzz - az) * abz) / ab2;
+          if (s > 0.05 && s < sCar - 0.02) { /* 管在視向上、車前方 */
+            const ex = qxx - (ax + abx * s), ey = qyy - (ay + aby * s), ez = qzz - (az + abz * s);
+            const dL = Math.sqrt(ex * ex + ey * ey + ez * ez);
+            if (dL < 0.45) { const n2 = 0.8 - dL; if (n2 > need) need = n2; }
+          }
+          if (need > bestNeed) {
+            bestNeed = need;
+            const inv = 1 / (d || 1);
+            bx = -dx * inv; by = -dy * inv; bz = -dz * inv; /* 推離方向：離該管中心 */
+          }
+        }
+        if (bestNeed <= 0) break;
+        camT.x += bx * bestNeed; camT.y += by * bestNeed; camT.z += bz * bestNeed;
+        if (camT.y < 0.8) camT.y = 0.8;
+      }
+    }
+    /* 25-1 鏡頭穩定器＋28.5-B：濾波速率隨 loopS 平滑提速（look 6→20、pos 5→20、up 6→14）——
+       環內目標變化快（chase 環軌跡）、高速率直接跟住（低速率滯後軌跡漂移）；
+       環外維持慢濾波吸粗糙段切線抖動 */
+    const k = 1 - Math.exp(-(5 + 15 * loopS) * dt);
     if (!this.smLook) this.smLook = look.clone();
-    this.smLook.lerp(look, 1 - Math.exp(-6 * dt));
-    /* 21-5：相機 bank ∝ v²・水平曲率（clamp ±25°）：設 camera.up 再 lookAt */
+    this.smLook.lerp(look, 1 - Math.exp(-(6 + 14 * loopS) * dt));
+    /* 28.5-B：相機 up 低通追蹤 upV（吸 t0/t1 邊界跳變） */
+    if (!this.smUp) this.smUp = upV.clone();
+    this.smUp.lerp(upV, 1 - Math.exp(-(6 + 8 * loopS) * dt));
+    if (this.smUp.lengthSq() < 1e-8) this.smUp.set(0, 1, 0);
+    this.smUp.normalize();
+    /* 21-5：相機 bank ∝ v²・水平曲率（clamp ±25°）；
+       28.5-B v6：環內歸零——世界 up 不 roll，且環牆切線水平投影≈0、dh 雜訊大 */
     const uB = Math.min(u, 0.993);
     const t2 = uB + 0.006;
     const tan2 = curve.getTangentAt(t2);
     const dh = Math.atan2(Math.sin(Math.atan2(tan2.x, tan2.z) - Math.atan2(tan.x, tan.z)),
       Math.cos(Math.atan2(tan2.x, tan2.z) - Math.atan2(tan.x, tan.z)));
     const curv = dh / (t2 - uB) / curve.getLength(); /* 1/u，+=左彎 */
-    const bankT = Math.max(-0.44, Math.min(0.44, this.v * this.v * curv * 0.03));
+    const bankT = inLoop ? 0 : Math.max(-0.44, Math.min(0.44, this.v * this.v * curv * 0.03));
     this.bank += (bankT - this.bank) * (1 - Math.exp(-4 * dt));
     const fwd = this.smLook.clone().sub(park.camera.position).normalize();
-    park.camera.up.set(0, 1, 0).applyAxisAngle(fwd, this.bank);
+    park.camera.up.copy(this.smUp).applyAxisAngle(fwd, this.bank);
     park.camera.position.lerp(camT, k);
     park.camera.lookAt(this.smLook);
   },
@@ -284,6 +372,7 @@ const ParkCoaster = {
     this.stars = [];
     this.car = null;
     this.smLook = null; /* 25-1：下趟重新收斂 */
+    this.smUp = null;   /* 28.5-B：下趟重新收斂 */
     /* 恢復停靠列車 */
     if (park.parkedTrain) for (const c of park.parkedTrain) c.visible = true;
     /* 玩家回站點 */
@@ -292,6 +381,8 @@ const ParkCoaster = {
     park.player.position.set(5, 1.5, 6);
     park.player.rotation.y = 0; /* 18e-fix：騎車時 billboard 轉向相機，走路要歸零 */
     park.player.material.map = park.playerTex[park.facing] || park.playerTex.down; /* 21-5：還原走路紋理 */
+    park.player.material.opacity = 1; /* 28.5-B v4：還原環內淡出 */
+    this.billO = 1;
     park.shadow.position.set(5, 0.03, 6);
     park.facing = 'down';
     park.redrawAll(0.5, false);
