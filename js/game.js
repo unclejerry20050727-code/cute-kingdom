@@ -1602,6 +1602,8 @@ function wallCard(id, it) {
   const cv = document.createElement('canvas'); cv.width = 128; cv.height = 84;
   const c2 = cv.getContext('2d');
   const n = countWallItem(id);
+  /* 第二十九輪 29-3：課程解鎖——未選該課程 → 灰卡 + 🔒 */
+  const locked = it.needsCourse && !hasCourse(it.needsCourse);
   const [wx, wy] = P(0.5, 0, -(it.hMid ?? 110));
   c2.save();
   c2.translate(64, 40);
@@ -1618,11 +1620,18 @@ function wallCard(id, it) {
   c2.restore();
   const nm = document.createElement('div');
   nm.className = 'bi-name';
-  nm.textContent = it.name + (n >= it.max ? `（${n}/${it.max}）` : '');
-  item.append(cv, nm);
-  if (n >= it.max) item.classList.add('dis');
+  nm.textContent = it.name + (locked ? ' 🔒' : (n >= it.max ? `（${n}/${it.max}）` : ''));
+  if (locked) {
+    const hk = document.createElement('div');
+    hk.className = 'bi-lock';
+    hk.textContent = `上${COURSE_NAMES[it.needsCourse]}解鎖`;
+    item.append(cv, nm, hk);
+  } else item.append(cv, nm);
+  if (n >= it.max || locked) item.classList.add('dis');
+  if (locked) item.classList.add('locked');
   item.onclick = () => {
     sfx('click');
+    if (locked) { showToast(`🔒 先上${COURSE_NAMES[it.needsCourse]}才能解鎖${it.name}`); return; }
     const cur = countWallItem(id);
     if (cur >= it.max) { showToast(`已經有 ${cur} 個${it.name}囉～`); return; }
     if (!canPlaceNow()) return;

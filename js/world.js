@@ -1672,6 +1672,62 @@ function drawWallWreath(ctx, wall, pos, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* 第二十九輪 29-3：花藝課→花環（春花環：綠葉環＋5 朵彩色小花＋頂部粉紅蝴蝶結＋中心小愛心；花角度偏移 36° 讓頂部空出放結） */
+function drawWallFlowerWreath(ctx, wall, pos, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  wallSpace(ctx, wall, pos, o.h ?? 170);
+  const bad = o.tint === 'bad';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(Math.cos(a) * 12, Math.sin(a) * 12);
+    ctx.rotate(a + Math.PI / 2);
+    ctx.fillStyle = bad ? '#DE8794' : (i % 2 ? '#8FD49B' : '#63B57B');
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(0, 0, 3, 5.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  const fCols = bad
+    ? [['#DE8794', '#C96A7A'], ['#DE8794', '#C96A7A'], ['#DE8794', '#C96A7A'], ['#DE8794', '#C96A7A'], ['#DE8794', '#C96A7A']]
+    : [['#FF8FAB', '#FFD166'], ['#FFD166', '#FFF6E9'], ['#9FD8E8', '#FFD166'], ['#FFB27A', '#FFF6E9'], ['#FF8FAB', '#FFD166']];
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + Math.PI / 5 + (i * Math.PI * 2) / 5;
+    const fx = Math.cos(a) * 12, fy = Math.sin(a) * 12;
+    const [petalC, centerC] = fCols[i];
+    for (let p = 0; p < 5; p++) {
+      const pa = (p / 5) * Math.PI * 2 - Math.PI / 2;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.rotate(pa);
+      ctx.fillStyle = petalC;
+      ctx.strokeStyle = INK; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(0, -2.5, 1.7, 2.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.fillStyle = centerC;
+    ctx.strokeStyle = INK; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(fx, fy, 1.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  /* 頂部粉紅蝴蝶結 */
+  ctx.fillStyle = bad ? '#DE8794' : '#FF9FBE';
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(0, -12); ctx.quadraticCurveTo(-8.5, -17, -7, -10.5); ctx.quadraticCurveTo(-3.5, -8.5, 0, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -12); ctx.quadraticCurveTo(8.5, -17, 7, -10.5); ctx.quadraticCurveTo(3.5, -8.5, 0, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#C96A7A' : '#FF6E97';
+  ctx.beginPath(); ctx.arc(0, -12, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  /* 中心小愛心 */
+  ctx.fillStyle = bad ? '#C96A7A' : '#FF8FAB';
+  ctx.strokeStyle = INK; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 2.4);
+  ctx.bezierCurveTo(-3.4, -0.4, -1.8, -3.4, 0, -1.2);
+  ctx.bezierCurveTo(1.8, -3.4, 3.4, -0.4, 0, 2.4);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  wallSpaceEnd(ctx);
+  ctx.globalAlpha = saved;
+}
+
 /* 彩燈串：綢帶同款弧線＋5 顆彩色圓燈泡（span 2，local 0 為中心 ±36） */
 function drawWallLights(ctx, wall, pos, o = {}) {
   const saved = ctx.globalAlpha;
@@ -1781,6 +1837,7 @@ const WALL_ITEMS = {
   poster:     { name: '海報',   tab: 'wall', max: 2, span: 1, hMid: 150, hitW: 15, sizeH: 46, draw: drawWallPoster },
   wallShelf:  { name: '牆架',   tab: 'wall', max: 2, span: 1, hMid: 105, hitW: 19, sizeH: 30, draw: drawWallShelf },
   garland:    { name: '彩旗',   tab: 'wall', max: 1, span: 2, hMid: 232, hitW: 36, sizeH: 24, draw: drawWallGarland },
+  flowerWreath: { name: '花環', tab: 'wall', max: 2, span: 1, hMid: 170, hitW: 17, sizeH: 36, needsCourse: 'flower', draw: drawWallFlowerWreath },
   /* 第十四輪d：節慶牆飾（🎉 分頁；numBalloon 可換數字 1-9） */
   couplet:    { name: '春聯',   tab: 'fest', max: 2, span: 1, hMid: 175, hitW: 14, sizeH: 66, draw: drawWallCouplet },
   fuChar:     { name: '福字',   tab: 'fest', max: 1, span: 1, hMid: 160, hitW: 15, sizeH: 30, draw: drawWallFuChar },

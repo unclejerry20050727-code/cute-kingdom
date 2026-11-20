@@ -575,6 +575,12 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - ✅ **驗證**（test/.proberot.mjs 1800×2000 12 格 before/after）：rot0 床/書桌/書架/沙發像素級一致（magick compare 僅 58 px × 1-3 階 AA 抖動＝無回歸）；rot1 床/書桌/沙發/鋼琴/黑板缺面全補上、腳不懸浮；五斗櫃抽屜/鋼琴鍵 rot0 從背面移到前面（faceSpace 原點修正的預期變化）；`.qa292.mjs` 重跑 **ALL PASS**＋截圖（/tmp/292-*.png）確認 rot0/rot1 黑板、鎖定卡、房間視圖皆正確
 - ⚠️ 已知小限制（不影響本輪）：rot1 鋼琴鍵仍顯示在前右寬面（物理上鍵盤可能背對鏡頭）＝「永遠可見」取捨；rot1 沙發靠背在寬邊（朝向取捨）。若要更真可加 rot=2/3，留後續輪
 ## 29-3 花藝課→花環（WALL_ITEMS+drawWallFlowerWreath+商店門控）
+- ✅ **完成**：
+  - world.js `drawWallFlowerWreath`（春花環：12 片綠葉環 #8FD49B/#63B57B＋5 朵 5 瓣小花（粉/黃/藍/橘/粉，角度偏 36° 讓頂部空出）＋頂部粉紅蝴蝶結＋中心小愛心；bad tint 全換；與冬青花環同結構但顏色/結位置/中心愛心區隔）
+  - `WALL_ITEMS.flowerWreath: { name:'花環', tab:'wall', max:2, span:1, hMid:170, hitW:17, sizeH:36, needsCourse:'flower', draw:drawWallFlowerWreath }`（「花環」vs 既有「冬青花環」不撞名）
+  - game.js `wallCard` 加與 floorCard 同款課程門控（無課→dis+locked+🔒＋「上花藝課解鎖」＋toast 不可放置）
+  - 字型免重建：花/藝/課/環/解/鎖/先 全在 rhr-900.woff2（fontTools cmap）→ 不需 ?v= bump
+  - `.qa293.mjs` **ALL PASS**（12 項：wall 頁鎖定卡 UI/toast/選課解鎖/startWallPlacement wall 模式/WALL_ITEMS 參數/無 pageerror）＋截圖：花環放大（/tmp/293-closeup.png）與冬青花環並排風格一致、房間掛牆視圖、商店鎖定卡
 ## 29-4 字型重跑 ?v=22＋.course29 測試
 ## 29-5 回歸 14 套＋.clock28/.school28＋push＋live smoke
 
