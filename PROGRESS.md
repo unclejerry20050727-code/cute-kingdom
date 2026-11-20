@@ -494,6 +494,19 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 28.5-A ✅（ff50359）：海盜船臉部特寫小框（park-ship.js：_ensureFacebox/_updateFace/_drawSquint 共用＋start/update/ride/cleanup 掛載）＋.shipfix 測試（5 層全中＋pageErr 0）＋截圖
 - 28.5-B ✅（v8）：雲霄飛車 360° 跟環相機（見下方最終設計）＋.coasterfix（L1 方位角 334° 單圈、逐幀最大跳轉 33.3°、0 flip、4 星 0 pageErr）＋6 張環內快照確認
 - 28.5-C ✅：回歸 .ride22（4/4 星）＋.ship27 全 PASS
+- 28.5-D ✅：雲霄飛車主角真 billboard——修「繞圈時主角突然消失」（見下方設計）＋.bill285 PASS＋回歸 .coasterfix/.ride22 PASS
+
+## 28.5-D 主角真 billboard（修「繞圈主角消失」）
+- **Jerry 觀察（2026-11-20）**：雲霄飛車繞圈時主角突然消失，猜測是「主角只有站立角度、沒有顛倒角度畫不出來」
+- **根因**：猜測方向對、位置不同——(1) 28.5-B 時代的 workaround：環內（inLoop）把主角 sprite 淡出到 opacity 0（當時原因是直立-only 的 2.4×3.0 平面在環內佔 30~50° 偏大）；(2) 主角 plane 只有 yaw 旋轉、平面恆直立（永遠「站立」姿態），不會跟車體翻轉
+- **修法**（park-coaster.js _updateVisual）：
+  1. 廢掉環內淡出（billO 邏輯整段刪除），opacity 恆 1
+  2. 真 billboard：平面法線（+Z）恆指相機（去頭向分量→垂直頭向平面內投影＋退化保護；右手系 x=y×z 保紋理不鏡射）；平面 +Y（頭向）跟車體 up（環外＝世界向上／環內＝朝環心）→ **環頂頭朝下、倒立角度畫得出**
+  3. 四元數直接跟（copy 非 slerp）：相機位置本身已低通平滑→目標平滑；slerp 14/s 會滯後環內高速視角（face 73.6%→改直接跟）
+  4. 回頭/慶祝仍只切紋理（背影 up↔正臉 down）；fwdYaw/camYaw 航向 lerp 刪除（dead code）；_cleanup 加 quaternion.identity() 還原
+- **幾何上限**：face＝dot(法線, 朝相機)＝√(1−(toCam·head)²)；環頂頭向朝環心（下）而相機在環外上方→該視角最佳解 face≈0.76（≈40° 傾角），非 bug
+- **測試 .bill285.cjs** PASS：minOpacity 1.000（全程無淡出）、環內中段頭向朝環心 >0.75 占比 100%（avg 1.00）、face>0.5 占 98.3%／>0.75 占 90.9%（不側對）、逐幀最大跳轉 34.9°／0 flip、4 星 0 pageErr；快照環頂/環牆/entry/exit 主角皆在（環頂倒掛、環側側傾）＋ride22 L3 環快照主角可見＋完賽回站點主角直立（quaternion 已還原）
+- **回歸**：.coasterfix PASS（L1 方位 334.4°、0 flip、4 星 0 pageErr，相機行為不變）、.ride22 PASS（4/4 星、0 停、0 pageErr）
 
 ## 28.5-B 最終設計（v8，多輪迭代後的收斂解）
 - **演進**：v3 chase+guard（最近點 guard 不夠）→ v4 環內 orbit（環面視向必穿出管→支柱/管遮蔽，結構死）→ v5 環外 flyaround（入口坡遮蔽）→ v6 chase+2.0（環頂撞山脊）→ v6.1 偏移 3.4＋lead 5u（L1 入口坡 0.128／L3 遠牆 0.18 遮蔽）→ v6.2 固定法線（L1 雙側皆敗）→ v7 純 orbit（底端 Rcam−LIFT=R 內切環、與不夾地衝突＋入口/出口佔據底端走廊）→ **v8＝v6.1 基礎＋L3 固定 +x 法線＋3D 軌道推離護衛**
@@ -506,7 +519,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 
 > 📌 做完接回第二十九輪 29-2（家具課→黑板）。
 
-> ✅ **第二十八點五輪完成**（2026-11-20）：28.5-A 海盜船臉部小框（ff50359）＋28.5-B 雲霄飛車 v8 跟環相機（見上）全 PASS；慢放复查無 180° 翻跳。
+> ✅ **第二十八點五輪完成**（2026-11-20）：28.5-A 海盜船臉部小框（ff50359）＋28.5-B 雲霄飛車 v8 跟環相機（見上）全 PASS；慢放复查無 180° 翻跳；28.5-D 主角真 billboard 修「繞圈主角消失」（見上）。
 
 # 第二十九輪：課程生效（選的課要有實際效果）
 

@@ -7,6 +7,8 @@
    - 車速過低會停住 → 提示「再踩一下！」
    - 相機跟車（切線後方，25-1 幾何不動），玩家 billboard 坐在車上；28.5-B：相機 up 改環感知
      （環內朝環心＋lowpass＋邊界 smoothstep 混合）→ 真跟軌道繞 360°（修「2 次 180° 快速反轉」）
+   - 28.5-D：主角真 billboard（平面法線→相機、頭向跟車體 up＝環內朝環心）→ 繞圈顛倒也畫得出，
+     廢掉 28.5-B 環內淡出（「繞圈主角消失」）
    接口：start(park) / update(dt) / action() / abort()
    ════════════════════════════════════════════════════════════════ */
 'use strict';
@@ -48,8 +50,6 @@ const ParkCoaster = {
     this.lastScream = -9;      /* 20c：上次尖叫時間（1.8s 冷卻） */
     this.speedOn = false;      /* 20c：加速線狀態 */
     this.bank = 0;             /* 21-5：相機 bank 角（rad，左彎+） */
-    const t0 = park.coasterCurve.getTangentAt(0);
-    this.fwdYaw = Math.atan2(t0.x, t0.z); /* 21-5：面朝前的穩定航向（弧長前顧） */
     this.lookBackT = 0;        /* 21-5：「回頭看螢幕」剩餘秒數 */
     this.lastLookStart = -9;   /* 21-5：上次回頭起始時間（頻率控制） */
     this.nextLookBack = park.t + 6 + Math.random() * 5; /* 21-5：下次隨機回頭 */
@@ -198,33 +198,34 @@ const ParkCoaster = {
     const ahead = p.clone().addScaledVector(tan, 1);
     this.car.lookAt(ahead);
 
-    /* 21-5：主角坐姿面朝前——航向取弧長前顧 1.2u 的水平投影（環頂/環牆切線近垂直，
-       直接用切線 atan2 會抖）；偶爾回頭看螢幕（隨機＋尖叫觸發，1.2s，短角 lerp） */
-    const camYaw = Math.atan2(park.camera.position.x - p.x, park.camera.position.z - p.z);
+    /* 21-5：偶爾回頭看螢幕（隨機＋尖叫觸發，1.2s）→ 只切紋理（背影↔正臉） */
     if (this.lookBackT <= 0 && park.t >= this.nextLookBack) {
       this.lookBackT = 1.2;
       this.lastLookStart = park.t;
       this.nextLookBack = park.t + 10 + Math.random() * 8;
     }
     if (this.lookBackT > 0) this.lookBackT -= dt;
-    /* 21-5：bill 紋理——面朝前（背朝相機）＝背影 up／回頭或完賽慶祝＝正臉 down（同一 plane 雙面會看到鏡像臉，必須切圖） */
+    /* 21-5：bill 紋理——面朝前（背朝相機）＝背影 up／回頭或完賽慶祝＝正臉 down */
     this.rideBill.material.map = (this.lookBackT > 0 || this.finished) ? park.playerTex.down : park.playerTex.up;
-    if (u < 0.995) {
-      const uA = Math.min(u + 1.2 / curve.getLength(), 0.999);
-      const pa = curve.getPointAt(uA);
-      const ahx = pa.x - p.x, ahz = pa.z - p.z;
-      if (ahx * ahx + ahz * ahz > 0.02) this.fwdYaw = Math.atan2(ahx, ahz);
-    }
-    const yawTarget = (this.finished || this.lookBackT > 0) ? camYaw : this.fwdYaw;
-    const dyaw = Math.atan2(Math.sin(yawTarget - this.rideBill.rotation.y), Math.cos(yawTarget - this.rideBill.rotation.y));
-    this.rideBill.rotation.y += dyaw * (1 - Math.exp(-12 * dt));
     this.rideBill.position.copy(p).addScaledVector(up, 1.9);
-    /* 28.5-B：環內淡出主角 sprite——v6 環內 chase 相機距 billboard（2.4×3.0）2.4~4.8u、
-       sprite 佔 30~50° 仍偏大；入環淡出（25/s ~0.15s）、出環淡回（8/s ~0.3s），慢放不跳 */
-    if (this.billO === undefined || this.billO === null) this.billO = 1;
-    this.billO += ((inLoop ? 0 : 1) - this.billO) * (1 - Math.exp(-(inLoop ? 25 : 8) * dt));
-    if (this.billO < 0.02) this.billO = 0;
-    this.rideBill.material.opacity = this.billO;
+    /* 28.5-D：主角真 billboard——平面法線恆指相機（恆看到正面、無鏡像），平面 +Y（頭向）跟車體 up
+       （環外＝世界向上／環內＝朝環心）→ 繞圈顛倒時頭向跟著翻、倒立角度也畫得出；
+       廢掉 28.5-B 環內淡出（舊因：直立-only sprite 環內佔 30~50° 偏大→乾脆隱掉＝「繞圈主角消失」；
+       v8 相機 3.4u 環法線偏移後環內 sprite 僅約 20°，與環外追擊視角同級，直接保留） */
+    if (!this._mBill) this._mBill = new THREE.Matrix4();
+    if (!this._qBill) this._qBill = new THREE.Quaternion();
+    {
+      const yAx = up; /* 平面 +Y＝頭向＝車體 up */
+      const zAx = park.camera.position.clone().sub(this.rideBill.position);
+      zAx.addScaledVector(yAx, -zAx.dot(yAx)); /* 去頭向分量→法線在垂直頭向的平面內 */
+      if (zAx.lengthSq() < 1e-6) { zAx.set(1, 0, 0); zAx.addScaledVector(yAx, -yAx.x); } /* 相機恰在頭向軸上→退化保護 */
+      zAx.normalize();
+      const xAx = new THREE.Vector3().crossVectors(yAx, zAx).normalize(); /* 右手系→紋理不鏡射 */
+      this._mBill.makeBasis(xAx, yAx, zAx);
+      this._qBill.setFromRotationMatrix(this._mBill);
+    }
+    this.rideBill.quaternion.copy(this._qBill); /* 相機位置本身已低通平滑→目標平滑、直接跟（slerp 會滯後高速環內視角） */
+    this.rideBill.material.opacity = 1;
 
     /* 星星旋轉漂浮 */
     for (const s of this.stars) {
@@ -379,10 +380,10 @@ const ParkCoaster = {
     park.player.visible = true;
     park.shadow.visible = true;
     park.player.position.set(5, 1.5, 6);
+    park.player.quaternion.identity(); /* 28.5-D：還原真 billboard 四元數（環內頭向曾跟車體翻轉） */
     park.player.rotation.y = 0; /* 18e-fix：騎車時 billboard 轉向相機，走路要歸零 */
     park.player.material.map = park.playerTex[park.facing] || park.playerTex.down; /* 21-5：還原走路紋理 */
-    park.player.material.opacity = 1; /* 28.5-B v4：還原環內淡出 */
-    this.billO = 1;
+    park.player.material.opacity = 1;
     park.shadow.position.set(5, 0.03, 6);
     park.facing = 'down';
     park.redrawAll(0.5, false);
