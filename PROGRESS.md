@@ -588,10 +588,6 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - **peek-build.mjs 期望值更新**（tracked 測試）：牆飾卡 6→7（29-3 花環）、擺飾卡 4→5（29-2 黑板）——新卡即使鎖定也計入 `.build-item` 數量
 ## 29-5 回歸 14 套＋.clock28/.school28＋push＋live smoke
 - ✅ 14 套回歸＋.clock28/.school28 全 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park/.ship27/.catch24/.wheel26/.clock28/.school28）
-- 待收尾：push＋live smoke
-## 新 session 接續步驟
-1. 確認 `git status` 乾淨（HEAD 應在 29-0 commit）；啟動 server：`python3 -m http.server 8742 --bind 127.0.0.1`
-2. 做 29-1（最小改動，先 commit）
-3. 29-2 前先 grep 確認 drawPlant 定義位置與建造 tab 卡的生成迴圈，照抄模式
-4. 每小步 commit（避免 terminated 丟進度）；截圖放 /tmp/s29-0x-*.png
-5. 29-4/29-5 收尾
+- ✅ **push＋live smoke**：push `01f9d8c..d4035ae`（29-2/29-3/29-4 三 commit）上線 GitHub Pages；`.livesmoke29.cjs` **PASS**（live drawBoard/drawWallFlowerWreath/speedMul 皆 function、board[2,1,furniture]/wreath[2,flower]/COURSE_NAMES.花藝課、黑板卡＋花環卡在商店、0 pageErr）
+- ⚠️ js 無 ?v= 防快取：使用者需強制重新整理（Ctrl/Cmd+Shift+R）
+> **第二十九輪完成 ✅**（2026-11-20）：課程正式生效——體育課⚽行走速度×1.25（speedMul 唯一出口）＋家具課🪑解鎖黑板（2×1 裝飾家具：木框＋墨綠板面＋粉筆塗鴉＋粉筆托）＋花藝課💐解鎖花環（春花環牆飾：綠葉環＋5 朵小花＋蝴蝶結＋愛心）；商店卡片課程門控（無課→灰卡🔒＋提示＋toast）；順手修復 29-2b 既有旋轉 90° 缺面 bug（isoBox/drawBed 硬編碼側面→最底角選面、faceSpace 四分支原點修正、drawBoard 板面選面）。測試：.q291/.qa292/.qa293/.course29 全 PASS＋.proberot before/after 驗證（rot0 像素一致、rot1 缺面全補）＋14 套回歸＋.clock28/.school28 全 PASS；字型免重建（新 CJK 全在 cmap）；push d4035ae、.livesmoke29 PASS。
