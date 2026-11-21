@@ -582,8 +582,13 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
   - 字型免重建：花/藝/課/環/解/鎖/先 全在 rhr-900.woff2（fontTools cmap）→ 不需 ?v= bump
   - `.qa293.mjs` **ALL PASS**（12 項：wall 頁鎖定卡 UI/toast/選課解鎖/startWallPlacement wall 模式/WALL_ITEMS 參數/無 pageerror）＋截圖：花環放大（/tmp/293-closeup.png）與冬青花環並排風格一致、房間掛牆視圖、商店鎖定卡
 ## 29-4 字型重跑 ?v=22＋.course29 測試
+- ✅ **完成**：
+  - 字型免重建：29-2/29-3 新增 CJK（黑板/花環/花藝/解鎖/先）全在 rhr-900.woff2 cmap（fontTools 驗證）→ 不需 ?v=22，font 維持 `?v=21`
+  - `test/.course29.mjs` 整合測試 **ALL PASS**（14 項）：R1 speedMul 1/1.25；R2 黑板卡鎖定/提示/解鎖；存檔含黑板＋花環＋選課；reload→startGame 續玩後黑板/花環/選課/speedMul 全持久化、黑板卡仍解鎖；0 pageerror
+- **peek-build.mjs 期望值更新**（tracked 測試）：牆飾卡 6→7（29-3 花環）、擺飾卡 4→5（29-2 黑板）——新卡即使鎖定也計入 `.build-item` 數量
 ## 29-5 回歸 14 套＋.clock28/.school28＋push＋live smoke
-
+- ✅ 14 套回歸＋.clock28/.school28 全 PASS（flow/peek-build/peek-recover/peek-bgm-filefix/peek-character/peek-map/peek-work/peek-fest/peek-mobile/peek-pose/peek-park/.ship27/.catch24/.wheel26/.clock28/.school28）
+- 待收尾：push＋live smoke
 ## 新 session 接續步驟
 1. 確認 `git status` 乾淨（HEAD 應在 29-0 commit）；啟動 server：`python3 -m http.server 8742 --bind 127.0.0.1`
 2. 做 29-1（最小改動，先 commit）

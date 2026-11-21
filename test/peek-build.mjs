@@ -106,16 +106,16 @@ check('放沙發 → 4 件家具', (await G(() => Game.furniture.length)) === 4)
 check('放完後 sub 回 free', (await G(() => Game.sub)) === 'free');
 await shot('room-furniture', '床+書桌+椅子+沙發');
 
-/* ── 4. 牆飾 tab：6 張卡（第九輪d） ── */
+/* ── 4. 牆飾 tab：7 張卡（第九輪d；29-3 加花環） ── */
 await page.click('.btab[data-tab="wall"]'); await ms(400);
 const nWall = await G(() => document.querySelectorAll('#build-items .build-item').length);
-check(`牆飾卡 6 張（實際 ${nWall}）`, nWall === 6);
+check(`牆飾卡 7 張（實際 ${nWall}）`, nWall === 7);
 await shot('wall-cards');
 
-/* ── 5. 擺飾 tab：4 張卡，放盆栽 + 氣球 ── */
+/* ── 5. 擺飾 tab：5 張卡（29-2 加黑板），放盆栽 + 氣球 ── */
 await page.click('.btab[data-tab="decor"]'); await ms(300);
 const nDeco = await G(() => document.querySelectorAll('#build-items .build-item').length);
-check(`擺飾卡 4 張（實際 ${nDeco}）`, nDeco === 4);
+check(`擺飾卡 5 張（實際 ${nDeco}）`, nDeco === 5);
 await shot('panel-decor');
 await placeItemByName('盆栽', 1.5, 3.5);
 check('放盆栽 → 5 件', (await G(() => Game.furniture.length)) === 5);
