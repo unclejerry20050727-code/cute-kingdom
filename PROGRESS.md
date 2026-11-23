@@ -619,7 +619,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 30-2 ✅：爐子（faceSpace h=頂高 22；screenshot 驗證）
 - 30-3 ✅：咖啡機（h=36；screenshot 驗證）
 - 30-4 ✅：池塘＋釣魚小游戏（.q304 14 項過；三態 screenshot 驗證）
-- 30-5 📋：小貓跟隨
+- 30-5 ✅：小貓跟隨（.q305 8 項過；橘色虎斑正面坐貓~38px 含尾；depth 玩家+0.15；領頭 0.45 tile 6 tile/s；確認課 toast 出現/撤課 toast 離開；screenshot 驗證）
 - 30-6 📋：字型＋?v=
 - 30-7 📋：.course30 整合測試
 - 30-8 📋：回歸＋push＋live smoke

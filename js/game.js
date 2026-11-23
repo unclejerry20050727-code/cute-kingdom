@@ -58,6 +58,8 @@ const Game = {
   school: { visited: false, confirmed: false, selected: [] },
   /* 第三十輪 30-4：釣魚（釣魚課；累計釣到數） */
   fish: { caught: 0 },
+  /* 第三十輪 30-5：寵物課——小貓（tile 座標跟隨；無課=null） */
+  pet: null,
   /* 第二十八輪：時間（1/1 起、無年；1 秒＝1 遊戲分鐘） */
   clock: { month: 1, day: 1, hour: 8, min: 0 },
   clockAcc: 0, clockText: '',
@@ -212,6 +214,9 @@ function beginGame(save, skipIntro) {
     selected: Array.isArray(save.school && save.school.selected) ? save.school.selected : [],
   };
   Game.fish = { caught: (save.fish && save.fish.caught) || 0 }; /* 第三十輪 30-4 */
+  Game.pet = (save.pet && typeof save.pet.x === 'number' && hasCourse('pet'))
+    ? { x: save.pet.x, y: save.pet.y, walking: false }
+    : (hasCourse('pet') ? { x: 4.5, y: 5.5, walking: false } : null); /* 第三十輪 30-5：小貓（無存檔=玩家出生點旁） */
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -381,6 +386,19 @@ function updateGame(dt) {
     }
     case 'free': {
       updateMovement(dt);
+      /* 第三十輪 30-5：寵物課——小貓跟隨（領頭 0.45 tile、6 tile/s、限房內） */
+      if (Game.pet) {
+        const pet = Game.pet;
+        const pdx = p.x - pet.x, pdy = p.y - pet.y;
+        const pd = Math.hypot(pdx, pdy);
+        if (pd > 0.45) {
+          const step = Math.min(6 * dt, pd - 0.2);
+          pet.x += (pdx / pd) * step; pet.y += (pdy / pd) * step;
+          pet.walking = true;
+        } else pet.walking = false;
+        pet.x = Math.min(9.7, Math.max(0.3, pet.x));
+        pet.y = Math.min(9.7, Math.max(0.3, pet.y));
+      }
       /* 第十五輪：姿勢計時（1.8s 自動回 idle） */
       if (Game.player.pose) {
         Game.player.pose.t += dt;
@@ -750,6 +768,14 @@ function confirmOrChangeSchool() {
     Game.school.confirmed = true;
     sfx('ding');
     showToast('📚 選課完成！你的 4 堂課定下來了~');
+  }
+  /* 第三十輪 30-5：小貓隨寵物課出現/離開 */
+  if (hasCourse('pet') && !Game.pet) {
+    Game.pet = { x: Game.player.x, y: Game.player.y, walking: false };
+    showToast('🐱 小貓來陪你囉~');
+  } else if (!hasCourse('pet') && Game.pet) {
+    Game.pet = null;
+    showToast('🐱 小貓回教室了…（重新選寵物課可以叫它回來）');
   }
   saveGame(fullSave(Game.stage));
   updateSchoolFoot();
@@ -1126,6 +1152,15 @@ function renderGame() {
       }
     },
   });
+
+  /* 第三十輪 30-5：寵物課——小貓（depth 玩家+0.15=畫玩家前面） */
+  if (Game.pet) {
+    const pet = Game.pet;
+    items.push({
+      depth: pet.x + pet.y + 0.15,
+      draw: () => drawCat(ctx, pet.x, pet.y, Game.t, !!pet.walking),
+    });
+  }
 
   items.sort((a, b) => a.depth - b.depth);
   for (const it of items) it.draw();
@@ -1756,6 +1791,7 @@ function fullSave(stage) {
     clock: Game.clock, /* 第二十八輪：時間 */
     school: Game.school, /* 第二十八輪：學校選課 */
     fish: { caught: Game.fish ? Game.fish.caught : 0 }, /* 第三十輪 30-4：釣魚紀錄 */
+    pet: Game.pet ? { x: +Game.pet.x.toFixed(3), y: +Game.pet.y.toFixed(3) } : null, /* 第三十輪 30-5：小貓位置 */
   };
 }
 

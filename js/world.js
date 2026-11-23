@@ -2037,3 +2037,83 @@ function wallItemHit(w, mx, my) {
   const hw = it ? (it.hitW ?? 30) : 30;
   return Math.abs(along) <= hw && Math.abs(vert) <= 48;
 }
+
+/* ══════════ 第三十輪 30-5：寵物課——橘色虎斑小貓（正面、約30px、腳底=tile 中心）══════════ */
+function drawCat(ctx, tx, ty, t, walking) {
+  const [sx, sy] = tileScreen(tx, ty);
+  const bob = walking ? Math.abs(Math.sin(t * 10)) * 2.2 : Math.sin(t * 2.2) * 1.1;
+  const by = sy - bob;
+  ctx.save();
+  ctx.lineCap = 'round';
+  /* 尾巴（環尾擺動，先畫=在身體後） */
+  const sw = Math.sin(t * 3) * 2.5;
+  ctx.strokeStyle = INK; ctx.lineWidth = 6.5;
+  ctx.beginPath(); ctx.moveTo(sx + 8, by - 10);
+  ctx.quadraticCurveTo(sx + 17, by - 13, sx + 14 + sw, by - 23);
+  ctx.stroke();
+  ctx.strokeStyle = '#FFB35C'; ctx.lineWidth = 3.2;
+  ctx.beginPath(); ctx.moveTo(sx + 8, by - 10);
+  ctx.quadraticCurveTo(sx + 17, by - 13, sx + 14 + sw, by - 23);
+  ctx.stroke();
+  /* 小腳（走路交替） */
+  const step = walking ? Math.sin(t * 10) * 1.6 : 0;
+  for (const sd of [-4.5, 4.5]) {
+    ctx.fillStyle = '#FFB35C';
+    ctx.beginPath(); ctx.ellipse(sx + sd, sy - 1.5 + (sd < 0 ? step : -step) * 0.4, 3.2, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
+  }
+  /* 鵝蛋身 */
+  ctx.fillStyle = '#FFB35C';
+  ctx.beginPath(); ctx.ellipse(sx, by - 12, 10, 10.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke();
+  /* 虎斑紋 */
+  ctx.strokeStyle = '#E8933C'; ctx.lineWidth = 2.2;
+  for (const [ox, oy] of [[-5, -18], [0, -20], [5, -18]]) {
+    ctx.beginPath(); ctx.moveTo(sx + ox, by + oy - 1.5);
+    ctx.quadraticCurveTo(sx + ox + 1, by + oy, sx + ox, by + oy + 2);
+    ctx.stroke();
+  }
+  /* 胸前白 */
+  ctx.fillStyle = '#FFF6EA';
+  ctx.beginPath(); ctx.ellipse(sx, by - 8, 5.2, 6, 0, 0, Math.PI * 2); ctx.fill();
+  /* 頭 */
+  const hy = by - 26;
+  for (const sd of [-1, 1]) {
+    /* 三角耳 */
+    ctx.fillStyle = '#FFB35C';
+    ctx.beginPath();
+    ctx.moveTo(sx + sd * 3.5, hy - 6.5);
+    ctx.lineTo(sx + sd * 9.5, hy - 11.5);
+    ctx.lineTo(sx + sd * 9.5, hy - 3.5);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    /* 內耳粉 */
+    ctx.fillStyle = '#FFC2D4';
+    ctx.beginPath();
+    ctx.moveTo(sx + sd * 5.5, hy - 7);
+    ctx.lineTo(sx + sd * 8.3, hy - 9.6);
+    ctx.lineTo(sx + sd * 8.3, hy - 4.6);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#FFB35C';
+  ctx.beginPath(); ctx.arc(sx, hy, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke();
+  /* 額頭斑紋 */
+  ctx.strokeStyle = '#E8933C'; ctx.lineWidth = 1.8;
+  for (const ox of [-3, 0, 3]) {
+    ctx.beginPath(); ctx.moveTo(sx + ox, hy - 8.5); ctx.lineTo(sx + ox, hy - 5.5); ctx.stroke();
+  }
+  /* 臉：開心閉眼(∩)+鼻+w嘴+腮紅 */
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+  for (const sd of [-1, 1]) {
+    ctx.beginPath(); ctx.arc(sx + sd * 3.6, hy + 1.5, 2.1, Math.PI, 0); ctx.stroke();
+  }
+  ctx.fillStyle = '#F08A9B';
+  ctx.beginPath(); ctx.arc(sx, hy + 4.2, 1.1, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.arc(sx - 1.4, hy + 6, 1.5, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx + 1.4, hy + 6, 1.5, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,143,178,0.5)';
+  for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(sx + sd * 6.6, hy + 4, 1.9, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
