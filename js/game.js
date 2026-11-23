@@ -56,6 +56,8 @@ const Game = {
   park: { stars: 0, best: { coaster: 0, catch: 0, wheel: 0 } },
   /* 第二十八輪：學校（已訪/選好的 4 堂課） */
   school: { visited: false, confirmed: false, selected: [] },
+  /* 第三十輪 30-4：釣魚（釣魚課；累計釣到數） */
+  fish: { caught: 0 },
   /* 第二十八輪：時間（1/1 起、無年；1 秒＝1 遊戲分鐘） */
   clock: { month: 1, day: 1, hour: 8, min: 0 },
   clockAcc: 0, clockText: '',
@@ -90,6 +92,9 @@ function init() {
   $('#map-home').onclick = () => { sfx('whoosh'); homeFromMap(); };
   $('#shop-x').onclick = () => { sfx('back'); closeShop(); };
   $('#work-x').onclick = () => { sfx('back'); exitWork(); };
+  /* 第三十輪 30-4：釣魚 */
+  $('#fish-x').onclick = () => { sfx('back'); exitFishing(); };
+  $('#fish-act').onclick = () => fishAction();
   /* 第二十八輪：學校 */
   $('#school-x').onclick = () => { sfx('back'); exitSchool(); };
   $('#school-tut').onclick = () => advanceSchoolTut();
@@ -206,6 +211,7 @@ function beginGame(save, skipIntro) {
     confirmed: !!(save.school && save.school.confirmed),
     selected: Array.isArray(save.school && save.school.selected) ? save.school.selected : [],
   };
+  Game.fish = { caught: (save.fish && save.fish.caught) || 0 }; /* 第三十輪 30-4 */
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -438,6 +444,9 @@ function updateGame(dt) {
     }
     case 'work':
       updateWork(dt);
+      break;
+    case 'fish':
+      updateFish(dt); /* 第三十輪 30-4：釣魚 */
       break;
     case 'placing': {
       const pl = Game.placement;
@@ -980,6 +989,12 @@ function renderGame() {
     return;
   }
 
+  if (Game.sub === 'fish') { /* 第三十輪 30-4：釣魚小遊戲 */
+    ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
+    renderFish(ctx, Game.t);
+    return;
+  }
+
   ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
   drawRoom(ctx);
 
@@ -1223,6 +1238,7 @@ function setupInput() {
     if (e.key === 'Escape') {
       if (Game.sub === 'park3d' && window.Park3D) { Park3D.exit(); return; } /* 第十八輪18d */
       if (Game.sub === 'school') { exitSchool(); return; } /* 第二十八輪 */
+      if (Game.sub === 'fish') { exitFishing(); return; } /* 第三十輪 30-4 */
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
     }
@@ -1356,6 +1372,8 @@ function setupInput() {
         if (Math.hypot(wx - MC.x, wy - MC.y) < 34) { openShop(); break; }
         if (Math.hypot(wx - PK.x, wy - PK.y) < 34) { enterPark(); break; } /* 第十八輪18d */
         if (Math.hypot(wx - SC.x, wy - SC.y) < 34) { enterSchool(); break; } /* 第二十八輪：學校 */
+        { const pdx = (wx - POND.x) / (POND.rx + 10), pdy = (wy - POND.y) / (POND.ry + 10); /* 第三十輪 30-4：湖（含釣魚課門控，startFishing 內） */
+          if (pdx * pdx + pdy * pdy < 1) { startFishing(); break; } }
         if (wx > ROAD_L && wx < ROAD_R && wy > 175 && wy < 645) {
           Game.mapTarget = { x: clamp(wx, ROAD_L + 10, ROAD_R - 10), y: clamp(wy, 182, 640) };
         }
@@ -1737,6 +1755,7 @@ function fullSave(stage) {
     park: Game.park, /* 第十八輪：遊樂園星星與紀錄（載入時舊存檔補預設） */
     clock: Game.clock, /* 第二十八輪：時間 */
     school: Game.school, /* 第二十八輪：學校選課 */
+    fish: { caught: Game.fish ? Game.fish.caught : 0 }, /* 第三十輪 30-4：釣魚紀錄 */
   };
 }
 

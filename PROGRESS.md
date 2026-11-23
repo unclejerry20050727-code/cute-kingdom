@@ -601,22 +601,24 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - **30-2 烹飪課 🍳→爐子**：world.js drawStove（白灰爐身 isoBox 1×1 h≈26＋黑爐面 2 爐頭＋鐵鍋＋蓋＋蒸汽 3 條）＋BUILD_ITEMS.stove { name:'爐子', tab:'decor', w:1, d:1, h:26, max:2, block:true, needsCourse:'cooking' }（floorCard 門控自動：灰卡🔒「上烹飪課解鎖」）。
 - **30-3 咖啡課 ☕→咖啡機**：world.js drawCoffeeMaker（復古銀白機身＋按鈕＋玻璃壺咖啡＋杯子＋蒸汽）＋BUILD_ITEMS.coffee { name:'咖啡機', tab:'decor', w:1, d:1, h:34, max:1, block:true, needsCourse:'coffee' }。
 - **30-4 釣魚課 🎣→池塘＋釣魚小游戏**：
-  - mapscene.js 畫池塘（路右側草皮 ~(705,500)，藍綠水塘橢圓＋睡蓮×2＋蘆葦×2＋岸邊石），常駐景觀
-  - game.js 地圖點擊：命中池塘 → hasCourse('fishing') ? enterFishing() : toast '🎣 先上釣魚課才能釣魚喔～'
-  - #screen-fish（HTML 只有 ✕＋標題/計數，畫面全 canvas 畫，同 screen-work 模式；sub='fish'）
-  - 釣魚狀態機（renderFish + case 'fish' in updateGame，dt 走主迴圈）：ready（點水面甩竿 sfx whoosh+漣漪）→ waiting（浮標隨機點漂 1.2~3.5s，可點=提前收線）→ bite（浮標沉＋「！」＋sfx blip，0.8s 窗口）→ 點中=caught（隨機魚：小魚🐟8元50%/彩魚🐠15元30%/青蟹🦀25元15%/金魚🐡40元5%；Game.money 加幣+saveGame、Game.fish.caught++；顯示 1.6s）→ ready；bite 沒點中=missed toast「溜走了～」
-  - ESC 支援（同 school 模式）
+  - mapscene.js 畫池塘（**實作在右上角 (770,185)**——原計畫 (705,500) 被麥當勞擋住；POND={x,y,rx:62,ry:34}＋drawPond：水塘橢圓#8FD3E8＋漣漪＋睡蓮×2＋小木碼頭+釣竿+釣牌）
+  - game.js 地圖點擊：命中池塘（橢圓式含+10 容差）→ startFishing()（內含 hasCourse('fishing') 門控：無課 toast '🎣 先上『釣魚課』才能釣魚喔～'）
+  - #screen-fish（HTML 只有 ✕＋訊息 bubble＋按鈕，畫面全 canvas 畫，同 screen-work 模式；sub='fish'）
+  - 釣魚狀態機（mini.js：FISH_TABLE/Fish/startFishing/exitFishing/setFishUI/fishAction/updateFish/renderFish；case 'fish' in updateGame）：ready（點「🎣 拋竿」sfx blip）→ wait（1.5~4.0s 隨機 biteAt，魚影接近）→ bite（浮標沉＋「!」＋sfx ding，0.9s 窗口，按鈕變紅「💦 撈！」）→ 撈=caught（魚表：小魚8/彩魚15/青蟹25/金魚40，權重50/30/15/5；Game.money 加幣+Game.fish.caught++＋saveGame(fullSave('done'))；魚飛出弧線動畫+水花+「+N」浮字 1.6s）→ ready；bite 沒撈=missed（水花，1.6s 後 ready）
+  - renderFish 側視場景：天空/太陽/雲/遠山/湖水/水波/水下魚影/左右岸+蘆葦/睡蓮/碼頭+水桶/小宥（草帽白衫藍背帶褲坐碼頭持竿）/釣線+浮標/右上角「已釣 N 隻」
+  - ESC 支援（同 school 模式）；Game.fish {caught} 進 newGame/beginGame/fullSave
+- **實作備註（30-1~30-4 已完成）**：30-1 已過 .q301（7 項）；30-2 faceSpace 的 h 要用「物體頂部高度」（爐門 faceSpace h=22）；30-3 咖啡機實作 h=36（plan 寫 34，以實作為準）；30-4 已過 .q304（14 項：門控/開屏/拋竿/咬餌/撈到/漏掉/ESC/存檔重載）
 - **30-5 寵物課 🐾→小貓跟隨**：hasCourse('pet') → Game.pet {x,y}（tile 座標，init=玩家位置）；updateGame 'free' lerp 追玩家（落後玩家右後方 ~0.45 tile、6 tile/s）；renderGame items 加 drawCat（depth p.x+p.y+0.2 畫玩家前面）；world.js drawCat：橘色虎斑（頭+三角耳+內耳+開心閉眼弧+鵝蛋身+環尾擺動+胸前的白+走路微顛）~30px 高
 - **30-6 字型重建**：新 CJK（塘/池/咬/快/溜/甩/竿/爐/機/蟹/彩/金/小/到/太/早/慢/貓…）→ make-font 重跑＋?v=21→22（fontenv 若被清先重建）
 - **30-7 .course30.mjs 整合測試**：R1 跳舞課音符（pose dance+課→notes>0；無課→0）；R2 爐子鎖/解/放/存檔重載持久；R3 咖啡機同（抽一）；R4 釣魚（有課開屏/無課 toast、強制 bite 流程 catch 加錢加數、0 pageErr）；R5 小貓（有課 Game.pet 存在且 2s 內靠近玩家；無課無 pet）
 - **30-8 收尾**：peek-build 期望更新（decor 卡 5→7）＋14 套回歸＋.clock28/.school28/.course29＋push＋live smoke
 
 ### 子任務
-- 30-0 📋：計畫（本節）
-- 30-1 📋：跳舞課音符
-- 30-2 📋：爐子
-- 30-3 📋：咖啡機
-- 30-4 📋：池塘＋釣魚小游戏
+- 30-0 ✅：計畫（本節）
+- 30-1 ✅：跳舞課音符（.q301 7 項過；startPose 會先 ++poseIdx，測試要 poseIdx=2 才到 dance）
+- 30-2 ✅：爐子（faceSpace h=頂高 22；screenshot 驗證）
+- 30-3 ✅：咖啡機（h=36；screenshot 驗證）
+- 30-4 ✅：池塘＋釣魚小游戏（.q304 14 項過；三態 screenshot 驗證）
 - 30-5 📋：小貓跟隨
 - 30-6 📋：字型＋?v=
 - 30-7 📋：.course30 整合測試

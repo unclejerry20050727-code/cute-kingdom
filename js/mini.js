@@ -582,3 +582,385 @@ function drawCustomer(ctx, x, y, c, t) {
   ctx.beginPath(); ctx.arc(0, -42 + bob, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
   ctx.restore();
 }
+
+/* ══════════ 第三十輪 30-4：釣魚（釣魚課）══════════ */
+const FISH_TABLE = [
+  { id: 'minnow', name: '小魚', coins: 8,  w: 50 },
+  { id: 'color',  name: '彩魚', coins: 15, w: 30 },
+  { id: 'crab',   name: '青蟹', coins: 25, w: 15 },
+  { id: 'puffer', name: '金魚', coins: 40, w: 5 },
+];
+
+let Fish = null;
+
+function rollFish() {
+  const total = FISH_TABLE.reduce((s, f) => s + f.w, 0);
+  let r = Math.random() * total;
+  for (const f of FISH_TABLE) { r -= f.w; if (r <= 0) return f; }
+  return FISH_TABLE[0];
+}
+
+function startFishing() {
+  if (!hasCourse('fishing')) { showToast('🎣 先上『釣魚課』才能釣魚喔～'); return; }
+  sfx('pop');
+  Fish = { state: 'ready', t: 0, biteAt: 0, fish: null, floaters: [] };
+  $('#screen-fish').classList.remove('hidden');
+  setSub('fish');
+  setFishUI('點「拋竿」開始吧！');
+}
+
+function exitFishing() {
+  $('#screen-fish').classList.add('hidden');
+  Fish = null;
+  setSub('map');
+}
+
+function setFishUI(msg) {
+  const btn = $('#fish-act');
+  if (!btn || !Fish) return;
+  if (Fish.state === 'ready') { btn.textContent = '🎣 拋竿'; btn.disabled = false; btn.classList.remove('hot'); }
+  else if (Fish.state === 'wait') { btn.textContent = '等待中…'; btn.disabled = true; btn.classList.remove('hot'); }
+  else if (Fish.state === 'bite') { btn.textContent = '💦 撈！'; btn.disabled = false; btn.classList.add('hot'); }
+  else { btn.textContent = '🎣 拋竿'; btn.disabled = false; btn.classList.remove('hot'); }
+  if (msg) $('#fish-msg').textContent = msg;
+}
+
+function fishAction() {
+  if (!Fish) return;
+  if (Fish.state === 'ready') {
+    Fish.state = 'wait'; Fish.t = 0;
+    Fish.biteAt = 1.5 + Math.random() * 2.5;
+    Fish.fish = rollFish();
+    sfx('blip');
+    setFishUI('等待咬餌中…');
+  } else if (Fish.state === 'bite') {
+    const f = Fish.fish;
+    Game.fish.caught += 1;
+    Game.money += f.coins;
+    Fish.state = 'caught'; Fish.t = 0;
+    Fish.floaters.push({ text: `+${f.coins}`, x: 560, y: 420, t: 0 });
+    sfx('coin');
+    syncMoneyUI();
+    setFishUI(`撈到${f.name}！+${f.coins} 元`);
+    saveGame(fullSave('done'));
+  }
+}
+
+function updateFish(dt) {
+  if (!Fish) return;
+  Fish.t += dt;
+  if (Fish.state === 'wait' && Fish.t >= Fish.biteAt) {
+    Fish.state = 'bite'; Fish.t = 0;
+    sfx('ding');
+    setFishUI('⚠️ 咬餌了！快撈！');
+  } else if (Fish.state === 'bite' && Fish.t > 0.9) {
+    Fish.state = 'missed'; Fish.t = 0;
+    sfx('buzz');
+    setFishUI('魚跑掉了…再試一次吧');
+  } else if ((Fish.state === 'caught' || Fish.state === 'missed') && Fish.t > 1.6) {
+    Fish.state = 'ready'; Fish.t = 0;
+    setFishUI('點「拋竿」開始吧！');
+  }
+  for (const fl of Fish.floaters) fl.t += dt;
+  Fish.floaters = Fish.floaters.filter(f => f.t < 1.2);
+}
+
+/* ── 釣魚場景（側視：天空/遠山/湖/岸/碼頭/小宥/浮標/魚）── */
+function renderFish(ctx, t) {
+  const W = VW, H = VH;
+  /* 天空 */
+  ctx.fillStyle = '#CBE9F8';
+  ctx.fillRect(0, 0, W, H);
+  /* 太陽 */
+  ctx.beginPath(); ctx.arc(858, 88, 34, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFD98A'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(858, 88, 43, 0, Math.PI * 2); ctx.stroke();
+  /* 雲 */
+  drawFishCloud(ctx, 180, 84 + Math.sin(t * 0.4) * 3, 1);
+  drawFishCloud(ctx, 560, 58 + Math.sin(t * 0.3 + 2) * 3, 0.75);
+  /* 遠山 */
+  ctx.fillStyle = '#A8D8B9';
+  fishHill(ctx, 150, 252, 240, 62);
+  fishHill(ctx, 540, 252, 280, 84);
+  fishHill(ctx, 880, 252, 230, 56);
+  /* 湖水 */
+  ctx.fillStyle = '#8FD3E8';
+  ctx.fillRect(0, 252, W, H - 252);
+  /* 水波紋 */
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let i = 0; i < 7; i++) {
+    const rx = 90 + i * 130 + Math.sin(t * 0.8 + i * 1.7) * 10;
+    const ry = 300 + ((i * 89) % 320);
+    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.quadraticCurveTo(rx + 18, ry - 4, rx + 36, ry); ctx.stroke();
+  }
+  /* 水下裝飾小魚（淡影） */
+  ctx.fillStyle = 'rgba(47,84,102,0.14)';
+  for (let i = 0; i < 2; i++) {
+    const fx = ((t * 46 + i * 470) % (W + 200)) - 100;
+    const fy = 430 + i * 130 + Math.sin(t * 2 + i) * 6;
+    ctx.beginPath(); ctx.ellipse(fx, fy, 13, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(fx + 12, fy); ctx.lineTo(fx + 22, fy - 6); ctx.lineTo(fx + 22, fy + 6); ctx.closePath(); ctx.fill();
+  }
+  /* 左岸 */
+  ctx.fillStyle = '#8FC47E';
+  ctx.beginPath();
+  ctx.moveTo(0, 236); ctx.lineTo(150, 252); ctx.quadraticCurveTo(110, 340, 70, 420); ctx.lineTo(0, 430);
+  ctx.closePath(); ctx.fill();
+  /* 右岸 */
+  ctx.fillStyle = '#7FB86B';
+  ctx.beginPath();
+  ctx.moveTo(W, 236); ctx.lineTo(W - 140, 252); ctx.quadraticCurveTo(W - 100, 340, W - 56, 420); ctx.lineTo(W, 430);
+  ctx.closePath(); ctx.fill();
+  /* 蘆葦 */
+  drawReeds(ctx, 46, 252, t);
+  drawReeds(ctx, W - 96, 254, t + 1.3);
+  /* 睡蓮 */
+  drawLily(ctx, 690, 356, 1, t);
+  drawLily(ctx, 850, 540, 0.8, t + 0.7);
+  /* 碼頭 */
+  ctx.fillStyle = 'rgba(47,84,102,0.18)';
+  for (const lx of [166, 268, 372]) { ctx.fillRect(lx, 412, 12, 52); }
+  ctx.fillStyle = '#B98A5F';
+  for (const lx of [166, 268, 372]) { ctx.fillRect(lx, 412, 12, 34); }
+  ctx.fillStyle = '#D9B98C';
+  roundRectPath(ctx, 138, 394, 264, 18, 5); ctx.fill();
+  ctx.strokeStyle = '#B98A5F'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(185,138,95,0.7)'; ctx.lineWidth = 2;
+  for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(138 + i * 52, 396); ctx.lineTo(138 + i * 52, 410); ctx.stroke(); }
+  /* 水桶（碼頭左端） */
+  ctx.fillStyle = '#B8C4CC';
+  ctx.beginPath(); ctx.moveTo(196, 372); ctx.lineTo(224, 372); ctx.lineTo(220, 394); ctx.lineTo(200, 394); ctx.closePath();
+  ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  /* 小宥（坐碼頭右端、持釣竿） */
+  drawFisher(ctx, t);
+  /* 釣線 + 浮標 */
+  const bobY = 470 + (Fish.state === 'wait' ? Math.sin(t * 2.2) * 3 : Fish.state === 'bite' ? 14 : 0);
+  ctx.strokeStyle = 'rgba(90,62,43,0.65)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(486, 318); ctx.quadraticCurveTo(540, 400, 560, bobY - 10); ctx.stroke();
+  /* 咬餌漣漪 */
+  if (Fish.state === 'bite' || (Fish.state === 'missed' && Fish.t < 0.8)) {
+    const rp = Fish.state === 'bite' ? (Fish.t % 0.5) / 0.5 : Fish.t / 0.8;
+    ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - rp)})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(560, bobY + 8, 10 + rp * 26, 4 + rp * 10, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  /* 等待時：魚影接近 */
+  if (Fish.state === 'wait' && Fish.biteAt - Fish.t < 1.0) {
+    const k = 1 - (Fish.biteAt - Fish.t) / 1.0;
+    const sx = 760 + (585 - 760) * k, sy = 560 + (500 - 560) * k;
+    ctx.fillStyle = 'rgba(47,84,102,0.30)';
+    ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sx - 14, sy); ctx.lineTo(sx - 24, sy - 7); ctx.lineTo(sx - 24, sy + 7); ctx.closePath(); ctx.fill();
+  }
+  /* 浮標（紅白） */
+  ctx.save();
+  ctx.translate(560, bobY);
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fillStyle = '#FFF8EC'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, 9, Math.PI, 0); ctx.fillStyle = '#E85A6A'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, -15); ctx.stroke();
+  ctx.restore();
+  /* 咬餌「!」 */
+  if (Fish.state === 'bite') {
+    ctx.fillStyle = '#FFF8EC';
+    ctx.beginPath(); ctx.arc(560, 424, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#E85A6A';
+    ctx.font = '800 22px RHR, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('!', 560, 425);
+  }
+  /* 撈到：魚飛出動畫 */
+  if (Fish.state === 'caught' && Fish.t < 0.7 && Fish.fish) {
+    const f = Math.min(Fish.t / 0.7, 1);
+    const fx = 560 + 110 * f;
+    const fy = 470 - 130 * Math.sin(f * Math.PI) + 30 * f;
+    drawCatchFish(ctx, Fish.fish, fx, fy, 1.4, -f * 2.2 + 0.4);
+    /* 水花 */
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(560 + s * 12, 468 - f * 16, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  /* 漂走：水花 */
+  if (Fish.state === 'missed' && Fish.t < 0.8) {
+    const f = Fish.t / 0.8;
+    ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - f)})`;
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(560 + s * 14, 472 - f * 20, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  /* 浮字 +N */
+  for (const fl of Fish.floaters) {
+    const a = 1 - fl.t / 1.2;
+    const fy = fl.y - fl.t * 46;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#E8A93C';
+    ctx.beginPath(); ctx.arc(fl.x - 16, fy, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#B26F22'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#5A3E2B';
+    ctx.font = '800 22px RHR, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(fl.text, fl.x - 3, fy);
+    ctx.globalAlpha = 1;
+  }
+  /* 右上角：已釣 N 隻（避開錢幣 HUD） */
+  ctx.fillStyle = '#FFF8EC';
+  roundRectPath(ctx, W - 210, 20, 128, 40, 20); ctx.fill();
+  ctx.strokeStyle = '#5FA8C4'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#5A3E2B';
+  ctx.font = '800 20px RHR, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`已釣 ${Game.fish.caught} 隻`, W - 146, 41);
+}
+
+function drawFishCloud(ctx, x, y, s) {
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  ctx.arc(x, y, 18 * s, 0, Math.PI * 2);
+  ctx.arc(x + 22 * s, y - 8 * s, 15 * s, 0, Math.PI * 2);
+  ctx.arc(x + 44 * s, y, 17 * s, 0, Math.PI * 2);
+  ctx.arc(x + 22 * s, y + 6 * s, 16 * s, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function fishHill(ctx, cx, base, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(cx - w / 2, base);
+  ctx.quadraticCurveTo(cx, base - h * 2, cx + w / 2, base);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawReeds(ctx, x, y, t) {
+  ctx.strokeStyle = '#5F9E52'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const sw = Math.sin(t * 1.4 + i) * 4;
+    const hx = x + i * 9 - 9;
+    ctx.beginPath(); ctx.moveTo(hx, y);
+    ctx.quadraticCurveTo(hx + sw * 0.5, y - 22, hx + sw, y - 40 - (i === 1 ? 8 : 0));
+    ctx.stroke();
+    ctx.fillStyle = '#8A5A3B';
+    ctx.beginPath(); ctx.ellipse(hx + sw, y - 46 - (i === 1 ? 8 : 0), 3.5, 8, sw * 0.03, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawLily(ctx, x, y, s, t) {
+  ctx.save();
+  ctx.translate(x + Math.sin(t * 0.7) * 2, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#7BC8A4';
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.arc(0, 0, 15, 0.35, Math.PI * 2 - 0.35);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(47,84,102,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#FFC2D4';
+  ctx.beginPath(); ctx.arc(6, -6, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawFisher(ctx, t) {
+  const bob = Math.sin(t * 1.8) * 1.5;
+  const hx = 352, hy = 330 + bob; /* 頭中心 */
+  /* 身體（白衫+藍背帶褲） */
+  ctx.fillStyle = '#FFFFFF';
+  roundRectPath(ctx, hx - 17, hy + 16, 34, 34, 9); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke();
+  ctx.fillStyle = '#7EC8E3';
+  roundRectPath(ctx, hx - 14, hy + 30, 28, 22, 6); ctx.fill(); ctx.stroke();
+  /* 腿（垂在碼頭邊） */
+  ctx.strokeStyle = INK; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(hx - 7, hy + 50); ctx.lineTo(hx - 7, hy + 62); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx + 7, hy + 50); ctx.lineTo(hx + 7, hy + 62); ctx.stroke();
+  ctx.fillStyle = '#B23B48';
+  for (const s of [-7, 7]) { roundRectPath(ctx, hx + s - 5, hy + 60, 10, 6, 3); ctx.fill(); }
+  /* 頭 */
+  ctx.fillStyle = '#FFE3C8';
+  ctx.beginPath(); ctx.arc(hx, hy, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke();
+  /* 瀏海 */
+  ctx.fillStyle = '#7A4E2D';
+  ctx.beginPath(); ctx.arc(hx, hy - 4, 20, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+  /* 草帽 */
+  ctx.fillStyle = '#F2D091';
+  ctx.beginPath(); ctx.ellipse(hx, hy - 12, 27, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx, hy - 14, 14, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  /* 臉 */
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(hx - 7, hy + 2, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + 7, hy + 2, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,143,178,0.55)';
+  ctx.beginPath(); ctx.arc(hx - 12, hy + 8, 3.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + 12, hy + 8, 3.4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(hx, hy + 8, 4, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  /* 手臂→釣竿 */
+  ctx.strokeStyle = INK; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(hx + 14, hy + 26); ctx.lineTo(hx + 30, hy + 36); ctx.stroke();
+  /* 釣竿 */
+  ctx.strokeStyle = '#8A5A3B'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(hx + 28, hy + 38); ctx.quadraticCurveTo(hx + 80, hy + 10, 486, 318); ctx.stroke();
+}
+
+/* 撈到的魚（小魚/彩魚/青蟹/金魚；rot 旋轉、s 縮放） */
+function drawCatchFish(ctx, f, x, y, s, rot) {
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  if (f.id === 'crab') {
+    /* 青蟹：身体+鉗+腳+眼柄 */
+    ctx.strokeStyle = '#3F7E76'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.moveTo(sd * 10, 2 + i * 4); ctx.lineTo(sd * (20 + i * 2), 8 + i * 3); ctx.stroke();
+    }
+    ctx.fillStyle = '#5FA8A0';
+    ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.stroke();
+    for (const sd of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(sd * 13, -10, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sd * 13, -16); ctx.lineTo(sd * 9, -13); ctx.stroke();
+    }
+    ctx.fillStyle = '#FFF';
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(sd * 5, -8, 3.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK;
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(sd * 5, -8, 1.6, 0, Math.PI * 2); ctx.fill(); }
+  } else if (f.id === 'puffer') {
+    /* 金魚（河豚）：圓身+小刺+大眼 */
+    ctx.strokeStyle = '#D98F2B'; ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * 12, Math.sin(a) * 11);
+      ctx.lineTo(Math.cos(a) * 17, Math.sin(a) * 16); ctx.stroke();
+    }
+    ctx.fillStyle = '#FFB84C';
+    ctx.beginPath(); ctx.ellipse(0, 0, 13, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.fillStyle = '#FFF';
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(sd * 5, -4, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK;
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.arc(sd * 5, -4, 2, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(0, 4, 3, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  } else {
+    /* 魚身（小魚=藍、彩魚=粉+紋） */
+    const body = f.id === 'minnow' ? '#7FB4D9' : '#FF8FB2';
+    const fin = f.id === 'minnow' ? '#5F93B8' : '#FFD98A';
+    ctx.fillStyle = fin;
+    ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-22, -8); ctx.lineTo(-22, 8); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (f.id === 'color') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(2, 0, 7, -1.1, 1.1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-4, 0, 7, -1.1, 1.1); ctx.stroke();
+    }
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath(); ctx.arc(8, -2, 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(8.8, -2, 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}

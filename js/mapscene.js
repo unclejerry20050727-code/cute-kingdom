@@ -12,6 +12,8 @@ const MC_SHOP = { x0: 612, y0: 332 }; /* 小舖 */
 const PK = { x: 490, y: 300 };        /* 第十八輪：遊樂園脈衝點（路中，麥當勞上方） */
 const SC = { x: 420, y: 600 };        /* 第二十八輪：學校脈衝點（路左側底端，學校門前） */
 
+const POND = { x: 770, y: 185, rx: 62, ry: 34 }; /* 第三十輪 30-4：湖（釣魚課；右上角麥當勞上方草地） */
+
 let mapCanvas = null;
 
 /* 字體載入後重建（招牌要用手寫體） */
@@ -77,6 +79,9 @@ function ensureMap() {
   ctx.fillText('我的家', 352, 175);
 
   /* ── 麥當勞小舖（路右側） ── */
+  /* 第三十輪 30-4：湖（右上角草地） */
+  drawPond(ctx);
+
   const S = MC_SHOP;
   ctx.fillStyle = 'rgba(90,62,43,0.15)';
   ctx.beginPath(); ctx.ellipse(709, 490, 108, 14, 0, 0, Math.PI * 2); ctx.fill();
@@ -144,6 +149,35 @@ function ensureMap() {
   drawSchool(ctx);
 
   mapCanvas = c;
+}
+
+/* 第三十輪 30-4：湖（點開釣魚小遊戲；有釣魚課才能點） */
+function drawPond(ctx) {
+  const P = POND;
+  /* 地影 */
+  ctx.fillStyle = 'rgba(90,62,43,0.15)';
+  ctx.beginPath(); ctx.ellipse(P.x, P.y + P.ry * 0.55, P.rx + 10, P.ry + 8, 0, 0, Math.PI * 2); ctx.fill();
+  /* 湖岸石圈 */
+  handEllipse(ctx, P.x, P.y, P.rx + 7, P.ry + 6, { fill: '#E9CDA9', stroke: null, seed: 71 });
+  /* 湖水 */
+  handEllipse(ctx, P.x, P.y, P.rx, P.ry, { fill: '#8FD3E8', stroke: INK, lw: 3, seed: 72 });
+  /* 波光 */
+  handLine(ctx, P.x - 30, P.y - 6, P.x - 8, P.y - 12, { stroke: 'rgba(255,255,255,0.75)', lw: 2.5, seed: 73, amp: 1.5, segs: 2 });
+  handLine(ctx, P.x + 6, P.y + 8, P.x + 30, P.y + 3, { stroke: 'rgba(255,255,255,0.6)', lw: 2.5, seed: 74, amp: 1.5, segs: 2 });
+  /* 睡蓮 */
+  handEllipse(ctx, P.x - 32, P.y + 10, 9, 5, { fill: '#7BC8A4', stroke: INK, lw: 1.6, seed: 75 });
+  handEllipse(ctx, P.x + 38, P.y - 10, 8, 4.5, { fill: '#8FC47E', stroke: INK, lw: 1.6, seed: 76 });
+  /* 小碼頭（湖左側伸入）+ 釣竿 */
+  handShape(ctx, [[P.x - P.rx - 6, P.y - 8], [P.x - P.rx + 26, P.y - 4], [P.x - P.rx + 26, P.y + 10], [P.x - P.rx - 6, P.y + 6]], { fill: '#D9B98C', stroke: INK, lw: 2.5, seed: 77, amp: 1.5, segs: 2 });
+  handLine(ctx, P.x - P.rx + 22, P.y - 2, P.x - P.rx + 44, P.y - 26, { stroke: '#8A5A3B', lw: 3, seed: 78, amp: 1, segs: 2 });
+  handLine(ctx, P.x - P.rx + 44, P.y - 26, P.x - P.rx + 40, P.y + 2, { stroke: '#FFF7EA', lw: 1.5, seed: 79, amp: 0.6, segs: 2 });
+  /* 「釣」木牌 */
+  handLine(ctx, P.x + P.rx + 16, P.y + 26, P.x + P.rx + 16, P.y + 4, { stroke: '#B98A5F', lw: 4, seed: 80 });
+  handShape(ctx, [[P.x + P.rx + 2, P.y - 16], [P.x + P.rx + 30, P.y - 16], [P.x + P.rx + 30, P.y + 4], [P.x + P.rx + 2, P.y + 4]], { fill: '#E9CDA9', stroke: INK, lw: 2, seed: 81 });
+  ctx.fillStyle = '#5A3E2B';
+  ctx.font = '700 16px RHR';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('釣', P.x + P.rx + 16, P.y - 6);
 }
 
 function drawMapTree(ctx, x, y, s) {
