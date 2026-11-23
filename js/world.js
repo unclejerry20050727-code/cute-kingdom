@@ -1376,6 +1376,66 @@ function drawStove(ctx, tx, ty, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* ── 擺飾：咖啡機（第三十輪 30-3：咖啡課解鎖）── */
+function drawCoffeeMaker(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 機身（奶油銀 1×1 h30） */
+  isoBox(ctx, tx, ty, 1, 1, 0, 30, { top: '#F2EDE4', right: bad ? '#DE8794' : '#CFC6B8', left: bad ? '#D47A88' : '#DED6C8', lw: 2.4 });
+  /* 前面板（前左面：視窗＋按鈕＋滴水盤） */
+  ctx.save();
+  faceSpace(ctx, tx, ty, 30, 'ty', 1, 1);
+  ctx.fillStyle = bad ? '#6A5A62' : '#3A3A44';
+  roundRectPath(ctx, 5, 5, 25, 10, 2.5); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.fillStyle = bad ? '#C49AA4' : '#8A8F9A';
+  ctx.fillRect(8, 8, 12, 4);
+  ctx.fillStyle = bad ? '#B4707E' : '#E85A6A';
+  ctx.beginPath(); ctx.arc(11, 21, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#D8A8B0' : '#FFD98A';
+  ctx.beginPath(); ctx.arc(20, 21, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = bad ? '#D8A8B0' : '#B8AE9E';
+  roundRectPath(ctx, 4, 25.5, 27, 2.8, 1.4); ctx.fill();
+  ctx.restore();
+  /* 玻璃咖啡壺（頂面後方） */
+  const [cx, cy] = P(tx + 0.38, ty + 0.38, -30);
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, cy - 13); ctx.lineTo(cx + 8, cy - 13); ctx.lineTo(cx + 6, cy); ctx.lineTo(cx - 6, cy); ctx.closePath();
+  ctx.fillStyle = bad ? 'rgba(240,200,210,0.55)' : 'rgba(255,255,255,0.55)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - 6.6, cy - 7.5); ctx.lineTo(cx + 6.6, cy - 7.5); ctx.lineTo(cx + 5.6, cy - 0.5); ctx.lineTo(cx - 5.6, cy - 0.5); ctx.closePath();
+  ctx.fillStyle = bad ? '#8A6A74' : '#6B4226';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, cy - 13); ctx.lineTo(cx + 8, cy - 13); ctx.lineTo(cx + 6, cy); ctx.lineTo(cx - 6, cy); ctx.closePath();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.fillStyle = bad ? '#B4707E' : '#8A7358';
+  roundRectPath(ctx, cx - 9, cy - 16.5, 18, 3.6, 1.8); ctx.fill(); ctx.stroke();
+  /* 杯子（頂面前方） */
+  const [ux, uy] = P(tx + 0.66, ty + 0.66, -30);
+  ctx.beginPath(); ctx.arc(ux + 6.5, uy - 5, 3, -1.25, 1.25);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.stroke();
+  roundRectPath(ctx, ux - 6, uy - 10, 12, 10, 2.5);
+  ctx.fillStyle = bad ? '#F0D0D6' : '#FFFFFF'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(ux, uy - 10, 5.6, 2.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = bad ? '#8A6A74' : '#6B4226'; ctx.fill(); ctx.stroke();
+  /* 蒸汽 */
+  if (!o.ghost) {
+    const t = (typeof Game !== 'undefined' && Game) ? Game.t : 0;
+    ctx.strokeStyle = 'rgba(150,152,165,0.55)';
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    const sw = Math.sin(t * 2.4) * 2.2;
+    ctx.beginPath();
+    ctx.moveTo(ux + 1, uy - 15);
+    ctx.quadraticCurveTo(ux + 1 + sw, uy - 21, ux + 1 - sw * 0.6, uy - 27);
+    ctx.stroke();
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
 /* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路、layer:'floor' 貼地層） ── */
 const BUILD_ITEMS = {
   bed:     { name: '床',     tab: 'furniture', w: 2, d: 1, h: 30, max: 1, block: true,  draw: drawBed },
@@ -1395,6 +1455,8 @@ const BUILD_ITEMS = {
   board:     { name: '黑板', tab: 'decor', w: 2, d: 1, h: 50, max: 1, block: true, needsCourse: 'furniture', draw: drawBoard },
   /* 第三十輪 30-2：爐子（烹飪課解鎖） */
   stove:     { name: '爐子', tab: 'decor', w: 1, d: 1, h: 26, max: 2, block: true, needsCourse: 'cooking', draw: drawStove },
+  /* 第三十輪 30-3：咖啡機（咖啡課解鎖） */
+  coffee:    { name: '咖啡機', tab: 'decor', w: 1, d: 1, h: 36, max: 1, block: true, needsCourse: 'coffee', draw: drawCoffeeMaker },
   /* 第九輪c：地飾（layer:'floor' 貼地層繪製） */
   rug:     { name: '地毯',   tab: 'floor', w: 2, d: 2, h: 6,  max: 2, block: false, layer: 'floor', draw: drawRug },
   doormat: { name: '門墊',   tab: 'floor', w: 1, d: 1, h: 3,  max: 1, block: false, layer: 'floor', draw: drawDoormat },
