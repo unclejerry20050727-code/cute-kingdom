@@ -620,8 +620,18 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 30-3 ✅：咖啡機（h=36；screenshot 驗證）
 - 30-4 ✅：池塘＋釣魚小游戏（.q304 14 項過；三態 screenshot 驗證）
 - 30-5 ✅：小貓跟隨（.q305 8 項過；橘色虎斑正面坐貓~38px 含尾；depth 玩家+0.15；領頭 0.45 tile 6 tile/s；確認課 toast 出現/撤課 toast 離開；screenshot 驗證）
-- 30-6 📋：字型＋?v=
-- 30-7 📋：.course30 整合測試
-- 30-8 📋：回歸＋push＋live smoke
+- 30-6 ✅：字型重建（make-font 重跑 3 woff2；?v=21→22；/tmp/306-font.png 驗證新字全 RHR）
+- 30-7 ✅：.course30 整合測試 21 項全過；刪 .q301/.q304/.q305（已併入）
+- 30-8 ✅：peek-build（擺飾卡 5→7）＋.course29＋flow 回歸全過；push＋live smoke
 
 > 📌 接手筆記：門控/存檔/商店卡全自動（needsCourse）；釣魚畫面走主迴圈 sub='fish'（同 work）；新中文都靠 make-font 自動收集，最後統一重建字型。
+
+### 第三十輪實作筆記（30-1~30-8）
+- 30-1：`sfx('note')`（audio.js）＋`danceNotes/danceNoteT`（game.js 頂部）；spawn 在 updateGame 'free'（pose=dance 且有跳舞課、每 0.4s）；draw 在 renderGame items 之後。⚠️ startPose 先 ++poseIdx，強制 dance 要 `poseIdx=2` 再 startPose。
+- 30-2：`drawStove`（world.js）＋`BUILD_ITEMS.stove`（needsCourse='cooking', w1d1h26 max2 block）；門面 `faceSpace(ctx,tx,ty,22,'tx',1,1)`（⚠️ h=物頂高，第一次用 h=0 門畫錯位置已修）。
+- 30-3：`drawCoffeeMaker`（world.js）＋`BUILD_ITEMS.coffee`（needsCourse='coffee', w1d1h36 max1 block）；面板 `faceSpace(ctx,tx,ty,30,'ty',1,1)`。
+- 30-4：`POND={x:770,y:185,rx:62,ry:34}`＋`drawPond`（mapscene.js，畫在 McD 前）；地圖點湖（+10 容差）→ `startFishing()`（無課 toast 門控）；`#screen-fish`（HTML msg+btn）＋`.fish-msg/.fish-btn(.hot)` CSS；mini.js：`Fish/FISH_TABLE/rollFish/startFishing/exitFishing/setFishUI/fishAction/updateFish/renderFish`＋小助手（drawFisher/drawCatchFish/drawReeds/drawLily）；咬餌窗口 0.9s；結果 1.6s；錢/隻數 fullSave fish；renderGame sub==='fish' → renderFish（全畫面側視：天/湖/棧橋/釣客/浮標/魚影/!/撈起拋物線/+N 浮字/已釣 N 隻計數 W-210 避開金錢 HUD）。sfx：pop/blip/ding/coin/buzz/back。
+- 30-5：`drawCat`（world.js：正面橘虎斑坐貓~38px，擺環尾/開心閉眼/虎斑/胸前白/小腳交替）；Game.pet={x,y,walking}（newGame null；beginGame 存檔或有課→出生點；fullSave pet）；updateGame 'free' updateMovement 後領頭 0.45 tile、6 tile/s、限房內 0.3~9.7；render items depth=pet.x+pet.y+0.15（畫玩家前面）；confirmOrChangeSchool 同步：有課無貓→玩家旁＋toast『🐱 小貓來陪你囉~』，無課有貓→null＋toast『🐱 小貓回教室了…（重新選寵物課可以叫它回來）』。
+- 30-6：`/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf` → rhr-500/700/900.woff2（285/289/270KB）；style.css `?v=21→22`；/tmp/306-font.png 驗證新字（湖釣拋竿咬餌撈貓蟹彩爐機金魚…）全 RHR 渲染。
+- 30-7：test/.course30.mjs（21 項：跳舞音符 0/有、爐子鎖/解/放置、咖啡機鎖/解、釣魚門控/全流程、小貓無課/確認/追隨、重載持久化×4、0 pageErr）；.q301/.q304/.q305 已併入並刪。
+- 30-8：peek-build.mjs 擺飾卡期望 5→7（30-2/30-3 加爐子/咖啡機）；回歸：peek-build ✅、.course29 ✅、.course30 ✅、flow ✅；push 後 live smoke。

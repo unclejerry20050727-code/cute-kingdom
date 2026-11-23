@@ -112,10 +112,10 @@ const nWall = await G(() => document.querySelectorAll('#build-items .build-item'
 check(`牆飾卡 7 張（實際 ${nWall}）`, nWall === 7);
 await shot('wall-cards');
 
-/* ── 5. 擺飾 tab：5 張卡（29-2 加黑板），放盆栽 + 氣球 ── */
+/* ── 5. 擺飾 tab：7 張卡（29-2 加黑板；30-2/30-3 加爐子/咖啡機），放盆栽 + 氣球 ── */
 await page.click('.btab[data-tab="decor"]'); await ms(300);
 const nDeco = await G(() => document.querySelectorAll('#build-items .build-item').length);
-check(`擺飾卡 5 張（實際 ${nDeco}）`, nDeco === 5);
+check(`擺飾卡 7 張（實際 ${nDeco}）`, nDeco === 7);
 await shot('panel-decor');
 await placeItemByName('盆栽', 1.5, 3.5);
 check('放盆栽 → 5 件', (await G(() => Game.furniture.length)) === 5);
