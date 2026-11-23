@@ -19,6 +19,9 @@ function hasCourse(id) { return !!(Game.school && Game.school.selected && Game.s
 const COURSE_NAMES = { cooking: '烹飪課', furniture: '家具課', fishing: '釣魚課', flower: '花藝課', coffee: '咖啡課', sport: '體育課' }; /* 第二十九輪：課程門控提示用 */
 function speedMul() { return hasCourse('sport') ? 1.25 : 1; } /* 第二十九輪：體育課 ⚽ */
 
+/* 第三十輪：跳舞課♪音符粒子（spawn 在 updateGame 'free'、draw 在 renderGame 玩家之後） */
+let danceNotes = [], danceNoteT = 0;
+
 const Game = {
   state: 'cover',   // cover | title | create | game
   sub: null,        // fp | talk | meet | tutBuild | placing | praise | goOut | free | loading | map | work
@@ -376,6 +379,16 @@ function updateGame(dt) {
       if (Game.player.pose) {
         Game.player.pose.t += dt;
         if (Game.player.pose.t >= 1.8) Game.player.pose = null;
+      }
+      /* 第三十輪：跳舞課——跳舞時頭上冒音符 */
+      if (Game.player.pose && Game.player.pose.id === 'dance' && hasCourse('dance')) {
+        danceNoteT += dt;
+        if (danceNoteT >= 0.4) {
+          danceNoteT = 0;
+          const [nx, ny] = tileScreen(Game.player.x, Game.player.y);
+          danceNotes.push({ x: nx + (Math.random() - 0.5) * 26, y: ny - 96, t: Game.t, seed: Math.random(), ch: Math.random() < 0.5 ? '♪' : '♫', col: ['#FF7EB6', '#B083E8', '#6FC3E8', '#FFB84D'][Math.floor(Math.random() * 4)] });
+          sfx('note');
+        }
       }
       break;
     }
@@ -1101,6 +1114,20 @@ function renderGame() {
 
   items.sort((a, b) => a.depth - b.depth);
   for (const it of items) it.draw();
+
+  /* 第三十輪：跳舞課音符（上浮+搖擺+淡出） */
+  if (danceNotes.length) {
+    danceNotes = danceNotes.filter(n => Game.t - n.t < 1.2);
+    ctx.textAlign = 'center';
+    for (const n of danceNotes) {
+      const age = Game.t - n.t, k = age / 1.2;
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = n.col;
+      ctx.font = '700 20px "RHR", sans-serif';
+      ctx.fillText(n.ch, n.x + Math.sin(age * 4 + n.seed * 6) * 7, n.y - age * 26);
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 function tileScreen(tx, ty) {

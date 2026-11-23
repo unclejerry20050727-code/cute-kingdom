@@ -143,6 +143,10 @@ function sfx(name) {
       noiseSfx(t + 0.62, 0.22, 0.2, 900);
       noiseSfx(t + 0.92, 0.3, 0.14, 650);
       break;
+    case 'note': /* 第三十輪：跳舞課音符（上行滑音＋高音點綴） */
+      tone(659, t, 0.12, { type: 'sine', vol: 0.05, slideTo: 880 });
+      tone(988, t + 0.1, 0.08, { type: 'triangle', vol: 0.03, release: 0.1 });
+      break;
   }
 }
 
