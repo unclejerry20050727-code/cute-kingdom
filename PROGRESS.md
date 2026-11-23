@@ -591,3 +591,35 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - ✅ **push＋live smoke**：push `01f9d8c..d4035ae`（29-2/29-3/29-4 三 commit）上線 GitHub Pages；`.livesmoke29.cjs` **PASS**（live drawBoard/drawWallFlowerWreath/speedMul 皆 function、board[2,1,furniture]/wreath[2,flower]/COURSE_NAMES.花藝課、黑板卡＋花環卡在商店、0 pageErr）
 - ⚠️ js 無 ?v= 防快取：使用者需強制重新整理（Ctrl/Cmd+Shift+R）
 > **第二十九輪完成 ✅**（2026-11-20）：課程正式生效——體育課⚽行走速度×1.25（speedMul 唯一出口）＋家具課🪑解鎖黑板（2×1 裝飾家具：木框＋墨綠板面＋粉筆塗鴉＋粉筆托）＋花藝課💐解鎖花環（春花環牆飾：綠葉環＋5 朵小花＋蝴蝶結＋愛心）；商店卡片課程門控（無課→灰卡🔒＋提示＋toast）；順手修復 29-2b 既有旋轉 90° 缺面 bug（isoBox/drawBed 硬編碼側面→最底角選面、faceSpace 四分支原點修正、drawBoard 板面選面）。測試：.q291/.qa292/.qa293/.course29 全 PASS＋.proberot before/after 驗證（rot0 像素一致、rot1 缺面全補）＋14 套回歸＋.clock28/.school28 全 PASS；字型免重建（新 CJK 全在 cmap）；push d4035ae、.livesmoke29 PASS。
+
+## 第三十輪：課程內容補完（跳舞/烹飪/釣魚/咖啡/寵物）（Jerry 要求 11-21）
+
+需求：「繼續補完課程內容」——第 29 輪只做 3 堂（體育/家具/花藝），補上剩下 5 堂，讓 8 堂課全部有實質效果。
+
+### 設計（沿用 29 模式：課程＝具體效果、複用既有系統、商店 needsCourse 門控通用自動生效）
+- **30-1 跳舞課 💃**：跳舞姿勢（pose=dance）時若 hasCourse('dance') → 頭上冒 ♪/♫ 音符粒子（上浮+搖擺+淡出 1.2s，每 0.4s 一個）＋sfx('note') 短音（audio.js 新增：sine 659→880）。spawn 在 updateGame 'free'、draw 在 renderGame（玩家畫完後）。
+- **30-2 烹飪課 🍳→爐子**：world.js drawStove（白灰爐身 isoBox 1×1 h≈26＋黑爐面 2 爐頭＋鐵鍋＋蓋＋蒸汽 3 條）＋BUILD_ITEMS.stove { name:'爐子', tab:'decor', w:1, d:1, h:26, max:2, block:true, needsCourse:'cooking' }（floorCard 門控自動：灰卡🔒「上烹飪課解鎖」）。
+- **30-3 咖啡課 ☕→咖啡機**：world.js drawCoffeeMaker（復古銀白機身＋按鈕＋玻璃壺咖啡＋杯子＋蒸汽）＋BUILD_ITEMS.coffee { name:'咖啡機', tab:'decor', w:1, d:1, h:34, max:1, block:true, needsCourse:'coffee' }。
+- **30-4 釣魚課 🎣→池塘＋釣魚小游戏**：
+  - mapscene.js 畫池塘（路右側草皮 ~(705,500)，藍綠水塘橢圓＋睡蓮×2＋蘆葦×2＋岸邊石），常駐景觀
+  - game.js 地圖點擊：命中池塘 → hasCourse('fishing') ? enterFishing() : toast '🎣 先上釣魚課才能釣魚喔～'
+  - #screen-fish（HTML 只有 ✕＋標題/計數，畫面全 canvas 畫，同 screen-work 模式；sub='fish'）
+  - 釣魚狀態機（renderFish + case 'fish' in updateGame，dt 走主迴圈）：ready（點水面甩竿 sfx whoosh+漣漪）→ waiting（浮標隨機點漂 1.2~3.5s，可點=提前收線）→ bite（浮標沉＋「！」＋sfx blip，0.8s 窗口）→ 點中=caught（隨機魚：小魚🐟8元50%/彩魚🐠15元30%/青蟹🦀25元15%/金魚🐡40元5%；Game.money 加幣+saveGame、Game.fish.caught++；顯示 1.6s）→ ready；bite 沒點中=missed toast「溜走了～」
+  - ESC 支援（同 school 模式）
+- **30-5 寵物課 🐾→小貓跟隨**：hasCourse('pet') → Game.pet {x,y}（tile 座標，init=玩家位置）；updateGame 'free' lerp 追玩家（落後玩家右後方 ~0.45 tile、6 tile/s）；renderGame items 加 drawCat（depth p.x+p.y+0.2 畫玩家前面）；world.js drawCat：橘色虎斑（頭+三角耳+內耳+開心閉眼弧+鵝蛋身+環尾擺動+胸前的白+走路微顛）~30px 高
+- **30-6 字型重建**：新 CJK（塘/池/咬/快/溜/甩/竿/爐/機/蟹/彩/金/小/到/太/早/慢/貓…）→ make-font 重跑＋?v=21→22（fontenv 若被清先重建）
+- **30-7 .course30.mjs 整合測試**：R1 跳舞課音符（pose dance+課→notes>0；無課→0）；R2 爐子鎖/解/放/存檔重載持久；R3 咖啡機同（抽一）；R4 釣魚（有課開屏/無課 toast、強制 bite 流程 catch 加錢加數、0 pageErr）；R5 小貓（有課 Game.pet 存在且 2s 內靠近玩家；無課無 pet）
+- **30-8 收尾**：peek-build 期望更新（decor 卡 5→7）＋14 套回歸＋.clock28/.school28/.course29＋push＋live smoke
+
+### 子任務
+- 30-0 📋：計畫（本節）
+- 30-1 📋：跳舞課音符
+- 30-2 📋：爐子
+- 30-3 📋：咖啡機
+- 30-4 📋：池塘＋釣魚小游戏
+- 30-5 📋：小貓跟隨
+- 30-6 📋：字型＋?v=
+- 30-7 📋：.course30 整合測試
+- 30-8 📋：回歸＋push＋live smoke
+
+> 📌 接手筆記：門控/存檔/商店卡全自動（needsCourse）；釣魚畫面走主迴圈 sub='fish'（同 work）；新中文都靠 make-font 自動收集，最後統一重建字型。
