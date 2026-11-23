@@ -1320,6 +1320,62 @@ function drawBalloonBunch(ctx, tx, ty, o = {}) {
   ctx.globalAlpha = saved;
 }
 
+/* ── 擺飾：爐子（第三十輪 30-2：烹飪課解鎖）── */
+function drawStove(ctx, tx, ty, o = {}) {
+  const saved = ctx.globalAlpha;
+  if (o.ghost) ctx.globalAlpha *= 0.62;
+  const bad = o.tint === 'bad';
+  /* 爐身（白灰 1×1 h22） */
+  isoBox(ctx, tx, ty, 1, 1, 0, 22, { top: '#F8F4EC', right: bad ? '#DE8794' : '#E6DCCB', left: bad ? '#D47A88' : '#F0E9DC', lw: 2.4 });
+  /* 爐面（深色菱面） */
+  const g0 = P(tx + 0.1, ty + 0.1, -22.5), g1 = P(tx + 0.9, ty + 0.1, -22.5), g2 = P(tx + 0.9, ty + 0.9, -22.5), g3 = P(tx + 0.1, ty + 0.9, -22.5);
+  ctx.fillStyle = bad ? '#6A5A62' : '#3A3A44';
+  poly(ctx, [g0[0], g0[1]], [g1[0], g1[1]], [g2[0], g2[1]], [g3[0], g3[1]]);
+  /* 兩爐頭 */
+  for (const [fx, fy] of [[0.33, 0.33], [0.67, 0.67]]) {
+    const [bx, by] = P(tx + fx, ty + fy, -22.5);
+    ctx.beginPath(); ctx.arc(bx, by, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#23232B'; ctx.fill();
+    ctx.strokeStyle = '#55555F'; ctx.lineWidth = 1.6; ctx.stroke();
+  }
+  /* 前爐門（faceSpace 前右面） */
+  ctx.save();
+  faceSpace(ctx, tx, ty, 22, 'tx', 1, 1);
+  ctx.fillStyle = bad ? '#D8A8B0' : '#EFE7D8';
+  roundRectPath(ctx, 6, 5, 23, 13, 3); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.fillStyle = bad ? '#B4707E' : '#C9BBA0';
+  roundRectPath(ctx, 9, 8, 17, 2.6, 1.3); ctx.fill();
+  ctx.restore();
+  /* 鍋（後爐頭上方、畫面空間畫） */
+  const [px, py] = P(tx + 0.33, ty + 0.33, -22.5);
+  ctx.fillStyle = bad ? '#8A6A74' : '#55607A';
+  roundRectPath(ctx, px - 11, py - 14, 22, 13, 3); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(px, py - 14, 11, 4.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = bad ? '#9A7A84' : '#6B7690'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px, py - 18, 2.4, 0, Math.PI * 2);
+  ctx.fillStyle = INK; ctx.fill();
+  /* 鍋耳 */
+  ctx.fillStyle = bad ? '#8A6A74' : '#55607A';
+  for (const s of [-1, 1]) { roundRectPath(ctx, px + s * 11 - 2, py - 11, 4, 3, 1.5); ctx.fill(); ctx.stroke(); }
+  /* 蒸汽（非 ghost 時微動） */
+  if (!o.ghost) {
+    const t = (typeof Game !== 'undefined' && Game) ? Game.t : 0;
+    ctx.strokeStyle = 'rgba(150,152,165,0.55)';
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (const s of [-4, 3]) {
+      const sw = Math.sin(t * 2.2 + s) * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(px + s, py - 24);
+      ctx.quadraticCurveTo(px + s + sw, py - 31, px + s - sw * 0.6, py - 38);
+      ctx.stroke();
+    }
+  }
+  if (o.ghost) ghostFootprint(ctx, tx, ty, 1, 1, o);
+  ctx.globalAlpha = saved;
+}
+
 /* ── 建造品項目錄（floor 類：w/d 為佔格、h 為高度、max 上限、block 是否擋路、layer:'floor' 貼地層） ── */
 const BUILD_ITEMS = {
   bed:     { name: '床',     tab: 'furniture', w: 2, d: 1, h: 30, max: 1, block: true,  draw: drawBed },
@@ -1337,6 +1393,8 @@ const BUILD_ITEMS = {
   balloon: { name: '氣球',   tab: 'decor', w: 1, d: 1, h: 82, max: 2, block: false, pv: 63, draw: drawBalloon },
   /* 第二十九輪 29-2：黑板（家具課解鎖；2x1 立式、擋路） */
   board:     { name: '黑板', tab: 'decor', w: 2, d: 1, h: 50, max: 1, block: true, needsCourse: 'furniture', draw: drawBoard },
+  /* 第三十輪 30-2：爐子（烹飪課解鎖） */
+  stove:     { name: '爐子', tab: 'decor', w: 1, d: 1, h: 26, max: 2, block: true, needsCourse: 'cooking', draw: drawStove },
   /* 第九輪c：地飾（layer:'floor' 貼地層繪製） */
   rug:     { name: '地毯',   tab: 'floor', w: 2, d: 2, h: 6,  max: 2, block: false, layer: 'floor', draw: drawRug },
   doormat: { name: '門墊',   tab: 'floor', w: 1, d: 1, h: 3,  max: 1, block: false, layer: 'floor', draw: drawDoormat },
