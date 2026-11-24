@@ -635,3 +635,19 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 30-6：`/tmp/fontenv/bin/python tools/make-font.py tools/full/ResourceHanRoundedTW-VF.otf` → rhr-500/700/900.woff2（285/289/270KB）；style.css `?v=21→22`；/tmp/306-font.png 驗證新字（湖釣拋竿咬餌撈貓蟹彩爐機金魚…）全 RHR 渲染。
 - 30-7：test/.course30.mjs（21 項：跳舞音符 0/有、爐子鎖/解/放置、咖啡機鎖/解、釣魚門控/全流程、小貓無課/確認/追隨、重載持久化×4、0 pageErr）；.q301/.q304/.q305 已併入並刪。
 - 30-8：peek-build.mjs 擺飾卡期望 5→7（30-2/30-3 加爐子/咖啡機）；回歸：peek-build ✅、.course29 ✅、.course30 ✅、flow ✅；push 後 live smoke。
+
+## 第三十一輪：iPhone 遊樂園觸控操作修復（Jerry 回報 11-22）
+> 症狀：摩天輪/甜甜圈接接樂在 iPhone 上無法左右移動（「不知道按哪」）。
+> 診斷（Playwright iPhone 13 模擬）：
+> 1. **核心 bug**：`park-catch.js`×2、`park-wheel.js`×1 讀 `park.dpadDir`——但 D-pad 存的是 `Game.dpadDir`，park 物件上永遠 undefined → 觸控左右完全無效（鍵盤 A/D 正常，所以電腦玩沒事）。
+> 2. **方向錯**：dpad 按鈕 data-d 是 iso tile 方向（→=(1,-1)）；3D 公園固定相機下直接當 (dx,dz) 用 → 按 → 是往右上斜走。需 remap：screenX=sign(tx-ty)、screenY=sign(tx+ty)（→=純右、↑=純遠）。
+> 3. **發現性**：prompt 寫「A/D」（鍵盤術語），手機玩家不知道按 D-pad 的 ←/→。
+> 4. D-pad 本身可见（z-index 60 > park3d 50）、pointer 事件正常（dbg 驗證 dpadDir 持續 700ms）。
+
+### 子任務
+- 31-0 📋：計畫（本節）
+- 31-1 📋：核心修復——Park3D.update 算 `this.touchDir`（iso→park remap）；movePlayer/catch×2/wheel×1 改用 `park.touchDir`/`this.touchDir`
+- 31-2 📋：發現性——prompt「A/D」→「← →」；進 catch/wheel 時 dpad ←/→ 加 `.lr-hint` 脈動光暈（cleanup 移除）
+- 31-3 📋：`#park-canvas` 加 `touch-action:none`（iOS 手勢防劫持）
+- 31-4 📋：iPhone 模擬全公園驗證（自由行走 4 向、catch 左右 px、wheel 左右 pOff、⚡ 可點）＋screenshot
+- 31-5 📋：回歸（wheel24/25、shipfix、coasterfix、smoke22、flow）＋push＋live smoke
