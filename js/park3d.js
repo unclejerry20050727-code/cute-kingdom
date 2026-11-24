@@ -578,6 +578,11 @@ const Park3D = {
     if (!this.running) return;
     this.t += dt;
 
+    /* 31-1：觸控 D-pad（iso tile 方向）→ 公園畫面方向（←/→=左/右、↑/↓=遠/近）
+       iso (tx,ty)：screenX = tx-ty、screenY = tx+ty（相機固定朝 -z） */
+    const dd = Game.dpadDir;
+    this.touchDir = dd ? [Math.sign(dd[0] - dd[1]), Math.sign(dd[0] + dd[1])] : null;
+
     /* 摩天輪轉動（座艙反向保持直立） */
     if (this.ferris) {
       this.wheelAngle += dt * this.wheelSpeed; /* 18g：遊玩時可調 speed */
@@ -624,7 +629,7 @@ const Park3D = {
     if (k.has('down')) dz += 1;
     if (k.has('left')) dx -= 1;
     if (k.has('right')) dx += 1;
-    if (Game.dpadDir) { dx += Game.dpadDir[0]; dz += Game.dpadDir[1]; }
+    if (this.touchDir) { dx += this.touchDir[0]; dz += this.touchDir[1]; } /* 31-1：remap 後純畫面方向 */
     const len = Math.hypot(dx, dz);
     if (len > 0) {
       dx /= len; dz /= len;

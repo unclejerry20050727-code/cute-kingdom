@@ -349,6 +349,12 @@ body {
   box-shadow: 0 3px 0 rgba(122,82,54,.3);
 }
 .dpad button:active { transform: translateY(2px); box-shadow: none; }
+/* 第三十一輪31-2：接接樂/摩天輪中脈動提示←/→（「不知道按哪」→ 直接閃給你看） */
+.dpad button.lr-hint { animation: dpad-glow .8s ease-in-out infinite; }
+@keyframes dpad-glow {
+  0%, 100% { box-shadow: 0 3px 0 rgba(122, 82, 54, .3); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 158, 194, .55), 0 3px 0 rgba(122, 82, 54, .3); }
+}
 .dpad-mid { display: flex; gap: 40px; }
 
 /* 第十一輪d：放置操作鈕（與 dpad 同位，僅放置中顯示） */
@@ -779,7 +785,7 @@ body {
   position: fixed; inset: 0; z-index: 50;
   background: #9FD8EF; /* 天空色（WebGL 背景同源） */
 }
-#park-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#park-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; } /* 31-3：禁 iOS 手勢劫持（捲動/雙擊放大） */
 .park-exit-btn {
   position: absolute; top: 14px; left: 14px;
   font-family: var(--font);
@@ -805,7 +811,7 @@ body {
   box-shadow: var(--shadow);
 }
 .park-prompt {
-  position: absolute; bottom: 118px; left: 50%;
+  position: absolute; bottom: 176px; left: 50%; /* 31-2b：118→176，抬到 D-pad 頂端（bottom 152）之上——原位置撞擋 ↑ 鈕 */
   transform: translateX(-50%);
   font-family: var(--font);
   font-size: 19px; font-weight: 700; color: var(--ink);
@@ -815,6 +821,10 @@ body {
   padding: 10px 20px;
   box-shadow: var(--shadow);
   white-space: nowrap;
+}
+/* 31-2b：小螢幕縮字型，避免 prompt 兩側被切 */
+@media (max-width: 480px) {
+  .park-prompt { font-size: 13px; padding: 8px 14px; }
 }
 .park-action-btn {
   position: absolute; bottom: 26px; right: 24px;

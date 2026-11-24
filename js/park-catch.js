@@ -67,6 +67,7 @@ const ParkCatch = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
+    document.querySelectorAll('.dpad button[data-d="-1,1"], .dpad button[data-d="1,-1"]').forEach(b => b.classList.add('lr-hint')); /* 31-2：脈動提示左右鍵 */
     /* 24-1 特寫／25-5 拉遠／26-1 再退：甜甜圈 y≈10.5 進畫面，全段落下 ≈1.5s 看得見 */
     park.camera.position.set(this.px, 6.4, 8.6);
     park.camera.lookAt(this.px, 4.2, this.Z);
@@ -79,7 +80,7 @@ const ParkCatch = {
     if (!this.active || this.dive || this.diveCd > 0) return;
     const k = Game.keys;
     let dir = (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0);
-    if (dir === 0 && this.park.dpadDir) dir = this.park.dpadDir[0];
+    if (dir === 0 && this.park.touchDir) dir = this.park.touchDir[0]; /* 31-1：dpad 在 Game 上，park.touchDir=remap 後 */
     if (dir === 0) {
       /* 無方向輸入：撲向最近的落下物 */
       let best = null, bd = 99;
@@ -98,7 +99,7 @@ const ParkCatch = {
     const extra = this.dive ? '🌪 飛撲中!' : (this.diveCd > 0 ? '⚡ 冷卻中' : '⚡ 可飛撲');
     const flashTxt = this.flash ? '｜' + this.flash.text : '';
     $('#park-prompt').textContent =
-      `⏰ ${sec}s ｜ 🍩 ${this.score}${flashTxt}（A/D 移動・${extra}・別接 🧨）`;
+      `⏰ ${sec}s ｜ 🍩 ${this.score}${flashTxt}（← → 移動・${extra}・別接 🧨）`; /* 31-2：A/D→← →（手機看得懂） */
     $('#park-prompt').classList.remove('hidden');
   },
 
@@ -175,7 +176,7 @@ const ParkCatch = {
     let dx = 0;
     if (k.has('left')) dx -= 1;
     if (k.has('right')) dx += 1;
-    if (dx === 0 && park.dpadDir) dx = park.dpadDir[0];
+    if (dx === 0 && park.touchDir) dx = park.touchDir[0]; /* 31-1：同上（原 park.dpadDir 永遠 undefined，iPhone 左右失效） */
 
     /* 24-1b：飛撲——覆蓋方向、2.6× 速 */
     if (this.dive) {
@@ -318,6 +319,7 @@ const ParkCatch = {
 
   _cleanup(awarded) {
     const park = this.park;
+    document.querySelectorAll('.dpad button.lr-hint').forEach(b => b.classList.remove('lr-hint')); /* 31-2 */
     for (const d of this.donuts) park.scene.remove(d.mesh);
     this.donuts = [];
     for (const f of this.fx) park.scene.remove(f.mesh);

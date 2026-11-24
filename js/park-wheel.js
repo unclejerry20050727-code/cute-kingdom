@@ -101,7 +101,8 @@ const ParkWheel = {
 
     park.nearStation = null;
     $('#park-action').classList.remove('near');
-    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（A/D 左右躲＋⚡ 跳）';
+    document.querySelectorAll('.dpad button[data-d="-1,1"], .dpad button[data-d="1,-1"]').forEach(b => b.classList.add('lr-hint')); /* 31-2：脈動提示左右鍵 */
+    $('#park-prompt').textContent = '🎡 慢慢轉動中… ★ 0/4 ｜ 🐦 來襲!（← → 左右躲＋⚡ 跳）'; /* 31-2：A/D→← → */
     $('#park-prompt').classList.remove('hidden');
     sfx('pop');
   },
@@ -184,7 +185,7 @@ const ParkWheel = {
     /* 24-2b/26-3：A/D 左右閃躲（加回），無輸入緩慢回中 */
     const ks = Game.keys;
     let dx = (ks.has('right') ? 1 : 0) - (ks.has('left') ? 1 : 0);
-    if (dx === 0 && park.dpadDir) dx = park.dpadDir[0];
+    if (dx === 0 && park.touchDir) dx = park.touchDir[0]; /* 31-1：dpad 在 Game 上，park.touchDir=remap 後（原 park.dpadDir 永遠 undefined） */
     this.pOff += dx * 2.2 * dt;
     if (dx === 0) this.pOff -= this.pOff * Math.min(1, dt * 2.5);
     if (this.pOff > 1.2) this.pOff = 1.2;
@@ -220,7 +221,7 @@ const ParkWheel = {
 
     const fl = this.hitFlash ? `｜${this.hitFlash.text}` : '';
     $('#park-prompt').textContent =
-      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜A/D 躲＋⚡ 跳`;
+      `🎡 慢慢轉動中… ★ ${this.collected}（🐦 閃躲 x${this.dodges}）${fl}｜← → 躲＋⚡ 跳`; /* 31-2 */
   },
 
   /* 24-2：鳥群更新（orbit/tele/dive/pass/ret） */
@@ -350,6 +351,7 @@ const ParkWheel = {
 
   _cleanup(awarded) {
     const park = this.park;
+    document.querySelectorAll('.dpad button.lr-hint').forEach(b => b.classList.remove('lr-hint')); /* 31-2 */
     for (const s of this.stars) park.scene.remove(s.mesh);
     this.stars = [];
     for (const b of this.birds) park.scene.remove(b.group);

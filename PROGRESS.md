@@ -645,9 +645,9 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 > 4. D-pad 本身可见（z-index 60 > park3d 50）、pointer 事件正常（dbg 驗證 dpadDir 持續 700ms）。
 
 ### 子任務
-- 31-0 📋：計畫（本節）
-- 31-1 📋：核心修復——Park3D.update 算 `this.touchDir`（iso→park remap）；movePlayer/catch×2/wheel×1 改用 `park.touchDir`/`this.touchDir`
-- 31-2 📋：發現性——prompt「A/D」→「← →」；進 catch/wheel 時 dpad ←/→ 加 `.lr-hint` 脈動光暈（cleanup 移除）
-- 31-3 📋：`#park-canvas` 加 `touch-action:none`（iOS 手勢防劫持）
-- 31-4 📋：iPhone 模擬全公園驗證（自由行走 4 向、catch 左右 px、wheel 左右 pOff、⚡ 可點）＋screenshot
-- 31-5 📋：回歸（wheel24/25、shipfix、coasterfix、smoke22、flow）＋push＋live smoke
+- 31-0 ✅：計畫（本節）
+- 31-1 ✅：核心修復——Park3D.update 算 `this.touchDir`（iso→park remap：→=純右/↑=純遠）；movePlayer 用 touchDir；catch×2/wheel×1 改讀 `park.touchDir`（原 `park.dpadDir` 永遠 undefined＝iPhone 左右失效元兇）
+- 31-2 ✅：發現性——prompt「A/D」→「← →」（catch/wheel）；進 catch/wheel 時 dpad ←/→ 加 `.lr-hint` 粉紅脈動光暈（_cleanup 移除）；`.park-prompt` bottom 118→176（原位置撞擋 ↑ 鈕，截圖實證）＋max-width:480 縮 13px（390px 寬文字會被切）
+- 31-3 ✅：`#park-canvas` 加 `touch-action:none`
+- 31-4 ✅：test/.park31.mjs（iPhone 13 模擬 18 項全過：D-pad 4 鍵螢幕內、→純右/↑純遠、catch ←/→ 動 px、wheel ←/→ 側閃 pOff、prompt 完整+不重疊+文字、lr-hint 2 顆/退場清除、⚡ 可點、0 pageErr）
+- 31-5 ✅：回歸全過（.park31/.smoke22/.wheel24/.shipfix/flow/.course30/.course29/peek-build；wheel25 R1/R2 過但「等一圈」超時、coasterfix Chromium 崩——git stash 實證 baseline 同樣失敗＝既有環境問題非回歸）＋push＋live smoke
