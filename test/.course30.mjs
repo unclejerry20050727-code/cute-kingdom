@@ -89,15 +89,19 @@ const r4 = await page.evaluate(async () => {
   Game.canvas.dispatchEvent(new MouseEvent('click', { clientX: cx, clientY: cy, bubbles: true }));
   await new Promise(res => setTimeout(res, 150));
   const open = !$('#screen-fish').classList.contains('hidden') && Game.sub === 'fish' && Fish && Fish.state === 'ready';
-  /* 拋竿→bite→撈 */
+  /* 32-1：長按蓄力→放開拋竿→wait→bite→撈 */
   const money0 = Game.money;
-  fishAction();
+  fishAction(); /* 開始蓄力 */
+  Fish.power = 1; /* 滿力 */
+  releaseCast(); /* 放開拋竿 */
+  for (let i = 0; i < 80 && Fish.state === 'cast'; i++) await new Promise(res => setTimeout(res, 50)); /* 等 0.9s 飛行落地 */
+  Fish.size = 1; /* 固定大小→代幣=基礎值（大獲路徑由 .fish32 測） */
   Fish.biteAt = Fish.t + 0.05;
   await new Promise(res => setTimeout(res, 150));
   const st = Fish.state;
   fishAction();
   const f = Fish.fish;
-  const caught = { money: Game.money, coins: f.coins, count: Game.fish.caught, msg: $('#fish-msg').textContent };
+  const caught = { money: Game.money, coins: Fish.coins, count: Game.fish.caught, msg: $('#fish-msg').textContent, zone: FISH_ZONES[Fish.zoneIdx].id };
   exitFishing();
   await new Promise(res => setTimeout(res, 100));
   return { noCourse, open, st, caught, back: Game.sub, money0 };
@@ -107,6 +111,7 @@ ok(r4.open, 'R4 有釣魚課點湖：開釣魚畫面');
 ok(r4.st === 'bite', 'R4 拋竿到時→bite');
 ok(r4.caught.money === r4.money0 + r4.caught.coins, 'R4 撈到加錢（+' + r4.caught.coins + '）');
 ok(r4.caught.count === 1 && /撈到/.test(r4.caught.msg), 'R4 累計+1＋訊息（' + r4.caught.msg + '）');
+ok(r4.caught.zone === 'far', 'R4 滿力拋竿→遠區（32-1 分區）');
 ok(r4.back === 'map', 'R4 退出回地圖');
 
 /* R5 寵物課：無課無貓 / 確認課後小貓出現並追隨 */
