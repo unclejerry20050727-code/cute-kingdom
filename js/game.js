@@ -94,9 +94,13 @@ function init() {
   $('#map-home').onclick = () => { sfx('whoosh'); homeFromMap(); };
   $('#shop-x').onclick = () => { sfx('back'); closeShop(); };
   $('#work-x').onclick = () => { sfx('back'); exitWork(); };
-  /* 第三十輪 30-4：釣魚 */
+  /* 第三十輪 30-4：釣魚；第三十二輪 32-1：長按蓄力（pointerdown 開始、pointerup/leave/cancel 放開拋竿） */
   $('#fish-x').onclick = () => { sfx('back'); exitFishing(); };
-  $('#fish-act').onclick = () => fishAction();
+  const fishAct = $('#fish-act');
+  fishAct.addEventListener('pointerdown', () => fishAction());
+  fishAct.addEventListener('pointerup', () => releaseCast());
+  fishAct.addEventListener('pointerleave', () => releaseCast());
+  fishAct.addEventListener('pointercancel', () => releaseCast());
   /* 第二十八輪：學校 */
   $('#school-x').onclick = () => { sfx('back'); exitSchool(); };
   $('#school-tut').onclick = () => advanceSchoolTut();
@@ -1228,6 +1232,12 @@ function setupInput() {
       if (window.Park3D) { Park3D.action(); e.preventDefault(); }
       return;
     }
+    /* 第三十二輪 32-1：釣魚 Space 長按蓄力、放開拋竿（bite 時=撈） */
+    if (Game.sub === 'fish' && e.key === ' ') {
+      fishAction();
+      e.preventDefault();
+      return;
+    }
     /* 第十五輪：P = 擺拍（10 姿勢輪流） */
     if ((e.key === 'p' || e.key === 'P') && (Game.sub === 'free' || Game.sub === 'map') && !Dialogue.active) {
       startPose();
@@ -1279,6 +1289,7 @@ function setupInput() {
     }
   });
   window.addEventListener('keyup', (e) => {
+    if (Game.sub === 'fish' && e.key === ' ') { releaseCast(); return; } /* 32-1：放開拋竿 */
     const keyMap = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
     if (keyMap[e.key]) Game.keys.delete(keyMap[e.key]);
   });

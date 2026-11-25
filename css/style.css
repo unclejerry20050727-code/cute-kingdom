@@ -891,6 +891,7 @@ body {
   font-family: inherit; font-size: 20px; font-weight: 800; color: #fff;
   background: #5FA8C4; border: 4px solid #3F7E9A; border-radius: 999px;
   padding: 12px 36px; box-shadow: 0 5px 0 #3F7E9A; cursor: pointer;
+  touch-action: none; /* 32-1：長按蓄力不被 iOS 捲動/縮放劫持 */
 }
 #screen-fish .fish-btn:active { transform: translate(-50%, 3px); box-shadow: 0 2px 0 #3F7E9A; }
 #screen-fish .fish-btn:disabled { opacity: 0.65; cursor: default; }

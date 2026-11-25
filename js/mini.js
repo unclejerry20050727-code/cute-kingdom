@@ -584,29 +584,41 @@ function drawCustomer(ctx, x, y, c, t) {
 }
 
 /* ══════════ 第三十輪 30-4：釣魚（釣魚課）══════════ */
-const FISH_TABLE = [
-  { id: 'minnow', name: '小魚', coins: 8,  w: 50 },
-  { id: 'color',  name: '彩魚', coins: 15, w: 30 },
-  { id: 'crab',   name: '青蟹', coins: 25, w: 15 },
-  { id: 'puffer', name: '金魚', coins: 40, w: 5 },
+const FISH_TABLE = {
+  minnow: { id: 'minnow', name: '小魚', coins: 8,  win: 1.1 },
+  color:  { id: 'color',  name: '彩魚', coins: 15, win: 0.9 },
+  crab:   { id: 'crab',   name: '青蟹', coins: 25, win: 0.7 },
+  puffer: { id: 'puffer', name: '金魚', coins: 40, win: 0.5 },
+};
+/* 32-1：分區魚表——越遠越稀有（金魚只在深處）；wait=等待秒數範圍 */
+const FISH_ZONES = [
+  { id: 'near', label: '近・淺水', x: 470, y: 480, wait: [1.2, 2.6], table: [['minnow', 70], ['color', 25], ['crab', 5]] },
+  { id: 'mid',  label: '中・中湖', x: 620, y: 465, wait: [2.0, 4.0], table: [['minnow', 30], ['color', 50], ['crab', 20]] },
+  { id: 'far',  label: '遠・深處', x: 770, y: 450, wait: [3.0, 6.0], table: [['color', 40], ['crab', 35], ['puffer', 25]] },
 ];
 
 let Fish = null;
 
-function rollFish() {
-  const total = FISH_TABLE.reduce((s, f) => s + f.w, 0);
+function rollZoneFish(zoneIdx) {
+  const zone = FISH_ZONES[zoneIdx];
+  const total = zone.table.reduce((s, r) => s + r[1], 0);
   let r = Math.random() * total;
-  for (const f of FISH_TABLE) { r -= f.w; if (r <= 0) return f; }
-  return FISH_TABLE[0];
+  for (const [id, w] of zone.table) { r -= w; if (r <= 0) return FISH_TABLE[id]; }
+  return FISH_TABLE[zone.table[0][0]];
 }
 
 function startFishing() {
   if (!hasCourse('fishing')) { showToast('🎣 先上『釣魚課』才能釣魚喔～'); return; }
   sfx('pop');
-  Fish = { state: 'ready', t: 0, biteAt: 0, fish: null, floaters: [] };
+  Fish = {
+    state: 'ready', t: 0, power: 0, zoneIdx: 1, biteAt: 0, nibbles: [], dipT: null,
+    fish: null, size: 1, coins: 0, floaters: [], splashes: [],
+    castFrom: null, castLand: null, releaseAngle: -0.44,
+    school: initFishSchool(), jumpAt: 5 + Math.random() * 6,
+  };
   $('#screen-fish').classList.remove('hidden');
   setSub('fish');
-  setFishUI('點「拋竿」開始吧！');
+  setFishUI('長按 🎣 蓄力，放開拋竿！越遠越稀有～'); /* 32-1 */
 }
 
 function exitFishing() {
@@ -618,49 +630,99 @@ function exitFishing() {
 function setFishUI(msg) {
   const btn = $('#fish-act');
   if (!btn || !Fish) return;
-  if (Fish.state === 'ready') { btn.textContent = '🎣 拋竿'; btn.disabled = false; btn.classList.remove('hot'); }
+  if (Fish.state === 'ready') { btn.textContent = '🎣 長按蓄力'; btn.disabled = false; btn.classList.remove('hot'); } /* 32-1 */
+  else if (Fish.state === 'charge') { btn.textContent = '🎣 蓄力中…'; btn.disabled = false; btn.classList.remove('hot'); } /* 32-1 */
+  else if (Fish.state === 'cast') { btn.textContent = '🎣 拋竿…'; btn.disabled = true; btn.classList.remove('hot'); } /* 32-1 */
   else if (Fish.state === 'wait') { btn.textContent = '等待中…'; btn.disabled = true; btn.classList.remove('hot'); }
   else if (Fish.state === 'bite') { btn.textContent = '💦 撈！'; btn.disabled = false; btn.classList.add('hot'); }
-  else { btn.textContent = '🎣 拋竿'; btn.disabled = false; btn.classList.remove('hot'); }
+  else { btn.textContent = '🎣 長按蓄力'; btn.disabled = false; btn.classList.remove('hot'); } /* 32-1 */
   if (msg) $('#fish-msg').textContent = msg;
 }
 
 function fishAction() {
   if (!Fish) return;
   if (Fish.state === 'ready') {
-    Fish.state = 'wait'; Fish.t = 0;
-    Fish.biteAt = 1.5 + Math.random() * 2.5;
-    Fish.fish = rollFish();
+    Fish.state = 'charge'; Fish.t = 0; Fish.power = 0; /* 32-1：長按蓄力 */
     sfx('blip');
-    setFishUI('等待咬餌中…');
+    setFishUI();
   } else if (Fish.state === 'bite') {
     const f = Fish.fish;
+    /* 32-1：代幣=基礎×size（0.8~1.3）；≥1.25 大獲再×1.5 */
+    let coins = Math.round(f.coins * Fish.size);
+    const big = Fish.size >= 1.25;
+    if (big) coins = Math.round(coins * 1.5);
+    Fish.coins = coins;
     Game.fish.caught += 1;
-    Game.money += f.coins;
+    Game.money += coins;
     Fish.state = 'caught'; Fish.t = 0;
-    Fish.floaters.push({ text: `+${f.coins}`, x: 560, y: 420, t: 0 });
+    const lx = Fish.castLand ? Fish.castLand.x : 560;
+    Fish.floaters.push({ text: `+${coins}`, x: lx + 60, y: 420, t: 0 });
+    scatterSchool(); /* 32-2：全群逃散 */
     sfx('coin');
     syncMoneyUI();
-    setFishUI(`撈到${f.name}！+${f.coins} 元`);
+    setFishUI(big ? `🎉 大獲！${f.name}！+${coins} 元` : `撈到${f.name}！+${coins} 元`);
     saveGame(fullSave('done'));
   }
+}
+
+/* 32-1：放開→按蓄力力度拋竿（charge→cast 0.9s 拋物線飛行→wait） */
+function releaseCast() {
+  if (!Fish || Fish.state !== 'charge') return;
+  const p = Fish.power;
+  Fish.zoneIdx = p < 0.33 ? 0 : p < 0.66 ? 1 : 2;
+  Fish.releaseAngle = rodAngle(Fish); /* 32-3：記下後拉角度供甩竿動畫 */
+  const tip = rodTipPos(Fish);
+  Fish.castFrom = { x: tip.x, y: tip.y };
+  Fish.castLand = FISH_ZONES[Fish.zoneIdx];
+  Fish.state = 'cast'; Fish.t = 0;
+  sfx('whoosh');
+  setFishUI('拋竿中…');
 }
 
 function updateFish(dt) {
   if (!Fish) return;
   Fish.t += dt;
-  if (Fish.state === 'wait' && Fish.t >= Fish.biteAt) {
-    Fish.state = 'bite'; Fish.t = 0;
-    sfx('ding');
-    setFishUI('⚠️ 咬餌了！快撈！');
-  } else if (Fish.state === 'bite' && Fish.t > 0.9) {
+  if (Fish.state === 'charge') {
+    Fish.power = Math.min(1, Fish.t / 1.2); /* 32-1：1.2s 滿力 */
+  } else if (Fish.state === 'cast' && Fish.t >= 0.9) {
+    /* 32-1：落水——按落點分區抽魚＋size＋假咬排程 */
+    Fish.state = 'wait'; Fish.t = 0;
+    Fish.fish = rollZoneFish(Fish.zoneIdx);
+    Fish.size = 0.8 + Math.random() * 0.5;
+    const [w0, w1] = FISH_ZONES[Fish.zoneIdx].wait;
+    Fish.biteAt = w0 + Math.random() * (w1 - w0);
+    Fish.nibbles = [];
+    const n = Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) Fish.nibbles.push(0.35 + Math.random() * 0.55);
+    Fish.nibbles.sort((a, b) => a - b);
+    Fish.splashes.push({ x: Fish.castLand.x, y: Fish.castLand.y, t: 0 }); /* 32-3：落水水花 */
+    sfx('splash');
+    setFishUI('小抖是咬餌，大沉才撈！');
+  } else if (Fish.state === 'wait') {
+    const frac = Fish.t / Fish.biteAt;
+    if (Fish.nibbles.length && frac >= Fish.nibbles[0]) { /* 32-1：假咬（小抖+tick） */
+      Fish.nibbles.shift();
+      Fish.dipT = 0;
+      sfx('tick');
+    }
+    if (Fish.t >= Fish.biteAt) {
+      Fish.state = 'bite'; Fish.t = 0;
+      sfx('ding');
+      setFishUI('⚠️ 咬餌了！快撈！');
+    }
+  } else if (Fish.state === 'bite' && Fish.t > (Fish.fish ? Fish.fish.win : 0.9)) { /* 32-1：窗口隨稀有度 */
     Fish.state = 'missed'; Fish.t = 0;
     sfx('buzz');
+    scatterSchool(); /* 32-2 */
     setFishUI('魚跑掉了…再試一次吧');
   } else if ((Fish.state === 'caught' || Fish.state === 'missed') && Fish.t > 1.6) {
-    Fish.state = 'ready'; Fish.t = 0;
-    setFishUI('點「拋竿」開始吧！');
+    Fish.state = 'ready'; Fish.t = 0; Fish.dipT = null;
+    setFishUI('長按 🎣 蓄力，放開拋竿！越遠越稀有～');
   }
+  if (Fish.dipT !== null) { Fish.dipT += dt; if (Fish.dipT > 0.35) Fish.dipT = null; }
+  updateFishSchool(Fish, dt); /* 32-2：魚群 AI */
+  for (const sp of Fish.splashes) sp.t += dt;
+  Fish.splashes = Fish.splashes.filter(s => s.t < 0.6);
   for (const fl of Fish.floaters) fl.t += dt;
   Fish.floaters = Fish.floaters.filter(f => f.t < 1.2);
 }
@@ -694,14 +756,8 @@ function renderFish(ctx, t) {
     const ry = 300 + ((i * 89) % 320);
     ctx.beginPath(); ctx.moveTo(rx, ry); ctx.quadraticCurveTo(rx + 18, ry - 4, rx + 36, ry); ctx.stroke();
   }
-  /* 水下裝飾小魚（淡影） */
-  ctx.fillStyle = 'rgba(47,84,102,0.14)';
-  for (let i = 0; i < 2; i++) {
-    const fx = ((t * 46 + i * 470) % (W + 200)) - 100;
-    const fy = 430 + i * 130 + Math.sin(t * 2 + i) * 6;
-    ctx.beginPath(); ctx.ellipse(fx, fy, 13, 6, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(fx + 12, fy); ctx.lineTo(fx + 22, fy - 6); ctx.lineTo(fx + 22, fy + 6); ctx.closePath(); ctx.fill();
-  }
+  /* 32-2：魚群（游動/被吸引/繞圈/跳魚，取代舊的 2 條固定淡影） */
+  drawFishSchool(ctx, Fish);
   /* 左岸 */
   ctx.fillStyle = '#8FC47E';
   ctx.beginPath();
@@ -732,64 +788,66 @@ function renderFish(ctx, t) {
   ctx.fillStyle = '#B8C4CC';
   ctx.beginPath(); ctx.moveTo(196, 372); ctx.lineTo(224, 372); ctx.lineTo(220, 394); ctx.lineTo(200, 394); ctx.closePath();
   ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
-  /* 小宥（坐碼頭右端、持釣竿） */
-  drawFisher(ctx, t);
-  /* 釣線 + 浮標 */
-  const bobY = 470 + (Fish.state === 'wait' ? Math.sin(t * 2.2) * 3 : Fish.state === 'bite' ? 14 : 0);
-  ctx.strokeStyle = 'rgba(90,62,43,0.65)'; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.moveTo(486, 318); ctx.quadraticCurveTo(540, 400, 560, bobY - 10); ctx.stroke();
-  /* 咬餌漣漪 */
-  if (Fish.state === 'bite' || (Fish.state === 'missed' && Fish.t < 0.8)) {
-    const rp = Fish.state === 'bite' ? (Fish.t % 0.5) / 0.5 : Fish.t / 0.8;
-    ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - rp)})`;
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(560, bobY + 8, 10 + rp * 26, 4 + rp * 10, 0, 0, Math.PI * 2); ctx.stroke();
+  /* 小宥（坐碼頭右端、持釣竿）＋32-3 蓄力條/目標圈 */
+  drawFisher(ctx, t, Fish);
+  drawFishChargeUI(ctx, Fish);
+  /* 32-3：浮標（蓄力/飛行/漂浮/咬餌）＋釣線 */
+  const bp = fishBobPos(Fish, t);
+  if (bp) {
+    const tip = rodTipPos(Fish);
+    const sag = bp.fly ? 4 : Fish.state === 'bite' ? -8 : 30;
+    ctx.strokeStyle = 'rgba(90,62,43,0.7)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(tip.x, tip.y);
+    ctx.quadraticCurveTo((tip.x + bp.x) / 2, (tip.y + bp.y) / 2 + sag, bp.x, bp.y - 8);
+    ctx.stroke();
+    /* 咬餌漣漪 */
+    if (Fish.state === 'bite' || (Fish.state === 'missed' && Fish.t < 0.8)) {
+      const rp = Fish.state === 'bite' ? (Fish.t % 0.5) / 0.5 : Fish.t / 0.8;
+      ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - rp)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(bp.x, bp.y + 8, 10 + rp * 26, 4 + rp * 10, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    drawBobber(ctx, bp.x, bp.y);
+    /* 32-1：咬餌時魚影在浮標下掙扎 */
+    if (Fish.state === 'bite' && Fish.fish) {
+      ctx.save(); ctx.globalAlpha = 0.6;
+      drawCatchFish(ctx, Fish.fish, bp.x, bp.y + 34, 0.9 * Fish.size, Math.sin(t * 14) * 0.2);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
   }
-  /* 等待時：魚影接近 */
-  if (Fish.state === 'wait' && Fish.biteAt - Fish.t < 1.0) {
-    const k = 1 - (Fish.biteAt - Fish.t) / 1.0;
-    const sx = 760 + (585 - 760) * k, sy = 560 + (500 - 560) * k;
-    ctx.fillStyle = 'rgba(47,84,102,0.30)';
-    ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(sx - 14, sy); ctx.lineTo(sx - 24, sy - 7); ctx.lineTo(sx - 24, sy + 7); ctx.closePath(); ctx.fill();
-  }
-  /* 浮標（紅白） */
-  ctx.save();
-  ctx.translate(560, bobY);
-  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fillStyle = '#FFF8EC'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0, 0, 9, Math.PI, 0); ctx.fillStyle = '#E85A6A'; ctx.fill();
-  ctx.strokeStyle = INK; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, -15); ctx.stroke();
-  ctx.restore();
-  /* 咬餌「!」 */
-  if (Fish.state === 'bite') {
+  /* 32-3：水花粒子（落水/跳魚） */
+  drawFishSplashes(ctx, Fish);
+  /* 咬餌「!」（32-3：跟隨浮標落點） */
+  if (Fish.state === 'bite' && bp) {
     ctx.fillStyle = '#FFF8EC';
-    ctx.beginPath(); ctx.arc(560, 424, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bp.x, bp.y - 46, 15, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.fillStyle = '#E85A6A';
     ctx.font = '800 22px RHR, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('!', 560, 425);
+    ctx.fillText('!', bp.x, bp.y - 45);
   }
-  /* 撈到：魚飛出動畫 */
+  /* 撈到：魚飛出動畫（32-1：按 size 放大） */
   if (Fish.state === 'caught' && Fish.t < 0.7 && Fish.fish) {
+    const z = Fish.castLand || { x: 560, y: 470 };
     const f = Math.min(Fish.t / 0.7, 1);
-    const fx = 560 + 110 * f;
-    const fy = 470 - 130 * Math.sin(f * Math.PI) + 30 * f;
-    drawCatchFish(ctx, Fish.fish, fx, fy, 1.4, -f * 2.2 + 0.4);
+    const fx = z.x + 110 * f;
+    const fy = z.y - 130 * Math.sin(f * Math.PI) + 30 * f;
+    drawCatchFish(ctx, Fish.fish, fx, fy, 1.4 * Math.min(1.5, Fish.size), -f * 2.2 + 0.4);
     /* 水花 */
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     for (const s of [-1, 1]) {
-      ctx.beginPath(); ctx.arc(560 + s * 12, 468 - f * 16, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(z.x + s * 12, z.y - 2 - f * 16, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
     }
   }
   /* 漂走：水花 */
   if (Fish.state === 'missed' && Fish.t < 0.8) {
+    const z = Fish.castLand || { x: 560, y: 470 };
     const f = Fish.t / 0.8;
     ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - f)})`;
     for (const s of [-1, 1]) {
-      ctx.beginPath(); ctx.arc(560 + s * 14, 472 - f * 20, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(z.x + s * 14, z.y - 2 - f * 20, 5 * (1 - f) + 2, 0, Math.PI * 2); ctx.fill();
     }
   }
   /* 浮字 +N */
@@ -860,9 +918,10 @@ function drawLily(ctx, x, y, s, t) {
   ctx.restore();
 }
 
-function drawFisher(ctx, t) {
+function drawFisher(ctx, t, fish) {
   const bob = Math.sin(t * 1.8) * 1.5;
-  const hx = 352, hy = 330 + bob; /* 頭中心 */
+  const lean = fish && fish.state === 'charge' ? fish.power : 0; /* 32-3：蓄力微後仰 */
+  const hx = 352 - lean * 5, hy = 330 + bob; /* 頭中心 */
   /* 身體（白衫+藍背帶褲） */
   ctx.fillStyle = '#FFFFFF';
   roundRectPath(ctx, hx - 17, hy + 16, 34, 34, 9); ctx.fill();
@@ -896,12 +955,16 @@ function drawFisher(ctx, t) {
   ctx.beginPath(); ctx.arc(hx + 12, hy + 8, 3.4, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(hx, hy + 8, 4, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-  /* 手臂→釣竿 */
+  /* 手臂→釣竿（32-3：隨甩竿角度動） */
+  const base = { x: hx + 28, y: hy + 38 };
+  const tip = fish ? rodTipPos(fish) : { x: 486, y: 318 };
+  const grip = { x: (base.x + tip.x) / 2, y: (base.y + tip.y) / 2 };
   ctx.strokeStyle = INK; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(hx + 14, hy + 26); ctx.lineTo(hx + 30, hy + 36); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx + 14, hy + 26); ctx.lineTo(grip.x - 8, grip.y + 4); ctx.stroke();
   /* 釣竿 */
   ctx.strokeStyle = '#8A5A3B'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(hx + 28, hy + 38); ctx.quadraticCurveTo(hx + 80, hy + 10, 486, 318); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(base.x, base.y);
+  ctx.quadraticCurveTo((base.x + tip.x) / 2, (base.y + tip.y) / 2 - 8, tip.x, tip.y); ctx.stroke();
 }
 
 /* 撈到的魚（小魚/彩魚/青蟹/金魚；rot 旋轉、s 縮放） */
@@ -963,4 +1026,228 @@ function drawCatchFish(ctx, f, x, y, s, rot) {
     ctx.beginPath(); ctx.arc(8.8, -2, 1.6, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
+}
+
+/* ═════ 第三十二輪 32-2：釣魚魚群 AI（游動/被吸引/繞圈咬餌/逃散/跳魚）════ */
+function initFishSchool() {
+  const mk = (kind, y0, sp, size) => ({
+    kind, x: 250 + Math.random() * 620, y: y0, baseY: y0,
+    dir: Math.random() < 0.5 ? 1 : -1, sp, size,
+    phase: Math.random() * 6.28, st: 'swim', t: Math.random() * 3,
+    turnAt: 1.5 + Math.random() * 3, ang: 0, jx: 0,
+  });
+  const s = [];
+  for (let i = 0; i < 5; i++) s.push(mk('minnow', 375 + i * 13, 26 + Math.random() * 22, 0.65 + Math.random() * 0.3));
+  for (let i = 0; i < 4; i++) s.push(mk('color', 435 + i * 17, 20 + Math.random() * 16, 0.85 + Math.random() * 0.3));
+  s.push(mk('crab', 580, 16, 0.9));
+  s.push(mk('crab', 594, 13, 0.8));
+  s.push(mk('turtle', 606, 7, 1.3));
+  return s;
+}
+
+function scatterSchool() {
+  if (!Fish) return;
+  for (const f of Fish.school) { if (f.st !== 'jump') { f.st = 'flee'; f.t = 0; } }
+}
+
+function updateFishSchool(fish, dt) {
+  /* 環境跳魚：每 7~15s 一條小魚跳出水面 */
+  fish.jumpAt -= dt;
+  if (fish.jumpAt <= 0) {
+    fish.jumpAt = 7 + Math.random() * 8;
+    const c = fish.school.filter(f => (f.kind === 'minnow' || f.kind === 'color') && f.st === 'swim');
+    if (c.length) {
+      const j = c[Math.floor(Math.random() * c.length)];
+      j.st = 'jump'; j.t = 0; j.jx = j.x;
+      fish.splashes.push({ x: j.x, y: 252, t: 0 });
+      sfx('splash');
+    }
+  }
+  const bob = (fish.state === 'wait' || fish.state === 'bite') ? fish.castLand : null;
+  for (const f of fish.school) {
+    f.t += dt;
+    if (f.st === 'swim') {
+      f.x += f.dir * f.sp * dt;
+      if (f.kind === 'crab') { /* 橫走小步 */
+        if (f.t > f.turnAt) { f.t = 0; f.turnAt = 0.7 + Math.random() * 1.1; f.dir *= -1; }
+        if (f.x < 250 || f.x > 890) f.dir *= -1;
+        f.y = f.baseY + Math.sin(f.t * 9) * 2;
+      } else {
+        f.y = f.baseY + Math.sin(fish.t * 1.5 + f.phase) * 7;
+        if (f.x < 235 || f.x > 895) f.dir *= -1;
+        else if (f.kind !== 'turtle' && Math.random() < dt * 0.22) f.dir *= -1;
+      }
+      /* 浮標落水後：附近的魚被吸引過去 */
+      if (bob && f.kind !== 'turtle' && Math.abs(f.x - bob.x) < 250 && Math.random() < dt * 0.5) {
+        f.st = 'approach'; f.t = 0;
+      }
+    } else if (f.st === 'approach' && bob) {
+      const tx = bob.x, ty = bob.y + 44;
+      const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy) || 1;
+      f.x += (dx / d) * 62 * dt; f.y += (dy / d) * 62 * dt;
+      f.dir = dx >= 0 ? 1 : -1;
+      if (d < 26) { f.st = 'circle'; f.t = 0; f.ang = Math.atan2(f.y - ty, f.x - tx); }
+      if (!bob) f.st = 'swim';
+    } else if (f.st === 'circle' && bob) {
+      f.ang += dt * 2.6 * f.dir;
+      f.x = bob.x + Math.cos(f.ang) * 22;
+      f.y = bob.y + 44 + Math.sin(f.ang) * 13;
+      if (fish.state !== 'wait' && fish.state !== 'bite') f.st = 'swim';
+    } else if (f.st === 'flee') {
+      const bx = bob ? bob.x : 560, by = bob ? bob.y + 40 : 470;
+      const fx = bx - f.x, fy = by - f.y, fd = Math.hypot(fx, fy) || 1;
+      f.x -= (fx / fd) * 135 * dt; f.y -= (fy / fd) * 135 * dt;
+      f.y = Math.max(345, Math.min(612, f.y));
+      if (f.t > 0.9) { f.st = 'swim'; f.t = 0; f.baseY = Math.max(370, Math.min(600, f.y)); f.turnAt = 2 + Math.random() * 3; }
+    } else if (f.st === 'jump') {
+      if (f.t < 1.1) {
+        const k = f.t / 1.1;
+        f.x = f.jx + f.dir * 85 * k;
+        f.y = 252 - 54 * Math.sin(k * Math.PI) + 30 * k;
+      } else { f.st = 'swim'; f.t = 0; f.baseY = 380 + Math.random() * 70; f.y = f.baseY; }
+    }
+  }
+}
+
+/* ═════ 第三十二輪 32-3：釣魚視覺（甩竿/蓄力條/目標圈/魚群/水花/浮標）════ */
+const FISH_ROD_BASE = { x: 380, y: 366 };
+const FISH_ROD_LEN = 117;
+
+function rodAngle(fish) {
+  const REST = -0.44;
+  if (fish.state === 'charge') return REST + (-2.0 - REST) * fish.power; /* 後拉 */
+  if (fish.state === 'cast') {
+    if (fish.t < 0.3) { const k = 1 - Math.pow(1 - fish.t / 0.3, 3); return fish.releaseAngle + (0.35 - fish.releaseAngle) * k; } /* 前甩 */
+    const k = Math.min(1, (fish.t - 0.3) / 0.5);
+    return 0.35 + (REST - 0.35) * k; /* 收回 */
+  }
+  return REST;
+}
+
+function rodTipPos(fish) {
+  const a = rodAngle(fish);
+  return { x: FISH_ROD_BASE.x + FISH_ROD_LEN * Math.cos(a), y: FISH_ROD_BASE.y + FISH_ROD_LEN * Math.sin(a) };
+}
+
+/* 浮標位置（蓄力/飛行/漂浮/咬餌） */
+function fishBobPos(fish, t) {
+  if (fish.state === 'cast') {
+    const k = Math.min(1, fish.t / 0.9);
+    const from = fish.castFrom, to = fish.castLand;
+    if (!from || !to) return null;
+    return { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k - Math.sin(k * Math.PI) * 120, fly: true };
+  }
+  if (fish.state === 'wait' || fish.state === 'bite' || fish.state === 'caught' || fish.state === 'missed') {
+    const z = fish.castLand;
+    if (!z) return null;
+    let dip = 0;
+    if (fish.state === 'wait') {
+      dip = Math.sin(t * 2.2) * 3;
+      if (fish.dipT !== null) dip += Math.sin(Math.min(1, fish.dipT / 0.35) * Math.PI) * 6; /* 假咬小沉 */
+    } else if (fish.state === 'bite') dip = 13 + Math.sin(t * 20) * 3; /* 真咬大沉+顫 */
+    return { x: z.x, y: z.y + dip };
+  }
+  return null;
+}
+
+function drawBobber(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fillStyle = '#FFF8EC'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, 9, Math.PI, 0); ctx.fillStyle = '#E85A6A'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, -15); ctx.stroke();
+  ctx.restore();
+}
+
+/* 魚群（水下魚半透明、龜/蟹各自畫法、跳魚全透明度高） */
+function drawFishSchool(ctx, fish) {
+  for (const f of fish.school) {
+    if (f.kind === 'turtle') { drawFishTurtle(ctx, f); continue; }
+    if (f.kind === 'crab') {
+      ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.dir * f.size, f.size);
+      ctx.globalAlpha = 0.75;
+      drawCatchFish(ctx, FISH_TABLE.crab, 0, 0, 1, 0);
+      ctx.restore();
+      continue;
+    }
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.scale(f.dir * f.size, f.size);
+    ctx.rotate(Math.sin(fish.t * 6 + f.phase) * 0.08); /* 擺尾搖擺 */
+    ctx.globalAlpha = f.st === 'jump' ? 0.95 : 0.5;
+    drawCatchFish(ctx, FISH_TABLE[f.kind], 0, 0, 1, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFishTurtle(ctx, f) {
+  ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.dir, 1); ctx.globalAlpha = 0.7;
+  ctx.fillStyle = '#8FBF7A';
+  for (const i of [-8, 8]) {
+    ctx.beginPath(); ctx.ellipse(i, 9, 6, 3, i < 0 ? 0.5 : -0.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#6B9E5F';
+  ctx.beginPath(); ctx.ellipse(0, 0, 16, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(47,84,102,0.5)'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-8, -8); ctx.lineTo(-4, 8);
+  ctx.moveTo(0, -9); ctx.lineTo(0, 9);
+  ctx.moveTo(8, -8); ctx.lineTo(4, 8);
+  ctx.stroke();
+  ctx.fillStyle = '#8FBF7A';
+  ctx.beginPath(); ctx.arc(19, -2, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2F5466';
+  ctx.beginPath(); ctx.arc(21, -3, 1.4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/* 水花粒子（落水/跳魚） */
+function drawFishSplashes(ctx, fish) {
+  for (const sp of fish.splashes) {
+    const k = sp.t / 0.6;
+    ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - k)})`;
+    for (let i = 0; i < 5; i++) {
+      const dx = (i - 2) * 13 * k, dy = -32 * k + 58 * k * k;
+      ctx.beginPath(); ctx.arc(sp.x + dx, sp.y + dy, 4 * (1 - k) + 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - k)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(sp.x, sp.y, 8 + k * 26, 3 + k * 8, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+/* 蓄力條＋近/中/遠目標圈 */
+function drawFishChargeUI(ctx, fish) {
+  if (fish.state === 'ready' || fish.state === 'charge') {
+    const cur = fish.power < 0.33 ? 0 : fish.power < 0.66 ? 1 : 2;
+    for (let i = 0; i < 3; i++) {
+      const z = FISH_ZONES[i];
+      const active = fish.state === 'charge' && cur === i;
+      ctx.strokeStyle = active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = active ? 3 : 2;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.ellipse(z.x, z.y, 26, 9, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = active ? '#FFF8EC' : 'rgba(255,248,236,0.55)';
+      ctx.font = '800 15px RHR, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(['近', '中', '遠'][i], z.x, z.y - 18);
+    }
+  }
+  if (fish.state === 'charge') {
+    const bx = 288, by = 274, bw = 124;
+    ctx.fillStyle = 'rgba(255,248,236,0.92)';
+    roundRectPath(ctx, bx - 5, by - 5, bw + 10, 22, 11); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    g.addColorStop(0, '#7BC8A4'); g.addColorStop(0.6, '#FFD98A'); g.addColorStop(1, '#E85A6A');
+    ctx.fillStyle = g;
+    roundRectPath(ctx, bx, by, Math.max(6, bw * fish.power), 12, 6); ctx.fill();
+    ctx.fillStyle = '#5A3E2B';
+    ctx.font = '800 14px RHR, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('蓄力', bx - 24, by + 6);
+  }
 }

@@ -101,6 +101,10 @@ function sfx(name) {
     case 'whoosh':
       noiseSfx(t, 0.45, 0.05, 500);
       break;
+    case 'splash': /* 32-1：落水/跳魚水花 */
+      noiseSfx(t, 0.3, 0.09, 800);
+      tone(300, t, 0.08, { type: 'sine', vol: 0.04, release: 0.1, slideTo: 150 });
+      break;
     case 'wake':
       tone(392, t, 0.1, { type: 'sine', vol: 0.06, release: 0.1 });
       tone(523, t + 0.12, 0.1, { type: 'sine', vol: 0.06, release: 0.1 });
