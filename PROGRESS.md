@@ -654,7 +654,7 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 
 ---
 
-## 第三十二輪：釣魚豐富化＋真實感（Jerry 2026-10-26）
+## 第三十二輪：釣魚豐富化＋真實感（Jerry 2026-10-26）——✅ 完成
 
 > 「釣魚缺少豐富性與真實性，如拋竿沒有真實動作，魚竟然到著游，釣魚的難度沒有多樣性，請加強」
 
@@ -676,12 +676,17 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - **UI**：按鈕「🎣 長按蓄力」→「🎣 蓄力中…」；鍵盤長按 Space 蓄力、放開拋竿；canvas 畫蓄力條（竿子上方）
 
 ### 子任務
-- 32-0 ✅：計畫（本節）
-- 32-1 📋：mini.js 狀態機——ready→charge→cast→wait→bite→caught/missed；FISH_ZONES 分區表；rollZoneFish；size/窗口/nibbles 排程；releaseCast()；Fish.lastCoins
-- 32-2 📋：mini.js 魚群 AI——initSchool(12)；updateSchool(dt)（swim/approach/circle/flee/jump）
-- 32-3 📋：mini.js 視覺——drawFisher 加竿角參數（蓄力後拉/甩竿）；drawFishSchool；浮標飛行拋物線+落水水花；蓄力條+目標圈；咬餌大/小沉；catch 按 size 放大
-- 32-4 📋：audio.js sfx('splash')
-- 32-5 📋：game.js 輸入——#fish-act pointerdown/up/leave + Space keydown/keyup
-- 32-6 📋：更新 .course30.mjs 釣魚段（charge→releaseCast→wait→bite→catch 新流程）＋新 test/.fish32.mjs
-- 32-7 📋：字型重建（新 CJK：蓄/力/放/越/遠/淺/處/稀/獲/抖/沉…）+ ?v=23
-- 32-8 📋：回歸＋push＋live smoke（.livesmoke32：FISH_ZONES/releaseCast/fontV23/0 pageErr）
+- 32-0 ✅：計畫（本節）→ b6c14e3
+- 32-1 ✅：mini.js 狀態機（ready→charge→cast→wait→bite→caught/missed、FISH_ZONES、rollZoneFish、size/win/nibbles、releaseCast、Fish.coins）→ c04a7f1
+- 32-2 ✅：mini.js 魚群 AI（initFishSchool 12 條、updateFishSchool swim/approach/circle/flee/jump、scatterSchool）→ c04a7f1
+- 32-3 ✅：mini.js 視覺（rodAngle/rodTipPos 竿子動畫、fishBobPos 飛行拋物線、drawFishSchool/drawFishTurtle、drawFishSplashes、drawFishChargeUI 蓄力條+目標圈、大獲放大）→ c04a7f1
+- 32-4 ✅：audio.js sfx('splash') → c04a7f1
+- 32-5 ✅：game.js pointerdown/up/leave/cancel＋Space keydown/keyup＋.fish-btn touch-action:none → c04a7f1
+- 32-6 ✅：.course30.mjs R4 新流程 22/22＋test/.fish32.mjs 25/25 → f0cd478
+- 32-7 ✅：字型重建 3 字重＋?v=23 → d277fdb
+- 32-8 ✅：course29/30+fish32+peek+flow 全過；shots 重生成 → c847252；.livesmoke32 全過（zones3/tableWin/releaseCast/school12/rodFns/splashSfx/fontV23/fishBtnTouchAction，0 pageErr）
+
+### 驗收截圖
+- /tmp/32-charge.png：蓄力（竿後拉＋力量條＋近/中/遠目標圈＋魚群游動）
+- /tmp/32-cast-flight.png：落水後 wait（浮標在遠區 x770、竿前伸）
+- /tmp/32-bite-school.png：bite（「!」在浮標上、魚影在浮標下、魚群繞圈、紅按鈕💦撈！）
