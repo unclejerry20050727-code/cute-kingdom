@@ -651,3 +651,37 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 31-3 ✅：`#park-canvas` 加 `touch-action:none`
 - 31-4 ✅：test/.park31.mjs（iPhone 13 模擬 18 項全過：D-pad 4 鍵螢幕內、→純右/↑純遠、catch ←/→ 動 px、wheel ←/→ 側閃 pOff、prompt 完整+不重疊+文字、lr-hint 2 顆/退場清除、⚡ 可點、0 pageErr）
 - 31-5 ✅：回歸全過（.park31/.smoke22/.wheel24/.shipfix/flow/.course30/.course29/peek-build；wheel25 R1/R2 過但「等一圈」超時、coasterfix Chromium 崩——git stash 實證 baseline 同樣失敗＝既有環境問題非回歸）＋push＋live smoke
+
+---
+
+## 第三十二輪：釣魚豐富化＋真實感（Jerry 2026-10-26）
+
+> 「釣魚缺少豐富性與真實性，如拋竿沒有真實動作，魚竟然到著游，釣魚的難度沒有多樣性，請加強」
+
+### 三個痛點
+1. **拋竿沒動作**：點「拋竿」浮標就直接在固定點出現——沒有蓄力、沒有拋出、沒有落水
+2. **魚在原地游**：水下只有 2 條淡影左右平移，跟餌料/咬餌完全無關
+3. **難度單一**：魚種表固定、咬餌窗口固定 0.9s、每次一樣
+
+### 設計
+- **蓄力拋竿**：長按🎣蓄力 0→100%（竿子後拉→前甩），放開拋出；力度決定落點 **近(470)/中(620)/遠(770)**；浮標拋物線飛行 0.9s＋落水水花+漣漪+splash 音效；水面上畫近/中/遠三個目標圈＋蓄力時顯示目前目標
+- **分區魚表（多樣難度）**：
+  - 近・淺水：小魚70/彩魚25/青蟹5，等 1.2~2.6s
+  - 中・中湖：小魚30/彩魚50/青蟹20，等 2~4s
+  - 遠・深處：彩魚40/青蟹35/**金魚25**（金魚只在遠區！），等 3~6s
+  - **咬餌窗口隨稀有度**：小魚1.1s / 彩魚0.9s / 青蟹0.7s / 金魚0.5s（越稀有越難撈）
+- **魚群 AI（12 條）**：小魚5(淺層)/彩魚4(中層)/青蟹2(底層橫走)/龜1(慢速ambient)；各自游動+擺尾+轉向；落水後附近魚 **approach→circle 繞圈咬餌**（咬餌前 0~3 次「小抖」假咬＋tick 音，大沉才是真咬）；上鉤→全群 **flee 逃散**；ambient 小魚偶爾**跳出水面**（抛物線+水花）
+- **魚大小**：每條 0.8~1.3×，代幣 = 基礎×size；size≥1.25 → **🎉大獲！** 再×1.5
+- **音效**：新增 sfx('splash')（落水/跳魚）
+- **UI**：按鈕「🎣 長按蓄力」→「🎣 蓄力中…」；鍵盤長按 Space 蓄力、放開拋竿；canvas 畫蓄力條（竿子上方）
+
+### 子任務
+- 32-0 ✅：計畫（本節）
+- 32-1 📋：mini.js 狀態機——ready→charge→cast→wait→bite→caught/missed；FISH_ZONES 分區表；rollZoneFish；size/窗口/nibbles 排程；releaseCast()；Fish.lastCoins
+- 32-2 📋：mini.js 魚群 AI——initSchool(12)；updateSchool(dt)（swim/approach/circle/flee/jump）
+- 32-3 📋：mini.js 視覺——drawFisher 加竿角參數（蓄力後拉/甩竿）；drawFishSchool；浮標飛行拋物線+落水水花；蓄力條+目標圈；咬餌大/小沉；catch 按 size 放大
+- 32-4 📋：audio.js sfx('splash')
+- 32-5 📋：game.js 輸入——#fish-act pointerdown/up/leave + Space keydown/keyup
+- 32-6 📋：更新 .course30.mjs 釣魚段（charge→releaseCast→wait→bite→catch 新流程）＋新 test/.fish32.mjs
+- 32-7 📋：字型重建（新 CJK：蓄/力/放/越/遠/淺/處/稀/獲/抖/沉…）+ ?v=23
+- 32-8 📋：回歸＋push＋live smoke（.livesmoke32：FISH_ZONES/releaseCast/fontV23/0 pageErr）
