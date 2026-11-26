@@ -690,3 +690,29 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - /tmp/32-charge.png：蓄力（竿後拉＋力量條＋近/中/遠目標圈＋魚群游動）
 - /tmp/32-cast-flight.png：落水後 wait（浮標在遠區 x770、竿前伸）
 - /tmp/32-bite-school.png：bite（「!」在浮標上、魚影在浮標下、魚群繞圈、紅按鈕💦撈！）
+
+## 第三十三輪：釣魚手感再進化（Jerry 2026-10-26）
+> 1. 魚跑掉後繼續釣，不用重新拋竿（除非按「重新拋竿」）
+> 2. 魚要「慢慢接近的魚影」才咬鉤；魚有大有小，最大的=現在4倍，越大越稀有
+> 3. 等待中可慢慢往回拉（逗引）讓魚以為有小蟲→咬；拉太快/太猛會嚇跑
+> 4. 中魚後要拼命按按鈕＋拉：搏鬥計條、魚破水抵抗濺水花、越大越難、可能中途跑掉
+> 5. 釣魚主角要維持主角外觀（主角髮色/衣服），戴釣魚帽即可
+
+### 設計
+- **不換竿機制**：missed（漏咬/掙脫）與 caught（上陸）都只播短暫動畫→自動回到 wait 換新魚（同落點）；「🎣 重新拋竿」小按鈕（wait/bite/reel 時顯示）→ ready 重新蓄力
+- **魚影接近**：wait 開始時生成 Fish.shade（從落點旁 140~220px 外），隨 t/biteAt 慢慢游到浮標旁；scare 時先逃再從更遠回来；bite 時魚影到位
+- **大小重設**：size 0.6~4.0——55% 小(0.6~1.2)/30% 中(1.2~2.2)/15% 大(2.2~4.0)；大獲門檻 size≥2.0 →×1.5；代幣=base×size；catch 飛出動畫 scale 隨 size（最大 4×）
+- **逗引（wait 長按）**：0.25~1.0s=輕拉→吸引：biteAt 縮短 45%（每次 cast 限 2 次）+ 魚群興奮；>1.0s=太猛→嚇跑：flee＋biteAt 重排；<0.25s 無效；拉動中浮標微往竿側移
+- **搏鬥（reel）**：bite 按下→reel，prog=20%；每次按 +12~16%（e.repeat 不算）；持續流失 (10+5×size)%/s；每 1.1~1.7s 發力 dash：-(8+2×size)＋破水魚影+水花；prog≥100 上陸；prog≤0 掙脫→missed→自動 rewait
+- **主角外觀**：drawFisher 改用 drawCharacter(Game.playerCfg) 站在碼頭邊（腿垂下）＋草釣魚帽＋釣竿（FISH_ROD_BASE 改到手部 370,336）
+- 新 CJK：拉 輕 猛 嚇 掙 猛 搏 鬥 巨 …；?v=24
+
+- 33-0 ✅：計畫
+- 33-1 📋：mini.js——missed/caught→自動 rewait；recast()；wait 逗引（jig 輕拉/嚇跑）
+- 33-2 📋：mini.js——reel 搏鬥（prog/按壓/流失/dash 破水/掙脫）
+- 33-3 📋：mini.js——size 0.6~4.0 分布＋shade 魚影接近/逃離＋大獲門檻 2.0
+- 33-4 📋：mini.js——drawFisher 換 drawCharacter(主角 cfg)＋釣魚帽
+- 33-5 📋：game.js/index.html/css——重新拋竿鈕＋reel 按壓（e.repeat 擋）＋setFishUI 新狀態
+- 33-6 📋：測試——.course30/.fish32 更新＋.fish33（shade/逗引/嚇跑/搏鬥/掙脫/rewait/recast）
+- 33-7 📋：字型重建＋?v=24
+- 33-8 📋：regression＋push＋live smoke33
