@@ -99,9 +99,10 @@ const r4 = await page.evaluate(async () => {
   Fish.biteAt = Fish.t + 0.05;
   await new Promise(res => setTimeout(res, 150));
   const st = Fish.state;
-  fishAction();
+  fishAction(); /* 33-2：中魚→搏鬥 */
+  for (let i = 0; i < 60 && Fish.state === 'reel'; i++) { fishAction(); await new Promise(res => setTimeout(res, 50)); } /* 猛按收線 */
   const f = Fish.fish;
-  const caught = { money: Game.money, coins: Fish.coins, count: Game.fish.caught, msg: $('#fish-msg').textContent, zone: FISH_ZONES[Fish.zoneIdx].id };
+  const caught = { money: Game.money, coins: Fish.coins, count: Game.fish.caught, msg: $('#fish-msg').textContent, zone: FISH_ZONES[Fish.zoneIdx].id, reelDone: Fish.state === 'caught' };
   exitFishing();
   await new Promise(res => setTimeout(res, 100));
   return { noCourse, open, st, caught, back: Game.sub, money0 };
@@ -109,6 +110,7 @@ const r4 = await page.evaluate(async () => {
 ok(r4.noCourse.hidden && r4.noCourse.sub === 'map' && /釣魚課/.test(r4.noCourse.toast), 'R4 無釣魚課點湖：toast 門控（' + r4.noCourse.toast + '）');
 ok(r4.open, 'R4 有釣魚課點湖：開釣魚畫面');
 ok(r4.st === 'bite', 'R4 拋竿到時→bite');
+ok(r4.caught.reelDone, 'R4 中魚後猛按→搏鬥上陸（33-2）');
 ok(r4.caught.money === r4.money0 + r4.caught.coins, 'R4 撈到加錢（+' + r4.caught.coins + '）');
 ok(r4.caught.count === 1 && /撈到/.test(r4.caught.msg), 'R4 累計+1＋訊息（' + r4.caught.msg + '）');
 ok(r4.caught.zone === 'far', 'R4 滿力拋竿→遠區（32-1 分區）');

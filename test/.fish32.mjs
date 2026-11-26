@@ -66,7 +66,7 @@ ok(r1.casting, 'R1 放開→cast（有 castFrom/castLand）');
 ok(r1.wait && r1.zone === 'far', 'R1 0.9s 飛行落地→wait（滿力=遠區，x=' + r1.landX + '）');
 ok(['color', 'crab', 'puffer'].includes(r1.fish), 'R1 遠區抽到遠區魚（' + r1.fish + '）');
 ok(r1.win <= 0.7, 'R1 咬餌窗口隨稀有度縮短（win=' + r1.win + 's）');
-ok(r1.size >= 0.8 && r1.size <= 1.3, 'R1 魚 size 0.8~1.3（' + r1.size.toFixed(2) + '）');
+ok(r1.size >= 0.6 && r1.size <= 4.0, 'R1 魚 size 0.6~4.0（33-3，' + r1.size.toFixed(2) + '）');
 ok(r1.school === 12, 'R1 魚群 12 條（' + r1.school + '）');
 
 /* R2 假咬（小抖）→真咬 */
@@ -83,26 +83,30 @@ ok(r2.sawDip, 'R2 假咬小抖（dipT 觸發）');
 ok(r2.bite, 'R2 到時→bite');
 ok(/撈/.test(r2.btn), 'R2 按鈕=撈（' + r2.btn + '）');
 
-/* R3 大獲（size 1.3）＋魚群逃散 */
+/* R3 大獲（size 2.5）＋搏鬥上陸（33-2）＋自動 rewait（33-1） */
 const r3 = await page.evaluate(async () => {
-  Fish.size = 1.3;
+  Fish.size = 2.5;
   const money0 = Game.money;
-  fishAction(); /* bite→caught */
+  fishAction(); /* 33-2：bite→reel */
+  const reeling = Fish.state === 'reel';
+  for (let i = 0; i < 80 && Fish.state === 'reel'; i++) { fishAction(); await new Promise(r => setTimeout(r, 40)); }
   const caught = Fish.state === 'caught';
   const msg = $('#fish-msg').textContent;
   const gained = Game.money - money0;
   await new Promise(r => setTimeout(r, 300));
   const fleeing = Fish.school.filter(f => f.st === 'flee').length;
   for (let i = 0; i < 50 && Fish.state === 'caught'; i++) await new Promise(r => setTimeout(r, 60));
-  return { caught, msg, gained, coins: Fish.coins, expected: Math.round(Math.round(15 * 1.3) * 1.5), fleeing, ready: Fish.state === 'ready' };
+  return { reeling, caught, msg, gained, coins: Fish.coins, expected: Math.round(Math.round(15 * 2.5) * 1.5), fleeing, rewait: Fish.state === 'wait' };
 });
-ok(r3.caught, 'R3 bite 撈→caught');
+ok(r3.reeling, 'R3 bite 撈→reel 搏鬥（33-2）');
+ok(r3.caught, 'R3 猛按→上陸 caught');
 ok(r3.gained === r3.coins && /大獲/.test(r3.msg), 'R3 大獲訊息+加錢（' + r3.msg + '，+' + r3.gained + '）');
-ok(r3.fleeing >= 5, 'R3 上鉤→魚群逃散（flee ' + r3.fleeing + ' 條）');
-ok(r3.ready, 'R3 1.6s 後回 ready');
+ok(r3.fleeing >= 5, 'R3 上陸→魚群逃散（flee ' + r3.fleeing + ' 條）');
+ok(r3.rewait, 'R3 不換竿：自動 rewait 換新魚（33-1）');
 
-/* R4 低力=近區＋near 表無金魚＋漏咬→missed */
+/* R4 低力=近區＋near 表無金魚＋漏咬→missed→自動 rewait（33-1） */
 const r4 = await page.evaluate(async () => {
+  recast(); /* 33-1：rewait 中→重新拋竿才能再蓄力 */
   fishAction();
   Fish.power = 0.15;
   releaseCast();
@@ -111,13 +115,13 @@ const r4 = await page.evaluate(async () => {
   for (let i = 0; i < 260 && (Fish.state === 'wait' || Fish.state === 'bite'); i++) await new Promise(r => setTimeout(r, 50)); /* 不撈→bite 超時→missed */
   const missed = Fish.state === 'missed';
   const msg = $('#fish-msg').textContent;
-  await new Promise(r => setTimeout(r, 1800));
-  return { zone, fish, missed, msg, ready: Fish.state === 'ready' };
+  for (let i = 0; i < 40 && Fish.state === 'missed'; i++) await new Promise(r => setTimeout(r, 60)); /* 0.9s→rewait */
+  return { zone, fish, missed, msg, rewait: Fish.state === 'wait' };
 });
 ok(r4.zone === 'near', 'R4 低力→近區（' + r4.zone + '）');
 ok(r4.fish !== 'puffer', 'R4 近區不出金魚（' + r4.fish + '）');
 ok(r4.missed && /跑掉/.test(r4.msg), 'R4 不撈→missed（' + r4.msg + '）');
-ok(r4.ready, 'R4 回 ready');
+ok(r4.rewait, 'R4 不換竿：missed 後自動 rewait（33-1）');
 
 /* R5 魚群 AI：跳魚+落水吸引 approach/circle */
 const r5 = await page.evaluate(async () => {
@@ -129,7 +133,8 @@ const r5 = await page.evaluate(async () => {
     splash = Fish.splashes.length;
     await new Promise(r => setTimeout(r, 40));
   }
-  /* 拋竿後等魚被吸引 */
+  /* 重新拋竿後等魚被吸引（33-1：rewait 中要先 recast） */
+  recast();
   fishAction(); Fish.power = 0.5; releaseCast();
   for (let i = 0; i < 80 && Fish.state === 'cast'; i++) await new Promise(r => setTimeout(r, 50));
   let attracted = 0;
@@ -144,8 +149,9 @@ ok(r5.jumped, 'R5 環境跳魚觸發');
 ok(r5.splash > 0, 'R5 跳魚/落水水花（' + r5.splash + '）');
 ok(r5.attracted >= 2, 'R5 浮標落水→魚 approach/circle（' + r5.attracted + ' 條）');
 
-/* 截圖：蓄力/飛行/魚群 */
+/* 截圖：蓄力/飛行/魚群（33-1：先 recast 才能重新蓄力） */
 await page.evaluate(async () => {
+  recast();
   fishAction(); Fish.power = 0.55;
   await new Promise(r => setTimeout(r, 100));
   releaseCast();
