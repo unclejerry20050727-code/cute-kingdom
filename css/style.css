@@ -899,4 +899,11 @@ body {
   background: #E85A6A; border-color: #B23B48; box-shadow: 0 5px 0 #B23B48;
   animation: fish-hot 0.35s infinite alternate;
 }
+/* 33-1：重新拋竿（小鈕，左側） */
+#screen-fish .fish-btn.fish-recast {
+  bottom: 96px; left: 10%; transform: none;
+  font-size: 15px; padding: 8px 18px;
+  background: #8FBF7A; border-color: #5F8A4C; box-shadow: 0 4px 0 #5F8A4C;
+}
+#screen-fish .fish-btn.fish-recast:active { transform: translateY(3px); box-shadow: 0 1px 0 #5F8A4C; }
 @keyframes fish-hot { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.08); } }

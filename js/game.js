@@ -101,6 +101,7 @@ function init() {
   fishAct.addEventListener('pointerup', () => releaseCast());
   fishAct.addEventListener('pointerleave', () => releaseCast());
   fishAct.addEventListener('pointercancel', () => releaseCast());
+  $('#fish-recast').onclick = () => { sfx('click'); recast(); }; /* 33-1：重新拋竿 */
   /* 第二十八輪：學校 */
   $('#school-x').onclick = () => { sfx('back'); exitSchool(); };
   $('#school-tut').onclick = () => advanceSchoolTut();
@@ -1232,9 +1233,9 @@ function setupInput() {
       if (window.Park3D) { Park3D.action(); e.preventDefault(); }
       return;
     }
-    /* 第三十二輪 32-1：釣魚 Space 長按蓄力、放開拋竿（bite 時=撈） */
+    /* 第三十二輪 32-1：釣魚 Space 長按蓄力、放開拋竿（bite 時=撈）；33-2：搏鬥時連按（鍵盤自動重發不算） */
     if (Game.sub === 'fish' && e.key === ' ') {
-      fishAction();
+      if (!e.repeat) fishAction();
       e.preventDefault();
       return;
     }
