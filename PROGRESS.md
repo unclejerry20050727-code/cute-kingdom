@@ -708,11 +708,17 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 新 CJK：拉 輕 猛 嚇 掙 猛 搏 鬥 巨 …；?v=24
 
 - 33-0 ✅：計畫
-- 33-1 📋：mini.js——missed/caught→自動 rewait；recast()；wait 逗引（jig 輕拉/嚇跑）
-- 33-2 📋：mini.js——reel 搏鬥（prog/按壓/流失/dash 破水/掙脫）
-- 33-3 📋：mini.js——size 0.6~4.0 分布＋shade 魚影接近/逃離＋大獲門檻 2.0
-- 33-4 📋：mini.js——drawFisher 換 drawCharacter(主角 cfg)＋釣魚帽
-- 33-5 📋：game.js/index.html/css——重新拋竿鈕＋reel 按壓（e.repeat 擋）＋setFishUI 新狀態
-- 33-6 📋：測試——.course30/.fish32 更新＋.fish33（shade/逗引/嚇跑/搏鬥/掙脫/rewait/recast）
-- 33-7 📋：字型重建＋?v=24
-- 33-8 📋：regression＋push＋live smoke33
+- 33-1 ✅：mini.js——missed/caught→自動 rewait；recast()；wait 逗引（jig 輕拉/嚇跑）
+- 33-2 ✅：mini.js——reel 搏鬥（prog/按壓/流失/dash 破水/掙脫）
+- 33-3 ✅：mini.js——size 0.6~4.0 分布＋shade 魚影接近/逃離＋大獲門檻 2.0
+- 33-4 ✅：mini.js——drawFisher 換 drawCharacter(主角 cfg)＋釣魚帽
+- 33-5 ✅：game.js/index.html/css——重新拋竿鈕＋reel 按壓（e.repeat 擋）＋setFishUI 新狀態
+- 33-6 ✅：測試—.course30 R4 改 reel 連按/.fish32 改新狀態機/新 .fish33 22項全過
+- 33-7 ✅：字型重建（1355 glyphs）＋?v=24
+- 33-8 ✅：regression＋push＋live smoke33＋完成記
+
+### 完成記（33-8）
+- commit：`88ddfab` 33-1~33-5 程式碼；`68a2eed` 33-6 測試；`65fc679` 33-7 字型；`de4ef5d` 33-8a 截圖；＋本完成記
+- 測試：.course29 ALL PASS/.course30 ALL PASS/.fish32 25/25/.fish33 22/22/flow ✅/peek-build ✅（首次跑偶發 headless crash，重試全過；Round32 worktree 同死→環境因素）
+- 視覺確認（截圖）：主角外觀+釣魚帽+垂腿坐碼頭/魚影接近/搏鬥計條+「拉線！」+「猛按收線！」紅鈕
+- 大獲驗證：size 2.5 金魚 +150 元（15×2.5×1.5）
