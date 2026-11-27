@@ -97,7 +97,8 @@ const r4 = await page.evaluate(async () => {
   for (let i = 0; i < 80 && Fish.state === 'cast'; i++) await new Promise(res => setTimeout(res, 50)); /* 等 0.9s 飛行落地 */
   Fish.size = 1; /* 固定大小→代幣=基礎值（大獲路徑由 .fish32 測） */
   Fish.biteAt = Fish.t + 0.05;
-  await new Promise(res => setTimeout(res, 150));
+  for (let i = 0; i < 40 && !Fish.hover; i++) await new Promise(res => setTimeout(res, 50)); /* 34-2：等魚來猶豫 */
+  fishAction(); await new Promise(res => setTimeout(res, 300)); releaseCast(); /* 34-2：輕輕拉→誘它咬 */
   const st = Fish.state;
   fishAction(); /* 33-2：中魚→搏鬥 */
   for (let i = 0; i < 60 && Fish.state === 'reel'; i++) { fishAction(); await new Promise(res => setTimeout(res, 50)); } /* 猛按收線 */
@@ -109,7 +110,7 @@ const r4 = await page.evaluate(async () => {
 });
 ok(r4.noCourse.hidden && r4.noCourse.sub === 'map' && /釣魚課/.test(r4.noCourse.toast), 'R4 無釣魚課點湖：toast 門控（' + r4.noCourse.toast + '）');
 ok(r4.open, 'R4 有釣魚課點湖：開釣魚畫面');
-ok(r4.st === 'bite', 'R4 拋竿到時→bite');
+ok(r4.st === 'bite', 'R4 拋竿→輕輕拉→bite（34-2）');
 ok(r4.caught.reelDone, 'R4 中魚後猛按→搏鬥上陸（33-2）');
 ok(r4.caught.money === r4.money0 + r4.caught.coins, 'R4 撈到加錢（+' + r4.caught.coins + '）');
 ok(r4.caught.count === 1 && /撈到/.test(r4.caught.msg), 'R4 累計+1＋訊息（' + r4.caught.msg + '）');

@@ -65,62 +65,67 @@ ok(r1.full === 1, 'R1 1.2s 後 power 滿（' + r1.full + '）');
 ok(r1.casting, 'R1 放開→cast（有 castFrom/castLand）');
 ok(r1.wait && r1.zone === 'far', 'R1 0.9s 飛行落地→wait（滿力=遠區，x=' + r1.landX + '）');
 ok(['color', 'crab', 'puffer'].includes(r1.fish), 'R1 遠區抽到遠區魚（' + r1.fish + '）');
-ok(r1.win <= 0.7, 'R1 咬餌窗口隨稀有度縮短（win=' + r1.win + 's）');
+ok(r1.win <= 0.9, 'R1 遠區咬餌視窗≤0.9s（比近區小魚 1.1s 短，win=' + r1.win + 's）');
 ok(r1.size >= 0.6 && r1.size <= 4.0, 'R1 魚 size 0.6~4.0（33-3，' + r1.size.toFixed(2) + '）');
 ok(r1.school === 12, 'R1 魚群 12 條（' + r1.school + '）');
 
-/* R2 假咬（小抖）→真咬 */
+/* R2 假咬（小抖）→魚到浮標旁開始猶豫（34-2：不再自動咬） */
 const r2 = await page.evaluate(async () => {
-  Fish.nibbles = [0.3, 0.5, 0.7]; Fish.biteAt = 2.0; Fish.t = 0;
+  Fish.nibbles = [0.3, 0.5, 0.7]; Fish.biteAt = 2.0; Fish.t = 0; Fish.hover = false;
   let sawDip = false;
-  for (let i = 0; i < 120 && Fish.state === 'wait'; i++) {
+  for (let i = 0; i < 200 && !Fish.hover; i++) {
     if (Fish.dipT !== null) sawDip = true;
     await new Promise(r => setTimeout(r, 30));
   }
-  return { sawDip, bite: Fish.state === 'bite', btn: $('#fish-act').textContent };
+  return { sawDip, hover: Fish.hover, state: Fish.state, btn: $('#fish-act').textContent };
 });
 ok(r2.sawDip, 'R2 假咬小抖（dipT 觸發）');
-ok(r2.bite, 'R2 到時→bite');
-ok(/撈/.test(r2.btn), 'R2 按鈕=撈（' + r2.btn + '）');
+ok(r2.hover && r2.state === 'wait', 'R2 到時→hover 猶豫（不直接 bite，34-2）');
+ok(/輕輕拉/.test(r2.btn), 'R2 按鈕=輕輕拉（34-2，' + r2.btn + '）');
 
-/* R3 大獲（size 2.5）＋搏鬥上陸（33-2）＋自動 rewait（33-1） */
+/* R3 大獲（size 2.5）＋輕拉誘咬（34-2）＋搏鬥上陸（33-2）＋重新拋竿（34-4） */
 const r3 = await page.evaluate(async () => {
   Fish.size = 2.5;
   const money0 = Game.money;
+  fishAction(); await new Promise(r => setTimeout(r, 400)); releaseCast(); /* 34-2：hover 中輕拉→誘它咬 */
+  const bitten = Fish.state === 'bite';
   fishAction(); /* 33-2：bite→reel */
   const reeling = Fish.state === 'reel';
-  for (let i = 0; i < 80 && Fish.state === 'reel'; i++) { fishAction(); await new Promise(r => setTimeout(r, 40)); }
+  for (let i = 0; i < 120 && Fish.state === 'reel'; i++) { fishAction(); await new Promise(r => setTimeout(r, 40)); }
   const caught = Fish.state === 'caught';
   const msg = $('#fish-msg').textContent;
   const gained = Game.money - money0;
   await new Promise(r => setTimeout(r, 300));
   const fleeing = Fish.school.filter(f => f.st === 'flee').length;
   for (let i = 0; i < 50 && Fish.state === 'caught'; i++) await new Promise(r => setTimeout(r, 60));
-  return { reeling, caught, msg, gained, coins: Fish.coins, expected: Math.round(Math.round(15 * 2.5) * 1.5), fleeing, rewait: Fish.state === 'wait' };
+  return { reeling, caught, msg, gained, coins: Fish.coins, expected: Math.round(Math.round(15 * 2.5) * 1.5), fleeing, ready: Fish.state === 'ready' };
 });
-ok(r3.reeling, 'R3 bite 撈→reel 搏鬥（33-2）');
+ok(r3.reeling, 'R3 輕拉→bite→reel 搏鬥（34-2+33-2）');
 ok(r3.caught, 'R3 猛按→上陸 caught');
 ok(r3.gained === r3.coins && /大獲/.test(r3.msg), 'R3 大獲訊息+加錢（' + r3.msg + '，+' + r3.gained + '）');
 ok(r3.fleeing >= 5, 'R3 上陸→魚群逃散（flee ' + r3.fleeing + ' 條）');
-ok(r3.rewait, 'R3 不換竿：自動 rewait 換新魚（33-1）');
+ok(r3.ready, 'R3 上陸後→ready 可重新拋竿（34-4）');
 
-/* R4 低力=近區＋near 表無金魚＋漏咬→missed→自動 rewait（33-1） */
+/* R4 低力=近區＋near 表無金魚＋誘咬後不撈→missed→自動 rewait（33-1） */
 const r4 = await page.evaluate(async () => {
-  recast(); /* 33-1：rewait 中→重新拋竿才能再蓄力 */
+  recast(); /* ready 時 no-op，wait 時回 ready */
   fishAction();
   Fish.power = 0.15;
   releaseCast();
   for (let i = 0; i < 80 && Fish.state === 'cast'; i++) await new Promise(r => setTimeout(r, 50));
   const zone = FISH_ZONES[Fish.zoneIdx].id, fish = Fish.fish.id;
-  for (let i = 0; i < 260 && (Fish.state === 'wait' || Fish.state === 'bite'); i++) await new Promise(r => setTimeout(r, 50)); /* 不撈→bite 超時→missed */
-  const missed = Fish.state === 'missed';
+  for (let i = 0; i < 260 && !Fish.hover; i++) await new Promise(r => setTimeout(r, 50)); /* 等魚來（hover） */
+  fishAction(); await new Promise(r => setTimeout(r, 300)); releaseCast(); /* 輕拉→bite */
+  const bitten = Fish.state === 'bite';
+  let missed = false;
+  for (let i = 0; i < 60 && !missed; i++) { missed = Fish.state === 'missed'; await new Promise(r => setTimeout(r, 50)); } /* 不撈→bite 視窗超時（0.5~1.1s） */
   const msg = $('#fish-msg').textContent;
   for (let i = 0; i < 40 && Fish.state === 'missed'; i++) await new Promise(r => setTimeout(r, 60)); /* 0.9s→rewait */
-  return { zone, fish, missed, msg, rewait: Fish.state === 'wait' };
+  return { zone, fish, bitten, missed, msg, rewait: Fish.state === 'wait' };
 });
 ok(r4.zone === 'near', 'R4 低力→近區（' + r4.zone + '）');
 ok(r4.fish !== 'puffer', 'R4 近區不出金魚（' + r4.fish + '）');
-ok(r4.missed && /跑掉/.test(r4.msg), 'R4 不撈→missed（' + r4.msg + '）');
+ok(r4.bitten && r4.missed && /跑掉/.test(r4.msg), 'R4 誘咬後不撈→missed（' + r4.msg + '）');
 ok(r4.rewait, 'R4 不換竿：missed 後自動 rewait（33-1）');
 
 /* R5 魚群 AI：跳魚+落水吸引 approach/circle */
@@ -137,8 +142,11 @@ const r5 = await page.evaluate(async () => {
   recast();
   fishAction(); Fish.power = 0.5; releaseCast();
   for (let i = 0; i < 80 && Fish.state === 'cast'; i++) await new Promise(r => setTimeout(r, 50));
+  /* 34-6：確定性——把 6 條魚放在浮標旁 100px 內（測「附近的魚」被吸引） */
+  const z5 = Fish.castLand;
+  [0, 1, 2, 3, 4, 5].forEach((i, k) => { const f = Fish.school[i]; f.st = 'swim'; f.x = z5.x - 100 + k * 40; f.y = z5.y + 30; f.dir = k % 2 ? -1 : 1; });
   let attracted = 0;
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 80; i++) {
     attracted = Fish.school.filter(f => f.st === 'approach' || f.st === 'circle').length;
     if (attracted >= 2) break;
     await new Promise(r => setTimeout(r, 100));

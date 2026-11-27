@@ -104,11 +104,12 @@ ok(r3.flee >= 5, 'R3 拉太猛→魚群嚇跑（' + r3.flee + ' 條）');
 ok(r3.biteAt >= r3.tRel + 1.1 && r3.biteAt <= r3.tRel + 3.2, 'R3 嚇跑後重新排程咬餌（+' + (r3.biteAt - r3.tRel).toFixed(2) + 's）');
 ok(/嚇跑/.test(r3.msg), 'R3 訊息=嚇跑（' + r3.msg + '）');
 
-/* R4 大魚搏鬥失敗→掙脫→自動 rewait（33-2/33-1） */
+/* R4 大魚搏鬥失敗→掙脫→自動 rewait（33-2/33-1/34-2） */
 const r4 = await page.evaluate(async () => {
   Fish.size = 4; /* 最大=舊 4× */
   Fish.biteAt = Fish.t + 0.05;
-  for (let i = 0; i < 120 && Fish.state === 'wait'; i++) await new Promise(r => setTimeout(r, 30));
+  for (let i = 0; i < 120 && !Fish.hover; i++) await new Promise(r => setTimeout(r, 30)); /* 等魚來猶豫 */
+  fishAction(); await new Promise(r => setTimeout(r, 300)); releaseCast(); /* 34-2：輕輕拉→bite */
   const bite = Fish.state === 'bite';
   fishAction(); /* 中魚→reel */
   const reel = Fish.state === 'reel' && !!Fish.reel;
@@ -141,13 +142,15 @@ ok(r5.ready, 'R5 recast→ready');
 ok(r5.charge, 'R5 ready→按下可再蓄力');
 ok(r5.wait && r5.zone === 'far', 'R5 再拋竿成功（' + r5.zone + '）');
 
-/* R6 搏鬥按壓→計條增加（33-2） */
+/* R6 搏鬥按壓→計條增加（33-2/34-3：dash 按壓無效，測時控 dashT=0） */
 const r6 = await page.evaluate(async () => {
   Fish.size = 1;
   Fish.biteAt = Fish.t + 0.05;
-  for (let i = 0; i < 120 && Fish.state === 'wait'; i++) await new Promise(r => setTimeout(r, 30));
+  for (let i = 0; i < 120 && !Fish.hover; i++) await new Promise(r => setTimeout(r, 30));
+  fishAction(); await new Promise(r => setTimeout(r, 300)); releaseCast(); /* 34-2：輕輕拉→bite */
   fishAction(); /* →reel */
   await new Promise(r => setTimeout(r, 60));
+  Fish.reel.burstAt = Fish.t + 10; Fish.reel.dashT = 0; /* 34-3：避開 dash 視窗，按壓效果確定性 */
   const p0 = Fish.reel.prog;
   fishAction(); await new Promise(r => setTimeout(r, 40));
   fishAction(); await new Promise(r => setTimeout(r, 40));
