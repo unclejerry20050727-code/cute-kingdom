@@ -795,7 +795,7 @@ function updateFish(dt) {
       Fish.dipT = 0;
       sfx('tick');
     }
-    if (Fish.t >= Fish.biteAt) {
+    if (Fish.t >= Fish.biteAt && Fish.shade && Fish.shade.st === 'in') { /* 34-2：魚到才猶豫（逃離中不計） */
       if (!Fish.hover) {
         /* 34-2：魚到浮標旁開始猶豫——要輕輕拉線誘它咬（大魚沒耐心） */
         Fish.hover = true;
