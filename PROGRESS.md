@@ -742,11 +742,13 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 新 CJK：誘 蟲 煩 耐 拋 竿 …；?v=25
 
 - 34-0 ✅：計畫
-- 34-1 📋：mini.js——魚群 AI 修正（接近上限/個別軌道/範圍/可見度）
-- 34-2 📋：mini.js——hover 誘咬機制（耐心/輕拉咬/嚇跑/離開換魚）
-- 34-3 📋：mini.js——reel 加難（dash 按壓無效/流失+發力調高）
-- 34-4 📋：mini.js——caught→ready 重新拋竿；missed 維持 rewait；recast 範圍收斂
-- 34-5 📋：mini.js——drawFisher 主角的手（袖+膚色拳頭握竿）
-- 34-6 📋：測試—.fish32 改 caught→ready/新 .fish34（魚群擴散/hover 誘咬/耐心離開/加難/手）
-- 34-7 📋：字型重建＋?v=25
-- 34-8 📋：regression＋push＋live smoke34
+- 34-1 ✅：mini.js——魚群 AI 修正（接近≤3/個別軌道 orb 16~42+orbSp/範圍 170/避岸 [190,830]）
+- 34-2 ✅：mini.js——hover 誘咬（小魚耐心 2.6~4.6s/大魚 1.6~2.8s；輕拉 0.25~1.0s→bite；>1.0s 嚇跑；超時→魚影 flee leave=true→0.8s rollWaitFish 換魚）＋34-2b：hover 需魚影 st=in 才觸發
+- 34-3 ✅：mini.js——reel 加難（dash 0.5s 內按壓無效；流失 8+3×size/s；發力 -(6+2×size) 每 0.9~1.5s；按壓 +8~14）
+- 34-4 ✅：mini.js——caught 0.9s→ready「上來了！再拋一竿？」；missed 仍 rewait；recast 只限 wait/bite/reel
+- 34-5 ✅：mini.js——drawFisher 主角的手（手臂先畫被身體/帽遮住→竿→膚色拳頭畫在竿上；resolveConfig 拿膚色/衣色）
+- 34-6 ✅：測試—.course30 R4/.fish32 R2-R5/.fish33 R4+R6 改 hover 流程；新 .fish34 17 項全過；.course29/flow/peek-build 回歸全過
+- 34-7 ✅：字型重建 1366 glyphs（誘/耐/煩/拋/竿）＋?v=25
+- 34-8 ✅：push 08a6b1e＋test/.livesmoke34.cjs 13 項全過（pageErr 0）
+
+**Round 34 完成（2026-11-26）**：五點全修完並上線驗證。commit：3ba92c6（34-1~5）/79a1319（34-2b）/0263346（34-6 測試）/a15cfc6（shots）/08a6b1e（34-7 字型＋push）。
