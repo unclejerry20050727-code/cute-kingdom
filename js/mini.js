@@ -1446,3 +1446,91 @@ function drawFishChargeUI(ctx, fish) {
     ctx.fillText('蓄力', bx - 24, by + 6);
   }
 }
+
+/* ══════════ 第三十五輪 35-1：烹飪課——爐子小遊戲（狀態機） ══════════ */
+const COOK_RECIPES = [
+  { id: 'rice', name: '蛋炒飯', emoji: '🍚', coins: 20, zone: 0.30, speed: 1.4 },
+  { id: 'soup', name: '番茄蛋湯', emoji: '🍅', coins: 35, zone: 0.22, speed: 2.0 },
+  { id: 'grill', name: '烤全魚', emoji: '🐟', coins: 55, zone: 0.15, speed: 2.6 },
+];
+let Cook = null;
+
+function cookNewZone(r) {
+  const z0 = 0.06 + Math.random() * (0.88 - r.zone);
+  return { z0, z1: z0 + r.zone };
+}
+
+function startCooking() {
+  if (!hasCourse('cooking')) { showToast('🍳 先上『烹飪課』才能煮東西喔～'); return; }
+  sfx('pop');
+  Cook = { state: 'menu', t: 0, recipe: null, round: 0, mark: 0, dir: 1, speed: 0, zone: null };
+  $('#screen-cook').classList.remove('hidden');
+  setSub('cook');
+  setCookUI('今天想做什麼？（選食譜）');
+}
+
+function exitCooking() {
+  $('#screen-cook').classList.add('hidden');
+  Cook = null;
+  setSub('free');
+}
+
+function setCookUI(msg) {
+  const btn = $('#cook-act'), rec = $('#cook-recipes');
+  if (!btn || !Cook) return;
+  if (rec) rec.classList.toggle('hidden', Cook.state !== 'menu');
+  if (Cook.state === 'menu') { btn.textContent = '🍳 選食譜'; btn.disabled = true; btn.classList.remove('hot'); }
+  else if (Cook.state === 'cook') { btn.textContent = '🔥 停火！'; btn.disabled = false; btn.classList.add('hot'); }
+  else { btn.textContent = '✨ 完成～'; btn.disabled = true; btn.classList.remove('hot'); }
+  if (msg) $('#cook-msg').textContent = msg;
+}
+
+function cookPick(id) {
+  if (!Cook || Cook.state !== 'menu') return;
+  const r = COOK_RECIPES.find(x => x.id === id);
+  if (!r) return;
+  Cook.recipe = r; Cook.round = 0;
+  Cook.mark = 0; Cook.dir = 1; Cook.speed = r.speed;
+  Cook.zone = cookNewZone(r);
+  Cook.state = 'cook'; Cook.t = 0;
+  sfx('click');
+  setCookUI(`開始做 ${r.emoji} ${r.name}！停兩次黃金區～`);
+}
+
+function cookAction() {
+  if (!Cook || Cook.state !== 'cook') return;
+  if (Cook.mark >= Cook.zone.z0 && Cook.mark <= Cook.zone.z1) {
+    Cook.round += 1;
+    sfx('ding');
+    if (Cook.round >= 2) {
+      const r = Cook.recipe;
+      Game.money += r.coins;
+      Game.cook = Game.cook || { n: 0 };
+      Game.cook.n += 1;
+      saveGame(fullSave(Game.stage));
+      Cook.state = 'result'; Cook.t = 0;
+      setCookUI(`🎉 ${r.emoji} ${r.name}完成！+${r.coins} 元（目前共做 ${Game.cook.n} 道菜）`);
+    } else {
+      Cook.zone = cookNewZone(Cook.recipe);
+      Cook.speed = Cook.recipe.speed * 1.35; /* 第 2 下更快 */
+      setCookUI('漂亮！火力加大，第二下準備～');
+    }
+  } else {
+    Cook.state = 'menu'; Cook.t = 0;
+    sfx('buzz');
+    setCookUI('💨 燒焦了…再來一次～');
+  }
+}
+
+function updateCook(dt) {
+  if (!Cook) return;
+  Cook.t += dt;
+  if (Cook.state === 'cook') {
+    Cook.mark += Cook.dir * Cook.speed * dt;
+    if (Cook.mark > 1) { Cook.mark = 2 - Cook.mark; Cook.dir = -1; }
+    else if (Cook.mark < 0) { Cook.mark = -Cook.mark; Cook.dir = 1; }
+  } else if (Cook.state === 'result' && Cook.t >= 1.6) {
+    Cook.state = 'menu'; Cook.t = 0; Cook.recipe = null;
+    setCookUI('接下來想做什麼？（選食譜）');
+  }
+}

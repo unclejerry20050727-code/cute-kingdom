@@ -60,6 +60,8 @@ const Game = {
   fish: { caught: 0 },
   /* 第三十輪 30-5：寵物課——小貓（tile 座標跟隨；無課=null） */
   pet: null,
+  /* 第三十五輪 35-1：烹飪課——做幾道菜 */
+  cook: null,
   /* 第二十八輪：時間（1/1 起、無年；1 秒＝1 遊戲分鐘） */
   clock: { month: 1, day: 1, hour: 8, min: 0 },
   clockAcc: 0, clockText: '',
@@ -222,6 +224,7 @@ function beginGame(save, skipIntro) {
   Game.pet = (save.pet && typeof save.pet.x === 'number' && hasCourse('pet'))
     ? { x: save.pet.x, y: save.pet.y, walking: false }
     : (hasCourse('pet') ? { x: 4.5, y: 5.5, walking: false } : null); /* 第三十輪 30-5：小貓（無存檔=玩家出生點旁） */
+  Game.cook = (save.cook && typeof save.cook.n === 'number') ? { n: save.cook.n } : null; /* 第三十五輪 35-1 */
 
   const p = Game.player;
   p.x = 4.5; p.y = 5.5; p.facing = 'down'; p.walkT = 0; p.walking = false;
@@ -470,6 +473,9 @@ function updateGame(dt) {
       break;
     case 'fish':
       updateFish(dt); /* 第三十輪 30-4：釣魚 */
+      break;
+    case 'cook':
+      updateCook(dt); /* 第三十五輪 35-1：烹飪 */
       break;
     case 'placing': {
       const pl = Game.placement;
@@ -1285,6 +1291,7 @@ function setupInput() {
       if (Game.sub === 'park3d' && window.Park3D) { Park3D.exit(); return; } /* 第十八輪18d */
       if (Game.sub === 'school') { exitSchool(); return; } /* 第二十八輪 */
       if (Game.sub === 'fish') { exitFishing(); return; } /* 第三十輪 30-4 */
+      if (Game.sub === 'cook') { exitCooking(); return; } /* 第三十五輪 35-1 */
       if (Game.sub === 'placing') cancelPlacement();
       else if (!$('#build-panel').classList.contains('hidden')) closeBuildPanel();
     }
@@ -1370,6 +1377,9 @@ function setupInput() {
           sfx('click');
           break;
         }
+        /* 第三十五輪 35-1：點爐子→烹飪小遊戲 */
+        const cookHit = removeTargetFromMouse();
+        if (cookHit && cookHit.type === 'floor' && Game.furniture[cookHit.idx].id === 'stove') { startCooking(); break; }
         if (tx > 0.2 && ty > 0.2 && tx < N - 0.2 && ty < N - 0.2) {
           Game.moveTarget = { x: clamp(tx, 0.4, N - 0.4), y: clamp(ty, 0.4, N - 0.4) };
         }
@@ -1804,6 +1814,7 @@ function fullSave(stage) {
     school: Game.school, /* 第二十八輪：學校選課 */
     fish: { caught: Game.fish ? Game.fish.caught : 0 }, /* 第三十輪 30-4：釣魚紀錄 */
     pet: Game.pet ? { x: +Game.pet.x.toFixed(3), y: +Game.pet.y.toFixed(3) } : null, /* 第三十輪 30-5：小貓位置 */
+    cook: Game.cook ? { n: Game.cook.n } : null, /* 第三十五輪 35-1：做菜數 */
   };
 }
 
