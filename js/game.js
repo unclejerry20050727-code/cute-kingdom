@@ -104,6 +104,11 @@ function init() {
   fishAct.addEventListener('pointerleave', () => releaseCast());
   fishAct.addEventListener('pointercancel', () => releaseCast());
   $('#fish-recast').onclick = () => { sfx('click'); recast(); }; /* 33-1：重新拋竿 */
+  /* 第三十五輪 35-3：烹飪（點爐子進）：✕離開/停火鈕/食譜鈕 */
+  $('#cook-x').onclick = () => { sfx('back'); exitCooking(); };
+  const cookAct = $('#cook-act');
+  cookAct.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!cookAct.disabled) cookAction(); });
+  document.querySelectorAll('#cook-recipes .cook-r').forEach(b => { b.onclick = () => cookPick(b.dataset.id); });
   /* 第二十八輪：學校 */
   $('#school-x').onclick = () => { sfx('back'); exitSchool(); };
   $('#school-tut').onclick = () => advanceSchoolTut();
@@ -1029,6 +1034,12 @@ function renderGame() {
   if (Game.sub === 'fish') { /* 第三十輪 30-4：釣魚小遊戲 */
     ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
     renderFish(ctx, Game.t);
+    return;
+  }
+
+  if (Game.sub === 'cook') { /* 第三十五輪 35-2：烹飪小遊戲 */
+    ctx.setTransform(Game.dpr * Game.ws, 0, 0, Game.dpr * Game.ws, Game.dpr * Game.offX, Game.dpr * Game.offY);
+    renderCook(ctx, Game.t);
     return;
   }
 

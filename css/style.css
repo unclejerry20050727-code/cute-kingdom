@@ -879,23 +879,23 @@ body {
 }
 #park-vomit.on #park-vomit-face { transform: translateX(-50%) scale(1) rotate(0deg); }
 
-/* ══════════ 第三十輪 30-4：釣魚 ══════════ */
-#screen-fish .fish-msg {
+/* ══════════ 第三十輪 30-4：釣魚（35-3：cook 共用同一套樣式） ══════════ */
+#screen-fish .fish-msg, #screen-cook .fish-msg {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
   background: #FFF8EC; border: 3px solid #5FA8C4; border-radius: 999px;
   padding: 8px 18px; font-size: 16px; font-weight: 800; color: #5A3E2B;
   white-space: nowrap; box-shadow: 0 4px 0 rgba(63,126,154,0.35);
 }
-#screen-fish .fish-btn {
+#screen-fish .fish-btn, #screen-cook .fish-btn {
   position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
   font-family: inherit; font-size: 20px; font-weight: 800; color: #fff;
   background: #5FA8C4; border: 4px solid #3F7E9A; border-radius: 999px;
   padding: 12px 36px; box-shadow: 0 5px 0 #3F7E9A; cursor: pointer;
   touch-action: none; /* 32-1：長按蓄力不被 iOS 捲動/縮放劫持 */
 }
-#screen-fish .fish-btn:active { transform: translate(-50%, 3px); box-shadow: 0 2px 0 #3F7E9A; }
-#screen-fish .fish-btn:disabled { opacity: 0.65; cursor: default; }
-#screen-fish .fish-btn.hot {
+#screen-fish .fish-btn:active, #screen-cook .fish-btn:active { transform: translate(-50%, 3px); box-shadow: 0 2px 0 #3F7E9A; }
+#screen-fish .fish-btn:disabled, #screen-cook .fish-btn:disabled { opacity: 0.65; cursor: default; }
+#screen-fish .fish-btn.hot, #screen-cook .fish-btn.hot {
   background: #E85A6A; border-color: #B23B48; box-shadow: 0 5px 0 #B23B48;
   animation: fish-hot 0.35s infinite alternate;
 }
@@ -907,3 +907,15 @@ body {
 }
 #screen-fish .fish-btn.fish-recast:active { transform: translateY(3px); box-shadow: 0 1px 0 #5F8A4C; }
 @keyframes fish-hot { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.08); } }
+
+/* 第三十五輪 35-3：食譜按鈕（menu 時的 3 顆） */
+#screen-cook #cook-recipes {
+  position: absolute; bottom: 104px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px;
+}
+#screen-cook .cook-r {
+  font-family: inherit; font-size: 15px; font-weight: 800; color: #5A3E2B;
+  background: #FFF8EC; border: 3px solid #C89B6A; border-radius: 999px;
+  padding: 9px 16px; box-shadow: 0 3px 0 #A87E52; cursor: pointer;
+}
+#screen-cook .cook-r:active { transform: translateY(2px); box-shadow: 0 1px 0 #A87E52; }

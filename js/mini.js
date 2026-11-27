@@ -1534,3 +1534,126 @@ function updateCook(dt) {
     setCookUI('接下來想做什麼？（選食譜）');
   }
 }
+
+/* ══════════ 第三十五輪 35-2：renderCook——廚房場景 ══════════ */
+function renderCook(ctx, t) {
+  /* 背景：暖色牆＋木地板 */
+  ctx.fillStyle = '#FBEAD3'; ctx.fillRect(0, 0, 980, 430);
+  ctx.fillStyle = '#E8C9A0'; ctx.fillRect(0, 430, 980, 130);
+  ctx.strokeStyle = 'rgba(138,90,59,0.25)'; ctx.lineWidth = 2;
+  for (let x = 60; x < 980; x += 96) { ctx.beginPath(); ctx.moveTo(x, 430); ctx.lineTo(x - 14, 560); ctx.stroke(); }
+  /* 牆上小窗 */
+  ctx.fillStyle = '#BFE3F2'; roundRectPath(ctx, 120, 90, 120, 100, 10); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(180, 90); ctx.lineTo(180, 190); ctx.moveTo(120, 140); ctx.lineTo(240, 140); ctx.stroke();
+
+  const cooking = Cook && Cook.state === 'cook';
+  /* 爐子（右） */
+  ctx.fillStyle = 'rgba(90,62,43,0.12)'; ctx.beginPath(); ctx.ellipse(690, 486, 110, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#B8C4CE'; roundRectPath(ctx, 585, 300, 210, 186, 12); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#8FA0AD'; roundRectPath(ctx, 600, 340, 180, 74, 8); ctx.fill(); ctx.stroke(); /* 爐門 */
+  ctx.fillStyle = '#5A6B7A'; roundRectPath(ctx, 614, 352, 152, 50, 6); ctx.fill();
+  if (cooking) { const g = ctx.createRadialGradient(690, 377, 4, 690, 377, 70); g.addColorStop(0, 'rgba(255,150,60,0.85)'); g.addColorStop(1, 'rgba(255,150,60,0)'); ctx.fillStyle = g; ctx.fillRect(614, 352, 152, 50); }
+  ctx.fillStyle = '#3A4750'; ctx.beginPath(); ctx.ellipse(640, 300, 30, 8, 0, 0, Math.PI * 2); ctx.ellipse(740, 300, 30, 8, 0, 0, Math.PI * 2); ctx.fill(); /* 爐頭 */
+  /* 煎鍋（左爐頭上） */
+  ctx.strokeStyle = '#2A333B'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(668, 296); ctx.lineTo(724, 282); ctx.stroke(); /* 鍋把 */
+  ctx.fillStyle = '#3A4750'; ctx.beginPath(); ctx.ellipse(640, 292, 46, 13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+  if (cooking && Cook.recipe) { /* 鍋中食物 */
+    ctx.fillStyle = Cook.recipe.id === 'rice' ? '#FFF1CE' : (Cook.recipe.id === 'soup' ? '#F08A5A' : '#E8A855');
+    ctx.beginPath(); ctx.ellipse(640, 290, 34, 8, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  if (cooking) { /* 鍋下火焰＋蒸汽 */
+    for (let i = 0; i < 4; i++) { const fx = 616 + i * 16, fh = 8 + Math.sin(t * 14 + i * 1.7) * 4; ctx.fillStyle = i % 2 ? '#FFB84D' : '#F0703A'; ctx.beginPath(); ctx.moveTo(fx, 302); ctx.quadraticCurveTo(fx + 6, 302 - fh, fx + 12, 302); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < 3; i++) { const sy = 268 - ((t * 26 + i * 22) % 66), sx = 640 + (i - 1) * 16 + Math.sin(t * 2.4 + i) * 5; ctx.globalAlpha = Math.max(0, 1 - (268 - sy) / 66); ctx.beginPath(); ctx.arc(sx, sy, 5 + i, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+
+  /* 中間流理台（result 時上菜） */
+  ctx.fillStyle = 'rgba(90,62,43,0.12)'; ctx.beginPath(); ctx.ellipse(455, 486, 84, 12, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#C89B6A'; roundRectPath(ctx, 380, 352, 150, 134, 8); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#E8C9A0'; roundRectPath(ctx, 372, 344, 166, 16, 8); ctx.fill(); ctx.stroke();
+  if (Cook && Cook.state === 'result' && Cook.recipe) drawDish(ctx, 455, 330, Cook.recipe, t);
+
+  /* 主角（左，圍裙＋廚師帽） */
+  const px = 292, py = 484 + Math.sin(t * 1.8) * 1.5, s = 1.15;
+  ctx.fillStyle = 'rgba(90,62,43,0.12)'; ctx.beginPath(); ctx.ellipse(px, py + 4, 40, 10, 0, 0, Math.PI * 2); ctx.fill();
+  if (Game.playerCfg) drawCharacter(ctx, Game.playerCfg, { x: px, y: py, facing: 'right', t, walking: false, scale: s });
+  ctx.save();
+  /* 圍裙 */
+  const acx = px + 2, aw = 34 * s;
+  ctx.fillStyle = '#FFF8F0'; roundRectPath(ctx, acx - aw / 2, py - 52 * s, aw, 46 * s, 7); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(acx - aw / 2 + 5, py - 28 * s); ctx.lineTo(acx + aw / 2 - 5, py - 28 * s); ctx.stroke(); /* 口袋 */
+  /* 廚師帽 */
+  const hx = px + 2, hy = py - 87 * s + 5; /* 頭頂+5px（帽帶壓住頭髮，不飄浮） */
+  ctx.fillStyle = '#FFFFFF';
+  roundRectPath(ctx, hx - 17, hy - 4, 34, 12, 4); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx - 11, hy - 8, 9, 0, Math.PI * 2); ctx.arc(hx + 11, hy - 8, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx, hy - 14, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx - 11, hy - 8, 9, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx + 11, hy - 8, 9, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx, hy - 14, 11, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  /* timing bar（cook 狀態） */
+  if (cooking) {
+    const bx = 300, by = 148, bw = 380;
+    ctx.fillStyle = '#5A3E2B'; roundRectPath(ctx, bx, by, bw, 26, 13); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.save(); roundRectPath(ctx, bx, by, bw, 26, 13); ctx.clip();
+    ctx.fillStyle = '#FFD98A'; ctx.fillRect(bx + Cook.zone.z0 * bw, by + 3, (Cook.zone.z1 - Cook.zone.z0) * bw, 20);
+    ctx.restore();
+    const mx = bx + Cook.mark * bw;
+    ctx.strokeStyle = '#E85A6A'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(mx, by - 8); ctx.lineTo(mx, by + 34); ctx.stroke();
+    ctx.fillStyle = '#F0703A'; ctx.beginPath(); ctx.moveTo(mx - 7, by - 10); ctx.quadraticCurveTo(mx, by - 26, mx + 7, by - 10); ctx.fill();
+    ctx.fillStyle = '#5A3E2B'; ctx.font = '800 15px RHR, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(`第 ${Cook.round + 1} / 2 下`, bx + bw + 14, by + 13);
+  }
+
+  /* 菜單黑板（menu 狀態） */
+  if (Cook && Cook.state === 'menu') {
+    ctx.fillStyle = '#8A5A3B'; roundRectPath(ctx, 316, 106, 348, 158, 14); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#3E5E4E'; roundRectPath(ctx, 328, 118, 324, 134, 8); ctx.fill();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFF6E8'; ctx.font = '800 22px RHR, sans-serif';
+    ctx.fillText('🍳 今日菜單', 490, 146);
+    ctx.font = '700 17px RHR, sans-serif';
+    COOK_RECIPES.forEach((r, i) => ctx.fillText(`${r.emoji} ${r.name} — ${r.coins} 元`, 490, 178 + i * 26));
+  }
+}
+
+function drawDish(ctx, x, y, r, t) {
+  /* 盤子 */
+  ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.ellipse(x, y, 52, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+  if (r.id === 'rice') { /* 蛋炒飯：白飯山＋蛋花 */
+    ctx.fillStyle = '#FFF6E8'; ctx.beginPath(); ctx.ellipse(x, y - 8, 32, 17, 0, Math.PI, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#FFD98A';
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x - 20 + i * 10, y - 12 - (i % 2) * 6, 2.6, 0, Math.PI * 2); ctx.fill(); }
+  } else if (r.id === 'soup') { /* 番茄蛋湯：碗＋湯面 */
+    ctx.fillStyle = '#F0705A'; ctx.beginPath(); ctx.arc(x, y - 6, 30, 0, Math.PI); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#FFB37E'; ctx.beginPath(); ctx.ellipse(x, y - 6, 26, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFF6E8'; ctx.beginPath(); ctx.ellipse(x + 6, y - 9, 6, 3, 0, 0, Math.PI * 2); ctx.fill(); /* 蛋花 */
+  } else { /* 烤全魚：金色魚身＋尾巴＋烤紋 */
+    ctx.fillStyle = '#E8A855'; ctx.beginPath(); ctx.ellipse(x, y - 10, 32, 14, -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + 26, y - 12); ctx.lineTo(x + 42, y - 22); ctx.lineTo(x + 40, y - 2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#B4713A'; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - 12 + i * 10, y - 20); ctx.lineTo(x - 6 + i * 10, y - 2); ctx.stroke(); }
+    ctx.fillStyle = '#3A2A1A'; ctx.beginPath(); ctx.arc(x - 22, y - 14, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+  /* 蒸汽＋閃光 */
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  for (let i = 0; i < 3; i++) { const sy = y - 30 - ((t * 22 + i * 18) % 44), sx = x - 14 + i * 14 + Math.sin(t * 2 + i) * 4; ctx.globalAlpha = Math.max(0, 0.9 - (y - 30 - sy) / 44); ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#FFB84D';
+  for (let i = 0; i < 2; i++) { const a = t * 3 + i * Math.PI; const sxx = x + Math.cos(a) * 58, syy = y - 14 + Math.sin(a) * 16; ctx.save(); ctx.translate(sxx, syy); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(2, -2); ctx.lineTo(7, 0); ctx.lineTo(2, 2); ctx.lineTo(0, 7); ctx.lineTo(-2, 2); ctx.lineTo(-7, 0); ctx.lineTo(-2, -2); ctx.closePath(); ctx.fill(); ctx.restore(); }
+}
