@@ -623,8 +623,9 @@ function rollWaitFish(F) {
   F.dipT = null;
   F.jig = null;
   F.jigglesLeft = 2; /* 33-1：每次拋竿限 2 次逗引 */
+  F.hover = false; F.patienceAt = 0; /* 34-2：猶豫期 */
   const z = F.castLand;
-  F.shade = { x0: z.x + (Math.random() < 0.5 ? -1 : 1) * (140 + Math.random() * 80), y0: z.y + 12 + Math.random() * 26, st: 'in', t: 0 }; /* 33-3：魚影 */
+  F.shade = { x0: z.x + (Math.random() < 0.5 ? -1 : 1) * (140 + Math.random() * 80), y0: z.y + 12 + Math.random() * 26, st: 'in', t: 0, leave: false }; /* 33-3：魚影 */
 }
 
 function startFishing() {
@@ -635,7 +636,7 @@ function startFishing() {
     fish: null, size: 1, coins: 0, floaters: [], splashes: [],
     castFrom: null, castLand: null, releaseAngle: -0.44,
     school: initFishSchool(), jumpAt: 5 + Math.random() * 6,
-    jig: null, jigglesLeft: 2, shade: null, reel: null, /* 33-1~33-3：逗引/搏鬥/魚影 */
+    jig: null, jigglesLeft: 2, shade: null, reel: null, hover: false, patienceAt: 0, /* 33-1~34-2：逗引/搏鬥/魚影/猶豫期 */
   };
   $('#screen-fish').classList.remove('hidden');
   setSub('fish');
@@ -652,11 +653,16 @@ function setFishUI(msg) {
   const btn = $('#fish-act');
   if (!btn || !Fish) return;
   const rec = $('#fish-recast');
-  if (rec) rec.classList.toggle('hidden', !['wait', 'bite', 'reel', 'caught', 'missed'].includes(Fish.state)); /* 33-1：竿在水中才顯示重新拋竿 */
+  if (rec) rec.classList.toggle('hidden', !['wait', 'bite', 'reel'].includes(Fish.state)); /* 34-4：竿在水中才顯示 */
   if (Fish.state === 'ready') { btn.textContent = '🎣 長按蓄力'; btn.disabled = false; btn.classList.remove('hot'); }
   else if (Fish.state === 'charge') { btn.textContent = '🎣 蓄力中…'; btn.disabled = false; btn.classList.remove('hot'); }
   else if (Fish.state === 'cast') { btn.textContent = '🎣 拋竿…'; btn.disabled = true; btn.classList.remove('hot'); }
-  else if (Fish.state === 'wait') { btn.textContent = Fish.jig ? '🪝 拉線中…' : '🎣 長按輕拉逗魚'; btn.disabled = false; btn.classList.remove('hot'); } /* 33-1：逗引要長按 */
+  else if (Fish.state === 'wait') {
+    if (Fish.jig) { btn.textContent = '🪝 拉線中…'; btn.classList.remove('hot'); }
+    else if (Fish.hover) { btn.textContent = '🪝 輕輕拉！'; btn.classList.add('hot'); } /* 34-2：魚來了，誘咬時機 */
+    else { btn.textContent = '🎣 長按輕拉逗魚'; btn.classList.remove('hot'); }
+    btn.disabled = false;
+  }
   else if (Fish.state === 'bite') { btn.textContent = '💦 撈！'; btn.disabled = false; btn.classList.add('hot'); }
   else if (Fish.state === 'reel') { btn.textContent = '🪝 猛按收線！'; btn.disabled = false; btn.classList.add('hot'); } /* 33-2 */
   else { btn.textContent = '🎣 …'; btn.disabled = true; btn.classList.remove('hot'); } /* caught/missed：短暫動畫 */
@@ -678,12 +684,17 @@ function fishAction() {
     sfx('ding');
     setFishUI('上鉤了！猛按按鈕拉線，把它拉上來！');
   } else if (Fish.state === 'reel') {
-    /* 33-2：每按一次收一截 */
-    Fish.reel.prog += 12 + Math.random() * 4;
-    const z = Fish.castLand;
-    if (z) Fish.splashes.push({ x: z.x + (Math.random() * 20 - 10), y: z.y, t: 0.35 });
-    sfx('tick');
-    if (Fish.reel.prog >= 100) landFish();
+    /* 34-3：每按收一截（魚發力破水中按壓無效） */
+    const R = Fish.reel;
+    if (R.dashT > 0) {
+      sfx('buzz');
+    } else {
+      R.prog += 8 + Math.random() * 6;
+      const z = Fish.castLand;
+      if (z) Fish.splashes.push({ x: z.x + (Math.random() * 20 - 10), y: z.y, t: 0.35 });
+      sfx('tick');
+      if (R.prog >= 100) landFish();
+    }
   }
 }
 
@@ -723,9 +734,19 @@ function releaseCast() {
     const d = Fish.jig.t;
     Fish.jig = null;
     const z = Fish.castLand;
-    if (d < 0.25) { setFishUI(); return; } /* 33-1：太快了不算 */
+    const gone = Fish.shade && Fish.shade.st === 'flee'; /* 34-2：魚已逃離 */
+    if (d < 0.25) { setFishUI(); return; } /* 太快了不算 */
     if (d <= 1.0) {
-      /* 輕拉→魚以為有小蟲，好奇心提升（咬餌 sooner） */
+      /* 34-2：輕拉=誘魚以為是小蟲 */
+      if (gone) { setFishUI(); return; } /* 魚已走，拉了也沒用 */
+      if (Fish.hover) {
+        Fish.state = 'bite'; Fish.t = 0;
+        if (z) Fish.splashes.push({ x: z.x, y: z.y, t: 0.3 });
+        sfx('ding');
+        setFishUI('⚠️ 咬餌了！快撈！');
+        return;
+      }
+      /* 魚還在游來：輕拉讓它更快靠近（每竿限 2 次） */
       if (Fish.jigglesLeft > 0 && Fish.t < Fish.biteAt - 0.4) {
         Fish.jigglesLeft -= 1;
         Fish.biteAt = Math.max(Fish.t + 0.5, Fish.t + (Fish.biteAt - Fish.t) * 0.55);
@@ -735,9 +756,10 @@ function releaseCast() {
       } else setFishUI();
     } else {
       /* 拉太猛→嚇跑 */
+      Fish.hover = false;
       scatterSchool();
       Fish.biteAt = Fish.t + 1.2 + Math.random() * 1.8;
-      if (Fish.shade) { Fish.shade.st = 'flee'; Fish.shade.t = 0; }
+      if (Fish.shade) { Fish.shade.st = 'flee'; Fish.shade.t = 0; Fish.shade.leave = false; }
       sfx('buzz');
       setFishUI('啊…拉太猛，把魚嚇跑了～');
     }
@@ -746,7 +768,7 @@ function releaseCast() {
 
 /* 33-1：重新拋竿——只有玩家按它才回 ready 重新蓄力 */
 function recast() {
-  if (!Fish || !['wait', 'bite', 'reel', 'caught', 'missed'].includes(Fish.state)) return;
+  if (!Fish || !['wait', 'bite', 'reel'].includes(Fish.state)) return; /* 34-4：caught/missed 已自動處理 */
   Fish.state = 'ready'; Fish.t = 0; Fish.power = 0;
   Fish.jig = null; Fish.reel = null; Fish.shade = null; Fish.dipT = null;
   sfx('whoosh');
@@ -764,7 +786,7 @@ function updateFish(dt) {
     rollWaitFish(Fish);
     Fish.splashes.push({ x: Fish.castLand.x, y: Fish.castLand.y, t: 0 });
     sfx('splash');
-    setFishUI('長按輕拉逗魚；小抖是假咬，大沉才撈！');
+    setFishUI('魚影快來了…到了輕輕拉線誘它咬～');
   } else if (Fish.state === 'wait') {
     if (Fish.jig) Fish.jig.t += dt; /* 33-1：逗引計時 */
     const frac = Fish.t / Fish.biteAt;
@@ -774,9 +796,20 @@ function updateFish(dt) {
       sfx('tick');
     }
     if (Fish.t >= Fish.biteAt) {
-      Fish.state = 'bite'; Fish.t = 0; Fish.jig = null;
-      sfx('ding');
-      setFishUI('⚠️ 咬餌了！快撈！');
+      if (!Fish.hover) {
+        /* 34-2：魚到浮標旁開始猶豫——要輕輕拉線誘它咬（大魚沒耐心） */
+        Fish.hover = true;
+        Fish.patienceAt = Fish.t + (Fish.size >= 2 ? 1.6 + Math.random() * 1.2 : 2.6 + Math.random() * 2.0);
+        sfx('blip');
+        setFishUI('🐟 魚來了！輕輕拉線誘它咬～');
+      } else if (Fish.t >= Fish.patienceAt) {
+        /* 34-2：等太久→魚失去興趣離開，換新魚影 */
+        Fish.hover = false;
+        Fish.jig = null;
+        if (Fish.shade) { Fish.shade.st = 'flee'; Fish.shade.t = 0; Fish.shade.leave = true; }
+        sfx('buzz');
+        setFishUI('魚等得不耐煩走了…再等一條～');
+      }
     }
   } else if (Fish.state === 'bite' && Fish.t > (Fish.fish ? Fish.fish.win : 0.9)) {
     Fish.state = 'missed'; Fish.t = 0;
@@ -786,10 +819,10 @@ function updateFish(dt) {
   } else if (Fish.state === 'reel') {
     /* 33-2：搏鬥——持續流失＋定時發力破水 */
     const R = Fish.reel;
-    R.prog -= (10 + 5 * Fish.size) * dt;
+    R.prog -= (8 + 3 * Fish.size) * dt; /* 34-3：加難 */
     if (Fish.t >= R.burstAt) {
-      R.prog -= 8 + 2 * Fish.size;
-      R.burstAt = Fish.t + 1.1 + Math.random() * 0.6;
+      R.prog -= 6 + 2 * Fish.size;
+      R.burstAt = Fish.t + 0.9 + Math.random() * 0.6;
       R.dashT = 0.5;
       Fish.splashes.push({ x: Fish.castLand.x, y: Fish.castLand.y, t: 0 });
       Fish.splashes.push({ x: Fish.castLand.x + 16, y: Fish.castLand.y - 6, t: 0.1 });
@@ -803,20 +836,33 @@ function updateFish(dt) {
       setFishUI('掙脫了！魚跑掉了…浮標還在水中～');
     }
   } else if ((Fish.state === 'caught' || Fish.state === 'missed') && Fish.t > 0.9) {
-    /* 33-1：不換竿——自動換新魚繼續等 */
-    Fish.state = 'wait'; Fish.t = 0;
-    rollWaitFish(Fish);
-    setFishUI('長按輕拉逗魚；小抖是假咬，大沉才撈！');
+    if (Fish.state === 'missed') {
+      /* 33-1：不換竿——自動換新魚繼續等 */
+      Fish.state = 'wait'; Fish.t = 0;
+      rollWaitFish(Fish);
+      setFishUI('魚影快來了…到了輕輕拉線誘它咬～');
+    } else {
+      /* 34-4：成功上陸→重新拋竿（回 ready） */
+      Fish.state = 'ready'; Fish.t = 0; Fish.power = 0;
+      Fish.jig = null; Fish.shade = null;
+      setFishUI('🎣 上來了！再拋一竿？（長按蓄力）');
+    }
   }
-  /* 33-3：魚影逃離後從更遠處重新接近 */
+  /* 33-3/34-2：魚影逃離——嚇跑=同條魚從更遠回來；失去興趣=換新魚 */
   if (Fish.shade && Fish.shade.st === 'flee') {
     Fish.shade.t += dt;
     if (Fish.shade.t > 0.8) {
-      Fish.shade.st = 'in';
-      const z = Fish.castLand;
-      Fish.shade.x0 = z.x + (Math.random() < 0.5 ? -1 : 1) * (200 + Math.random() * 80);
-      Fish.shade.y0 = z.y + 12 + Math.random() * 26;
-      Fish.shade.t = 0;
+      if (Fish.shade.leave) {
+        rollWaitFish(Fish);
+        Fish.t = 0; /* 34-2：等新魚影重新接近（重計時） */
+        setFishUI('又一條魚影游過來了～');
+      } else {
+        Fish.shade.st = 'in';
+        const z = Fish.castLand;
+        Fish.shade.x0 = z.x + (Math.random() < 0.5 ? -1 : 1) * (200 + Math.random() * 80);
+        Fish.shade.y0 = z.y + 12 + Math.random() * 26;
+        Fish.shade.t = 0;
+      }
     }
   }
   if (Fish.dipT !== null) { Fish.dipT += dt; if (Fish.dipT > 0.35) Fish.dipT = null; }
@@ -1076,6 +1122,17 @@ function drawFisher(ctx, t, fish) {
   /* 33-4：主角本人（drawCharacter：跟家裡/學校同一張臉、同一髮型），坐碼頭邊腿垂下 */
   const px = 352, py = 388 + bob;
   const lean = fish && fish.state === 'charge' ? fish.power * 0.07 : 0; /* 蓄力微後仰 */
+  /* 34-5：主角的手拿釣竿——手臂先畫（被身體/帽子遮住），拳頭畫在竿上才有握持感 */
+  const base = FISH_ROD_BASE;
+  const tip = fish ? rodTipPos(fish) : { x: 474, y: 290 };
+  const cc = Game.playerCfg ? resolveConfig(Game.playerCfg) : null;
+  const grip = { x: (base.x + tip.x) / 2, y: (base.y + tip.y) / 2 - 4 }; /* 手把位置（竿曲線中點） */
+  const sx = px + 13, sy = py - 44; /* 肩 */
+  const ex = sx + (grip.x - sx) * 0.45, ey = sy + (grip.y - sy) * 0.45; /* 袖口 */
+  ctx.strokeStyle = cc ? cc.topColor : '#F4F0E6'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.strokeStyle = cc ? cc.skinColor : '#F7CBA4'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(grip.x - 2, grip.y + 1); ctx.stroke();
   ctx.save();
   ctx.translate(px, py - 30);
   ctx.rotate(-lean);
@@ -1090,16 +1147,14 @@ function drawFisher(ctx, t, fish) {
   ctx.strokeStyle = '#E85A6A'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.arc(hx2, hy2 - 2, 16, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
   ctx.restore();
-  /* 33-4：手臂→釣竿（手部位置配合主角身體） */
-  const base = FISH_ROD_BASE;
-  const tip = fish ? rodTipPos(fish) : { x: 474, y: 290 };
-  const grip = { x: (base.x + tip.x) / 2, y: (base.y + tip.y) / 2 };
-  ctx.strokeStyle = INK; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(px + 13, py - 44); ctx.lineTo(grip.x - 6, grip.y + 4); ctx.stroke();
-  /* 釣竿 */
+  /* 釣竿（手臂之後、拳頭之前） */
   ctx.strokeStyle = '#8A5A3B'; ctx.lineWidth = 4; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(base.x, base.y);
   ctx.quadraticCurveTo((base.x + tip.x) / 2, (base.y + tip.y) / 2 - 8, tip.x, tip.y); ctx.stroke();
+  /* 拳頭（在竿上，握住手把） */
+  ctx.fillStyle = cc ? cc.skinColor : '#F7CBA4';
+  ctx.beginPath(); ctx.arc(grip.x - 1, grip.y, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.stroke();
 }
 
 /* 撈到的魚（小魚/彩魚/青蟹/金魚；rot 旋轉、s 縮放） */
@@ -1170,9 +1225,10 @@ function initFishSchool() {
     dir: Math.random() < 0.5 ? 1 : -1, sp, size,
     phase: Math.random() * 6.28, st: 'swim', t: Math.random() * 3,
     turnAt: 1.5 + Math.random() * 3, ang: 0, jx: 0,
+    orb: 16 + Math.random() * 26, orbSp: 1.6 + Math.random() * 1.8, /* 34-1：每條魚個別繞軌 */
   });
   const s = [];
-  for (let i = 0; i < 5; i++) s.push(mk('minnow', 375 + i * 13, 26 + Math.random() * 22, 0.65 + Math.random() * 0.3));
+  for (let i = 0; i < 5; i++) s.push(mk('minnow', 375 + i * 13, 26 + Math.random() * 22, 0.75 + Math.random() * 0.3)); /* 34-1：微調大一點易見 */
   for (let i = 0; i < 4; i++) s.push(mk('color', 435 + i * 17, 20 + Math.random() * 16, 0.85 + Math.random() * 0.3));
   s.push(mk('crab', 580, 16, 0.9));
   s.push(mk('crab', 594, 13, 0.8));
@@ -1205,15 +1261,16 @@ function updateFishSchool(fish, dt) {
       f.x += f.dir * f.sp * dt;
       if (f.kind === 'crab') { /* 橫走小步 */
         if (f.t > f.turnAt) { f.t = 0; f.turnAt = 0.7 + Math.random() * 1.1; f.dir *= -1; }
-        if (f.x < 250 || f.x > 890) f.dir *= -1;
+        if (f.x < 200 || f.x > 820) f.dir *= -1; /* 34-1：避開右岸遮蔽區 */
         f.y = f.baseY + Math.sin(f.t * 9) * 2;
       } else {
         f.y = f.baseY + Math.sin(fish.t * 1.5 + f.phase) * 7;
-        if (f.x < 235 || f.x > 895) f.dir *= -1;
+        if (f.x < 190 || f.x > 830) f.dir *= -1; /* 34-1 */
         else if (f.kind !== 'turtle' && Math.random() < dt * 0.22) f.dir *= -1;
       }
-      /* 浮標落水後：附近的魚被吸引過去 */
-      if (bob && f.kind !== 'turtle' && Math.abs(f.x - bob.x) < 250 && Math.random() < dt * 0.5) {
+      /* 浮標落水後：附近的魚被吸引過去（34-1：最多 3 條，其餘繼續游，不再擠成一堆） */
+      const nearN = fish.school.filter(g => g.st === 'approach' || g.st === 'circle').length;
+      if (bob && f.kind !== 'turtle' && nearN < 3 && Math.abs(f.x - bob.x) < 170 && Math.random() < dt * 0.5) {
         f.st = 'approach'; f.t = 0;
       }
     } else if (f.st === 'approach' && bob) {
@@ -1224,9 +1281,9 @@ function updateFishSchool(fish, dt) {
       if (d < 26) { f.st = 'circle'; f.t = 0; f.ang = Math.atan2(f.y - ty, f.x - tx); }
       if (!bob) f.st = 'swim';
     } else if (f.st === 'circle' && bob) {
-      f.ang += dt * 2.6 * f.dir;
-      f.x = bob.x + Math.cos(f.ang) * 22;
-      f.y = bob.y + 44 + Math.sin(f.ang) * 13;
+      f.ang += dt * f.orbSp * f.dir; /* 34-1：個別軌道（半徑/速度不同，不再重疊） */
+      f.x = bob.x + Math.cos(f.ang) * f.orb;
+      f.y = bob.y + 44 + Math.sin(f.ang) * f.orb * 0.55;
       if (fish.state !== 'wait' && fish.state !== 'bite') f.st = 'swim';
     } else if (f.st === 'flee') {
       const bx = bob ? bob.x : 560, by = bob ? bob.y + 40 : 470;
@@ -1314,7 +1371,7 @@ function drawFishSchool(ctx, fish) {
     ctx.translate(f.x, f.y);
     ctx.scale(f.dir * f.size, f.size);
     ctx.rotate(Math.sin(fish.t * 6 + f.phase) * 0.08); /* 擺尾搖擺 */
-    ctx.globalAlpha = f.st === 'jump' ? 0.95 : 0.5;
+    ctx.globalAlpha = f.st === 'jump' ? 0.95 : 0.62; /* 34-1：微調易見 */
     drawCatchFish(ctx, FISH_TABLE[f.kind], 0, 0, 1, 0);
     ctx.restore();
   }
