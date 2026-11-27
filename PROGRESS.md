@@ -752,3 +752,24 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - 34-8 ✅：push 08a6b1e＋test/.livesmoke34.cjs 13 項全過（pageErr 0）
 
 **Round 34 完成（2026-11-26）**：五點全修完並上線驗證。commit：3ba92c6（34-1~5）/79a1319（34-2b）/0263346（34-6 測試）/a15cfc6（shots）/08a6b1e（34-7 字型＋push）。
+
+## 第三十五輪（烹飪課——爐子真的能煮）
+> 課程內容盤點（2026-11-26）：8 門課只有釣魚有小遊戲；烹飪/咖啡/家具/花藝/體育=解鎖結果。先做烹飪課（描述「做美味料理」vs 實際零料理，落差最大）。
+
+### 設計
+- **入口（35-1）**：房間（free）點已擺的爐子→startCooking()（照「點湖→釣魚」模式，removeTargetFromMouse 偵測）；無烹飪課→toast
+- **場景（35-2）**：setSub('cook')＋#screen-cook 覆蓋層；renderCook 廚房場景：大爐子+煎鍋+蒸汽、主角圍裙+廚師帽（drawCharacter+疊層）、timing bar 畫在 canvas
+- **小遊戲（35-2）**：menu/cook/result 三態
+  - menu：3 食譜鈕 🍚 蛋炒飯 20 元（zone 0.30/速度 1.4）／🍅 番茄蛋湯 35 元（0.22/2.0）／🐟 烤全魚 55 元（0.15/2.6）
+  - cook：timing bar 標記左右往返（ping-pong），2 次停在黃金區（隨機位置、第 2 次快 1.35×）；失手=燒焦→回 menu
+  - result：菜盤+錢+「目前共做 N 道菜」→1.6s 回 menu
+- **存檔（35-1）**：Game.cook={n}（做幾道菜）進 fullSave
+- **離開**：Esc／✕→exitCooking() 回 free
+
+- 35-0 ✅：計畫
+- 35-1 📋：mini.js Cook 狀態機（startCooking/exitCooking/updateCook/cookAction）＋game.js 爐子點擊/case cook/Esc/fullSave
+- 35-2 📋：mini.js renderCook（廚房場景/主角圍裙+廚師帽/timing bar/蒸汽/菜盤）
+- 35-3 📋：index.html #screen-cook（msg/停火鈕/3 食譜鈕/關閉）＋css
+- 35-4 📋：test/.cook35.mjs（入口/選食譜/命中/失手/加錢/Esc 離開）
+- 35-5 📋：字型重建＋?v=26
+- 35-6 📋：regression＋push＋livesmoke35
