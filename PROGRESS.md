@@ -767,9 +767,10 @@ commit：`ce02e58` Round23 23-2（js/park3d.js 三組 cp + .smooth22 resync）
 - **離開**：Esc／✕→exitCooking() 回 free
 
 - 35-0 ✅：計畫
-- 35-1 📋：mini.js Cook 狀態機（startCooking/exitCooking/updateCook/cookAction）＋game.js 爐子點擊/case cook/Esc/fullSave
-- 35-2 📋：mini.js renderCook（廚房場景/主角圍裙+廚師帽/timing bar/蒸汽/菜盤）
-- 35-3 📋：index.html #screen-cook（msg/停火鈕/3 食譜鈕/關閉）＋css
-- 35-4 📋：test/.cook35.mjs（入口/選食譜/命中/失手/加錢/Esc 離開）
-- 35-5 📋：字型重建＋?v=26
-- 35-6 📋：regression＋push＋livesmoke35
+- 35-1 ✅ 08e945d：mini.js Cook 狀態機（startCooking/exitCooking/cookPick/cookAction/updateCook/COOK_RECIPES）＋game.js 點爐子入口/case cook/Esc/fullSave
+- 35-2~35-3 ✅ b5bdc76：renderCook 廚房場景（暖牆木地板/爐子+煎鍋+火焰蒸汽/主角圍裙+廚師帽/timing bar/菜單黑板/3菜盤）＋#screen-cook HTML/CSS/按鈕綁定
+- 35-4 ✅ 9a7a3d1：test/.cook35.mjs 11項全過（課門檻/點爐子/3食譜/兩停火/燒焦/存檔/Esc）
+- 35-5 ✅ 0967a90：字型重建 1380 glyphs（食譜/蛋炒飯/番茄蛋湯/烤全魚/停火/燒焦…）＋?v=26
+- 35-6 ✅ a7a30e1＋c9b6664：regression 8套全過（.cook35/.course30/.course29/.fish32-34/flow/peek-build）＋shots＋push 5debc1f..c9b6664＋.livesmoke35 12項全過（live 行為：點爐子→兩停火→+20元→Esc）
+
+> 完成（2026-11-26）：烹飪課正式有小遊戲——房間點爐子進廚房，選食譜（蛋炒飯/番茄蛋湯/烤全魚），timing bar 兩下停火成功→菜+錢+道菜數存檔。下一輪候選：☕ 咖啡機小遊戲／🐾 摸摸貓（餵料理）。
